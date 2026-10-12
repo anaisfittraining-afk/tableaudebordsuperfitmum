@@ -31,7 +31,13 @@
   td { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
   td.chk, th.chk { width: 34px; }
   td.chk input { width: 18px; height: 18px; accent-color: var(--green); cursor: pointer; }
-  td:last-child, th:last-child { text-align: right; }
+  td:nth-child(n+3), th:nth-child(n+3) { text-align: right; }
+  .recap { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .fig { background: var(--green-soft); border: 1px solid var(--green-line); border-radius: 12px; padding: 12px 14px; }
+  .fig span { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; }
+  .fig strong { display: block; font-size: 26px; line-height: 1.2; color: var(--green); font-variant-numeric: tabular-nums; }
+  .fig small { color: var(--muted); font-size: 12.5px; }
+  @media (max-width: 440px) { .recap { grid-template-columns: 1fr; } }
   tr.off td { color: var(--muted); text-decoration: line-through; }
   tr.total td { border-bottom: 0; font-weight: 700; padding-top: 12px; }
   .btns { display: grid; gap: 10px; }
@@ -63,8 +69,16 @@
     </div>
 
     <div class="card">
+      <h2>Ta sélection</h2>
+      <div class="recap" aria-live="polite">
+        <div class="fig"><span>Montant à retrouver sur la facture</span><strong id="totEuro">0,00 €</strong><small id="totEuroNote"></small></div>
+        <div class="fig"><span>Nombre de cours</span><strong id="totCours">0</strong><small id="totDates"></small></div>
+      </div>
+    </div>
+
+    <div class="card">
       <table aria-label="Cours à facturer">
-        <thead><tr><th class="chk"><span class="sr" hidden>Inclure</span></th><th>Date</th><th>Cours</th></tr></thead>
+        <thead><tr><th class="chk"></th><th>Date</th><th>Cours</th><th>Montant</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
       <div class="tools">
@@ -87,6 +101,9 @@
         <button type="button" class="btn" data-mode="cours">
           <span>Nombre de cours seul<small>un nombre par ligne, dans le même ordre</small></span><span>Copier</span>
         </button>
+        <button type="button" class="btn" data-mode="montant">
+          <span>Montant total seul<small>le total en euros de la sélection, par exemple 180,00</small></span><span>Copier</span>
+        </button>
         <button type="button" class="btn" data-mode="inline">
           <span>Tout sur une seule ligne<small>02/09 (2), 04/09 (2)… au total 11 cours</small></span><span>Copier</span>
         </button>
@@ -108,7 +125,8 @@
   var raw = decodeURIComponent((location.hash || '').replace(/^#/, ''));
   var items = raw.split('~').map(function (p) {
     var a = p.split('_');
-    return { date: (a[0] || '').trim(), cours: (a[1] || '').trim(), desc: (a.slice(2).join('_') || '').trim(), on: true };
+    var hasM = a.length > 2 && /^\s*\d[\d.,\s]*$/.test(a[2]);          // 3e champ = montant (nouveau format)
+    return { date: (a[0] || '').trim(), cours: (a[1] || '').trim(), montant: hasM ? a[2].trim() : '', desc: (a.slice(hasM ? 3 : 2).join('_') || '').trim(), on: true };
   }).filter(function (x) { return /^\d{2}\/\d{2}\/\d{4}$/.test(x.date); });
   items.forEach(function (x) { if (x.cours !== '') { var n = parseFloat(x.cours.replace(',', '.')); if (!isNaN(n)) x.cours = String(Math.round(n * 100) / 100).replace('.', ','); } });
 
@@ -119,6 +137,9 @@
   var MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
   function num(s) { var n = parseFloat(String(s).replace(',', '.')); return isNaN(n) ? 0 : n; }
   function fr(n) { return String(Math.round(n * 100) / 100).replace('.', ','); }
+  function eur(n) { return n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/[\u202f\u00a0]/g, ' '); }
+  function sumEuro(list) { return list.reduce(function (t, x) { return t + num(x.montant); }, 0); }
+  var hasMontant = items.some(function (x) { return x.montant !== ''; });
   function monthKey(x) { return x.date.slice(6, 10) + '-' + x.date.slice(3, 5); }       // 2026-09
   function monthLabel(k) { var m = parseInt(k.slice(5), 10); return MOIS[m - 1] + ' ' + k.slice(0, 4); }
   function sortKey(x) { return x.date.slice(6, 10) + x.date.slice(3, 5) + x.date.slice(0, 2); }
@@ -165,14 +186,20 @@
       c0.appendChild(cb);
       var td1 = document.createElement('td'); td1.textContent = x.date;
       var td2 = document.createElement('td'); td2.textContent = x.cours ? x.cours : '—';
-      tr.appendChild(c0); tr.appendChild(td1); tr.appendChild(td2); tbody.appendChild(tr);
+      var td3 = document.createElement('td'); td3.textContent = x.montant !== '' ? eur(num(x.montant)) + ' €' : '—';
+      tr.appendChild(c0); tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3); tbody.appendChild(tr);
     });
     var sel = selected();
     var trT = document.createElement('tr'); trT.className = 'total';
     var t0 = document.createElement('td');
     var t1 = document.createElement('td'); t1.textContent = 'Total (' + sel.length + ' date' + (sel.length > 1 ? 's' : '') + ')';
     var t2 = document.createElement('td'); t2.textContent = fr(sumCours(sel));
-    trT.appendChild(t0); trT.appendChild(t1); trT.appendChild(t2); tbody.appendChild(trT);
+    var t3 = document.createElement('td'); t3.textContent = hasMontant ? eur(sumEuro(sel)) + ' €' : '';
+    trT.appendChild(t0); trT.appendChild(t1); trT.appendChild(t2); trT.appendChild(t3); tbody.appendChild(trT);
+    $('totEuro').textContent = hasMontant ? eur(sumEuro(sel)) + ' €' : '—';
+    $('totEuroNote').textContent = hasMontant ? (current === 'all' ? 'tous les mois sélectionnés' : monthLabel(current)) : 'montant non reçu : mets à jour le tableau LUM';
+    $('totCours').textContent = fr(sumCours(sel));
+    $('totDates').textContent = sel.length + ' date' + (sel.length > 1 ? 's' : '') + ' cochée' + (sel.length > 1 ? 's' : '');
     [].forEach.call(document.querySelectorAll('.btn[data-mode]'), function (b) { b.disabled = sel.length === 0; });
     $('preview').value = sel.length ? build('both') : '';
     $('status').textContent = '';
@@ -184,10 +211,11 @@
     var total = sumCours(list);
     switch (mode) {
       case 'full': return list.map(function (x) { return x.date + (x.desc ? ' : ' + x.desc : '') + (x.cours ? ' : ' + x.cours + ' cours' : ''); }).join('\n');
+      case 'montant': return hasMontant ? eur(sumEuro(list)).replace(/\s/g, '') : '';
       case 'dates': return list.map(function (x) { return x.date; }).join('\n');
       case 'cours': return list.map(function (x) { return x.cours; }).join('\n');
       case 'inline':
-        return list.map(function (x) { return x.date.slice(0, 5) + (x.cours ? ' (' + x.cours + ')' : ''); }).join(', ') + ' — au total ' + fr(total) + ' cours';
+        return list.map(function (x) { return x.date.slice(0, 5) + (x.cours ? ' (' + x.cours + ')' : ''); }).join(', ') + ' — au total ' + fr(total) + ' cours' + (hasMontant ? ', ' + eur(sumEuro(list)) + ' €' : '');
       default: return list.map(function (x) { return x.date + (x.cours ? ' : ' + x.cours + ' cours' : ''); }).join('\n');
     }
   }
