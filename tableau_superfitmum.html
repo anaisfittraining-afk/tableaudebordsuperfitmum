@@ -28,6 +28,7 @@
   <script src="exercise_library_data.js"></script>
   <script src="mealplan_templates_data.js"></script>
   <script src="mail_data.js"></script>
+  <script src="../taches_privees_data.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Karla:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -663,6 +664,17 @@
     <div id="body-emailtasks">
     <div style="font-size:11.5px;color:#8C9686;margin:-6px 0 10px">Générées automatiquement toutes les 2h entre 7h et 21h (tâche "mail-triage" — visible dans la section Scheduled de l'app) en triant tes mails non lus des dernières 24h.</div>
     <div id="dailyEmailTasksContent" style="margin-bottom:28px"></div>
+    </div>
+
+    <div id="wrap-chantiers" style="display:none">
+    <div class="section-title collapsible-hdr" style="margin-bottom:12px" onclick="toggleDailySection('chantiers')">
+      <h2>📋 Mes chantiers (liste de départ)</h2>
+      <span class="collapse-chevron" id="chev-chantiers">▾</span>
+    </div>
+    <div id="body-chantiers">
+    <div style="font-size:11.5px;color:#8C9686;margin:-6px 0 10px">Les sujets de ta liste qui ne sont pas dans le programme des 5 jours. « → Ce jour » les ajoute à la journée affichée dans « Mes tâches du jour ».</div>
+    <div id="dailyChantiersContent" style="margin-bottom:28px"></div>
+    </div>
     </div>
 
     <div class="section-title collapsible-hdr" style="margin-bottom:12px" onclick="toggleDailySection('tachesjour')">
@@ -4937,7 +4949,7 @@
   }
 
   // ── MES TÂCHES DU JOUR (manuel, éditable, suit le jour sélectionné) ──
-  var dailyOffset = 0; // 0 = aujourd'hui, jusqu'à 3
+  var dailyOffset = 0; // 0 = aujourd'hui, jusqu'à 6
   function dailyOffsetDateKey(offset) {
     var d = new Date();
     d.setDate(d.getDate() + (typeof offset === 'number' ? offset : dailyOffset));
@@ -4962,9 +4974,13 @@
   function toggleDailyTask(idx) {
     var k = dailyOffsetDateKey();
     var list = getDailyTasksFor(k);
-    if (list[idx]) list[idx].done = !list[idx].done;
+    if (list[idx]) {
+      list[idx].done = !list[idx].done;
+      if (list[idx].fromEmailId) syncEmailTaskDone(list[idx].fromEmailId, list[idx].done);
+    }
     saveDailyTasksFor(k, list);
     renderDailyTasks();
+    if (list[idx] && list[idx].fromEmailId) { renderEmailTasksList(lastEmailSuggestionsRaw); renderChantiersList(); }
   }
 
   function removeDailyTask(idx) {
@@ -5003,6 +5019,7 @@
   function mergeEmailTaskState(rawSuggestions) {
     var state = getEmailTaskState();
     var todayKey = dailyOffsetDateKey(0);
+    importPrivateTasks(state, todayKey);
     (rawSuggestions || []).forEach(function (s) {
       var id = emailTaskId(s);
       if (!state[id]) {
@@ -5018,10 +5035,60 @@
     Object.keys(state).forEach(function (id) {
       var it = state[id];
       if (it.done && it.doneAt && it.doneAt < todayKey) delete state[id];
-      else if (!it.done && it.lastSeen && (new Date(todayKey) - new Date(it.lastSeen)) > 30 * 86400000) delete state[id];
+      else if (!it.done && !it.backlog && !it.chantier && it.lastSeen && (new Date(todayKey) - new Date(it.lastSeen)) > 30 * 86400000) delete state[id];
     });
     saveEmailTaskState(state);
     return state;
+  }
+
+  // ── Données privées (fichier ../taches_privees_data.js, jamais publié) : mails importants à traiter
+  // (MAIL_BACKLOG), chantiers de la liste de départ (CHANTIERS_LISTE) et programme des 5 jours
+  // (PLAN_5_JOURS). Chaque élément n'est importé qu'UNE fois ; il n'est supprimé qu'une fois coché. ──
+  var PRIVATE_IMPORT_KEY = 'sfm_private_imported';
+  function importPrivateTasks(state, todayKey) {
+    var imp; try { imp = JSON.parse(localStorage.getItem(PRIVATE_IMPORT_KEY) || '{}'); } catch (e) { imp = {}; }
+    var changed = false;
+    (window.MAIL_BACKLOG || []).forEach(function (m) {
+      var id = emailTaskId(m);
+      if (imp[id]) return;
+      imp[id] = 1; changed = true;
+      if (!state[id]) state[id] = { text: m.text || '', from: m.from || '', subject: m.subject || '', done: false, firstSeen: m.date || todayKey, lastSeen: todayKey, backlog: true, link: m.link || '', priority: m.priority || 'normal', category: m.category || '' };
+    });
+    (window.CHANTIERS_LISTE || []).forEach(function (c) {
+      var id = 'c_' + c.id;
+      if (imp[id]) return;
+      imp[id] = 1; changed = true;
+      if (!state[id]) state[id] = { text: c.text || '', from: '', subject: '', done: false, firstSeen: todayKey, lastSeen: todayKey, chantier: true, category: c.cat || '' };
+    });
+    if (changed) { try { localStorage.setItem(PRIVATE_IMPORT_KEY, JSON.stringify(imp)); } catch (e) {} }
+  }
+
+  var PRIO_META = { urgent: ['🔴 Urgent', '#fff5f5', '#c53030'], important: ['🟠 Important', '#fffaf0', '#c05621'], normal: ['⚪ À traiter', '#f7fafc', '#718096'] };
+  function emailTaskRowHtml(id, it, todayKey) {
+    var reportee = !it.backlog && !it.chantier && it.firstSeen && it.firstSeen < todayKey;
+    var badge = '';
+    if (it.backlog && PRIO_META[it.priority]) {
+      var pm = PRIO_META[it.priority];
+      badge = '<span style="font-size:10.5px;font-weight:700;background:' + pm[1] + ';color:' + pm[2] + ';padding:1px 7px;border-radius:10px;margin-right:6px">' + pm[0] + '</span>';
+    }
+    var meta = '';
+    if (it.chantier) meta = esc(it.category || '');
+    else if (it.from) meta = esc(it.from) + (it.subject ? ' · ' + esc(it.subject) : '');
+    if (it.backlog && it.firstSeen) meta += (meta ? ' · ' : '') + 'mail du ' + esc(rdvFrDate(it.firstSeen));
+    var link = it.link ? '<a href="' + esc(it.link) + '" target="_blank" rel="noopener" title="Ouvrir le mail dans Gmail" style="font-size:12px;text-decoration:none;color:#3F5D46;font-weight:700;margin-left:6px;white-space:nowrap">📧 Ouvrir</a>' : '';
+    var transfer = '';
+    if (!it.done) {
+      transfer = it.transferredTo
+        ? '<span style="font-size:11px;color:#3F5D46;white-space:nowrap;align-self:center">✓ ajoutée au ' + esc(rdvFrDate(it.transferredTo)) + '</span>'
+        : '<button onclick="transferTaskToDay(' + jsAttr(id) + ')" title="Ajouter à mes tâches du jour affiché" style="font-size:11px;font-weight:700;color:#3F5D46;background:#E7EEE1;border:1px solid #CFE0C9;border-radius:8px;padding:3px 8px;cursor:pointer;white-space:nowrap;align-self:center">→ Ce jour</button>';
+    }
+    return '<div class="task-row' + (it.done ? ' done' : '') + '" style="background:white;border:1px solid #E2DCC8;border-radius:12px;padding:12px 16px;margin-bottom:8px">' +
+      '<input type="checkbox" id="emailtaskcb_' + id + '"' + (it.done ? ' checked' : '') + ' onchange="toggleEmailTaskDone(' + jsAttr(id) + ')">' +
+      '<label for="emailtaskcb_' + id + '" style="flex:1">' +
+        '<div style="font-size:13px;font-weight:700;color:#26312A">' + badge + (reportee ? '<span style="color:#dd6b20;font-size:11px" title="Détectée le ' + esc(it.firstSeen) + '">↩ Reportée · </span>' : '') + esc(it.text) + '</div>' +
+        (meta ? '<div style="font-size:11px;color:#8C9686;margin-top:2px">' + meta + link + '</div>' : (link ? '<div style="margin-top:2px">' + link + '</div>' : '')) +
+      '</label>' + transfer +
+    '</div>';
   }
 
   function renderEmailTasksList(rawSuggestions) {
@@ -5030,14 +5097,20 @@
     if (!el) return;
     var state = mergeEmailTaskState(lastEmailSuggestionsRaw);
     var todayKey = dailyOffsetDateKey(0);
-    // affiche tout ce qui n'est pas encore coché (vu aujourd'hui ou reporté depuis un jour précédent), + ce qui vient d'être coché aujourd'hui (confort visuel, rayé)
+    // affiche tout ce qui n'est pas encore coché (vu aujourd'hui, reporté ou importé de mes anciens mails), + ce qui vient d'être coché aujourd'hui (confort visuel, rayé)
     var ids = Object.keys(state).filter(function (id) {
       var it = state[id];
+      if (it.chantier) return false;
       return !it.done || it.doneAt === todayKey;
     });
+    function rank(it) {
+      if (!it.backlog) return 1.5;
+      return it.priority === 'urgent' ? 0 : (it.priority === 'important' ? 1 : 2);
+    }
     ids.sort(function (a, b) {
       var ia = state[a], ib = state[b];
       if (!!ia.done !== !!ib.done) return ia.done ? 1 : -1;
+      if (rank(ia) !== rank(ib)) return rank(ia) - rank(ib);
       return (ia.firstSeen || '').localeCompare(ib.firstSeen || '');
     });
     if (ids.length === 0) {
@@ -5045,18 +5118,99 @@
       return;
     }
     var out = '';
-    ids.forEach(function (id) {
-      var it = state[id];
-      var reportee = it.firstSeen && it.firstSeen < todayKey;
-      out += '<div class="task-row' + (it.done ? ' done' : '') + '" style="background:white;border:1px solid #E2DCC8;border-radius:12px;padding:12px 16px;margin-bottom:8px">' +
-        '<input type="checkbox" id="emailtaskcb_' + id + '"' + (it.done ? ' checked' : '') + ' onchange="toggleEmailTaskDone(' + jsAttr(id) + ')">' +
-        '<label for="emailtaskcb_' + id + '" style="flex:1">' +
-          '<div style="font-size:13px;font-weight:700;color:#26312A">' + (reportee ? '<span style="color:#dd6b20;font-size:11px" title="Détectée le ' + esc(it.firstSeen) + '">↩ Reportée · </span>' : '') + esc(it.text) + '</div>' +
-          (it.from ? '<div style="font-size:11px;color:#8C9686;margin-top:2px">' + esc(it.from) + (it.subject ? ' · ' + esc(it.subject) : '') + '</div>' : '') +
-        '</label>' +
-      '</div>';
+    ids.forEach(function (id) { out += emailTaskRowHtml(id, state[id], todayKey); });
+    el.innerHTML = out;
+  }
+
+  var CHANTIER_ORDER = ['Numérique', 'Finances', 'Travail', 'Maison', 'Famille', 'Perso'];
+  function renderChantiersList() {
+    var el = document.getElementById('dailyChantiersContent');
+    if (!el) return;
+    var state = mergeEmailTaskState([]);
+    var todayKey = dailyOffsetDateKey(0);
+    var any = Object.keys(state).some(function (id) { return state[id].chantier; });
+    var wrap = document.getElementById('wrap-chantiers');
+    if (wrap) wrap.style.display = any ? '' : 'none';
+    if (!any) return;
+    if (!localStorage.getItem('sfm_chantiers_init')) {
+      try { localStorage.setItem('sfm_chantiers_init', '1'); } catch (e) {}
+      var set = getDailyCollapsedSet();
+      if (set.indexOf('chantiers') < 0) { set.push('chantiers'); saveDailyCollapsedSet(set); }
+      var bd = document.getElementById('body-chantiers'); if (bd) bd.style.display = 'none';
+      var cv = document.getElementById('chev-chantiers'); if (cv) cv.textContent = '▸';
+    }
+    var ids = Object.keys(state).filter(function (id) { var it = state[id]; return it.chantier && (!it.done || it.doneAt === todayKey); });
+    if (!ids.length) { el.innerHTML = '<div style="font-size:13px;color:#8C9686;padding:6px 2px">Tous les chantiers sont cochés. 🎉</div>'; return; }
+    var cats = {};
+    ids.forEach(function (id) { var c = state[id].category || 'Autre'; (cats[c] = cats[c] || []).push(id); });
+    var order = CHANTIER_ORDER.filter(function (c) { return cats[c]; }).concat(Object.keys(cats).filter(function (c) { return CHANTIER_ORDER.indexOf(c) < 0; }));
+    var out = '';
+    order.forEach(function (c) {
+      out += '<div style="font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#8C9686;margin:12px 0 6px">' + esc(c) + '</div>';
+      cats[c].forEach(function (id) { out += emailTaskRowHtml(id, state[id], todayKey); });
     });
     el.innerHTML = out;
+  }
+
+  function syncEmailTaskDone(id, done) {
+    var state = getEmailTaskState();
+    if (!state[id]) return;
+    state[id].done = !!done;
+    state[id].doneAt = done ? dailyOffsetDateKey(0) : null;
+    saveEmailTaskState(state);
+  }
+
+  // Transfert : copie une tâche (mail ou chantier) dans « Mes tâches du jour » du jour affiché ;
+  // cocher la tâche du jour coche aussi l'originale.
+  function transferTaskToDay(id) {
+    var state = getEmailTaskState();
+    var it = state[id];
+    if (!it) return;
+    var k = dailyOffsetDateKey();
+    var list = getDailyTasksFor(k);
+    list.push({ text: it.text, done: false, fromEmailId: id });
+    saveDailyTasksFor(k, list);
+    it.transferredTo = k;
+    saveEmailTaskState(state);
+    renderDailyTasks();
+    renderEmailTasksList(lastEmailSuggestionsRaw);
+    renderChantiersList();
+    showToast('Ajoutée à mes tâches du ' + rdvFrDate(k));
+  }
+
+  // Tâches qui reviennent chaque jour (mails, import Fathom, transfert) : ajoutées une fois par jour,
+  // supprimables sans réapparaître ce jour-là, jamais reportées au lendemain (elles reviennent d'elles-mêmes).
+  var DAILY_RECURRING = [
+    { rid: 'mail', text: '📧 Trier mes mails et transformer les importants en tâches (section « Suggestions détectées »)' },
+    { rid: 'fathom', text: '🎙️ Importer les récaps Fathom (double-clic sur « Import Fathom SFM.command ») puis vérifier les tâches reprises' },
+    { rid: 'transfert', text: '🔁 Transférer mes tâches : mails et chantiers → « Mes tâches du jour », et replanifier ce qui n\'est pas fait' }
+  ];
+  function ensureDailyRecurring(k) {
+    if (k < dailyOffsetDateKey(0)) return;
+    var seeded; try { seeded = JSON.parse(localStorage.getItem('sfm_daily_recurring_seeded') || '{}'); } catch (e) { seeded = {}; }
+    if (seeded[k]) return;
+    var list = getDailyTasksFor(k);
+    var have = {};
+    list.forEach(function (t) { if (t.rid) have[t.rid] = 1; });
+    var toAdd = DAILY_RECURRING.filter(function (r) { return !have[r.rid]; }).map(function (r) { return { text: r.text, done: false, rid: r.rid }; });
+    if (toAdd.length) saveDailyTasksFor(k, toAdd.concat(list));
+    seeded[k] = 1;
+    try { localStorage.setItem('sfm_daily_recurring_seeded', JSON.stringify(seeded)); } catch (e) {}
+  }
+
+  // Programme des 5 jours (fichier privé) : ajouté une seule fois aux tâches des jours concernés.
+  function importPlan5Jours() {
+    var plan = window.PLAN_5_JOURS;
+    if (!plan || !plan.days) return;
+    if (localStorage.getItem('sfm_plan5j_imported') === plan.version) return;
+    var all = getDailyTasksAll();
+    Object.keys(plan.days).forEach(function (k) {
+      var list = all[k] || [];
+      plan.days[k].forEach(function (t) { list.push({ text: t, done: false, plan: '5j' }); });
+      all[k] = list;
+    });
+    saveDailyTasksAll(all);
+    try { localStorage.setItem('sfm_plan5j_imported', plan.version); } catch (e) {}
   }
 
   function toggleEmailTaskDone(id) {
@@ -5066,6 +5220,7 @@
     state[id].doneAt = state[id].done ? dailyOffsetDateKey(0) : null;
     saveEmailTaskState(state);
     renderEmailTasksList(lastEmailSuggestionsRaw);
+    renderChantiersList();
   }
 
   function addDaysToKeyStr(key, n) {
@@ -5082,7 +5237,7 @@
     var changed = false;
     pastKeys.forEach(function (k) {
       var list = all[k] || [];
-      var undone = list.filter(function (t) { return !t.done && !t.rolledOver; });
+      var undone = list.filter(function (t) { return !t.done && !t.rolledOver && !t.rid; });
       if (undone.length === 0) return;
       var nextKey = addDaysToKeyStr(k, 1);
       if (!all[nextKey]) all[nextKey] = [];
@@ -5137,8 +5292,10 @@
   function renderDailyTasks() {
     var container = document.getElementById('dailyTasksContent');
     if (!container) return;
+    importPlan5Jours();
     rolloverDailyTasks();
     var k = dailyOffsetDateKey();
+    ensureDailyRecurring(k);
     var list = getDailyTasksFor(k);
     var out = '<div class="task-section" style="margin-bottom:0">';
     if (list.length === 0) {
@@ -5182,7 +5339,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function setDailyOffset(o) { dailyOffset = o; renderDailyOverview(); }
   function changeDailyOffset(delta) {
     var next = dailyOffset + delta;
-    if (next < 0 || next > 3) return;
+    if (next < 0 || next > 6) return;
     dailyOffset = next;
     renderDailyOverview();
   }
@@ -5465,6 +5622,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     renderMailRecap();
     renderPriorities();
     renderDailyTasks();
+    renderChantiersList();
     renderDailyFathomTasks();
     renderDailyRdvUrgent();
     renderDailyPendingResa();
@@ -5485,7 +5643,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     }
     if (todayLinkEl) todayLinkEl.style.display = dailyOffset === 0 ? 'none' : 'block';
     var prevBtn = document.getElementById('dailyNavPrev'); if (prevBtn) prevBtn.style.visibility = dailyOffset <= 0 ? 'hidden' : 'visible';
-    var nextBtn = document.getElementById('dailyNavNext'); if (nextBtn) nextBtn.style.visibility = dailyOffset >= 3 ? 'hidden' : 'visible';
+    var nextBtn = document.getElementById('dailyNavNext'); if (nextBtn) nextBtn.style.visibility = dailyOffset >= 6 ? 'hidden' : 'visible';
 
     var data = window.AGENDA_DATA;
     var dayData = data && data.days ? data.days[k] : null;
@@ -10072,8 +10230,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       var list = getClientSportPrograms(m.key), idx = list.findIndex(function(p) { return p.id === m.recId; });
       var prog = JSON.parse(JSON.stringify(list[idx])), images = {};
       (prog.semaines || []).forEach(function(w) { (w.exercices || []).forEach(function(x) { var id = progExLibId(x); var ph = progLibPhoto(id); if (ph) { x.libId = id; images[id] = ph; } }); });
-      var payload = firebaseStripUndefined({ nom: prog.nom, description: prog.description, semaines: prog.semaines, images: images, publishedAt: new Date().toISOString() });
-      return dashFbDB.ref(programmePath(code)).set(payload).then(function() {
+      var payload = firebaseStripUndefined({ id: prog.id, nom: prog.nom, description: prog.description, semaines: prog.semaines, images: images, publishedAt: new Date().toISOString() });
+      return dashFbDB.ref(programmeItemPath(code, prog.id)).set(payload).then(function() { return progRemoveLegacyIfSame(code, payload.nom); }).then(function() {
         var l2 = getClientSportPrograms(m.key), i2 = l2.findIndex(function(p) { return p.id === m.recId; });
         if (i2 >= 0) { l2[i2].publishedAt = payload.publishedAt; l2[i2].publishedCode = code; saveClientSportPrograms(m.key, l2); }
         m.status = 'assigné et envoyé ✓';
@@ -10094,13 +10252,26 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     });
   }
   function progDeleteClientProgram(clientKey, programId) {
-    if (!window.confirm('Supprimer ce programme pour cette cliente ?')) return;
+    if (!window.confirm('Supprimer ce programme pour cette cliente ? S\'il a été envoyé, il disparaîtra aussi de son espace.')) return;
+    var delProg = getClientSportPrograms(clientKey).find(function(p) { return p.id === programId; });
+    if (delProg && delProg.publishedCode && initSyncFirebase()) {
+      dashFbDB.ref(programmeItemPath(delProg.publishedCode, programId)).remove().catch(function(err) { console.error('[co-NAÎTRE] Retrait programme :', err); });
+    }
     var list = getClientSportPrograms(clientKey).filter(function(p) { return p.id !== programId; });
     saveClientSportPrograms(clientKey, list);
     progRefreshViews();
     showToast('🗑️ Programme supprimé.');
   }
   function programmePath(code) { return 'epanouissement/' + code + '/programme'; }
+  // Plusieurs programmes par cliente : chaque envoi est rangé sous .../programmes/<id> (le suivant n'écrase plus le précédent).
+  function programmeItemPath(code, id) { return 'epanouissement/' + code + '/programmes/' + String(id).replace(/[.#$\[\]\/]/g, '_'); }
+  // Si l'ancien chemin unique contient le même programme (même nom), on le retire pour ne pas l'afficher en double.
+  function progRemoveLegacyIfSame(code, nom) {
+    return dashFbDB.ref(programmePath(code)).once('value').then(function(snap) {
+      var v = snap.val();
+      if (v && (v.nom || '') === (nom || '')) return dashFbDB.ref(programmePath(code)).remove();
+    }).catch(function() {});
+  }
   function progPublishToClient(clientKey, programId, clientName) {
     var link = getClientLink(clientKey);
     var code = link && link.code;
@@ -10114,13 +10285,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var images = {};
     prog = JSON.parse(JSON.stringify(prog));
     (prog.semaines || []).forEach(function(w) { (w.exercices || []).forEach(function(x) { var id = progExLibId(x); var ph = progLibPhoto(id); if (ph) { x.libId = id; images[id] = ph; } }); });
-    var payload = firebaseStripUndefined({ nom: prog.nom, description: prog.description, semaines: prog.semaines, images: images, publishedAt: new Date().toISOString() });
-    dashFbDB.ref(programmePath(code)).set(payload).then(function() {
+    var payload = firebaseStripUndefined({ id: prog.id, nom: prog.nom, description: prog.description, semaines: prog.semaines, images: images, publishedAt: new Date().toISOString() });
+    dashFbDB.ref(programmeItemPath(code, prog.id)).set(payload).then(function() { return progRemoveLegacyIfSame(code, payload.nom); }).then(function() {
       list[idx].publishedAt = payload.publishedAt;
       list[idx].publishedCode = code;
       saveClientSportPrograms(clientKey, list);
       progRefreshViews();
-      showToast('📤 Programme envoyé dans son espace co-NAÎTRE.');
+      showToast('📤 Programme envoyé dans son espace co-NAÎTRE (les précédents restent visibles).');
     }).catch(function(err) {
       console.error('[co-NAÎTRE] Échec publication programme :', err);
       alert('Erreur lors de l\'envoi : ' + (err && err.message ? err.message : 'inconnue'));
@@ -11194,6 +11365,82 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     showToast('📚 « ' + lib.nom + ' » ajouté.');
   }
 
+  // ── Notes RDV (appel de vente) rattachées à une cliente : le champ "Cliente liée" d'une note RDV est
+  // rapproché du nom (peu importe l'ordre prénom/nom, les accents ou les majuscules) ou de l'e-mail de la
+  // fiche cliente — la note s'affiche alors dans sa fiche (Base clientes). ──
+  function rdvNorm(v) {
+    return String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9@. ]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function rdvSameName(a, b) {
+    a = rdvNorm(a); b = rdvNorm(b);
+    if (!a || !b) return false;
+    return a === b || a.split(' ').sort().join(' ') === b.split(' ').sort().join(' ');
+  }
+  function rdvNotesForClient(k, cl) {
+    return getRdvNotes().filter(function (n) {
+      var l = n.clienteLiee;
+      if (!rdvNorm(l)) return false;
+      if (rdvNorm(l) === rdvNorm(k) || (cl.email && rdvNorm(l) === rdvNorm(cl.email))) return true;
+      return rdvSameName(l, cl.name);
+    });
+  }
+  function rdvFrDate(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''));
+    return m ? m[3] + '/' + m[2] + '/' + m[1] : (iso || '');
+  }
+  function rdvGoToNote(id) {
+    var t = document.querySelector('.nav-tab[data-view=pole_vente]');
+    showView('pole_vente', t);
+    setTimeout(function () {
+      var tab = Array.prototype.slice.call(document.querySelectorAll('#view-pole_vente > .sub-nav-bar > .sub-tab')).filter(function (x) { return x.textContent.indexOf('Notes RDV') >= 0; })[0];
+      if (tab) showSubView('rdvnotes', tab);
+      rdvOpenNote(id);
+    }, 80);
+  }
+  function rdvNoteBlockHtml(n) {
+    var meta = RDV_STATUT_META[n.statut] || { label: '', color: '#8C9686' };
+    var detail = '';
+    RDV_SECTIONS.forEach(function (sec) {
+      if (sec.type === 'text' && n[sec.key] && String(n[sec.key]).trim()) {
+        detail += '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;color:#8C9686">' + sec.label + '</div><div>' + esc(n[sec.key]) + '</div></div>';
+      }
+    });
+    if (!detail) detail = '<span style="color:#8C9686;font-style:italic">Aucune note écrite pour cet appel.</span>';
+    var h = '<div style="border-bottom:1px solid #f7fafc">';
+    h += '<div style="padding:8px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px">';
+    h += '<span style="font-size:13px;font-weight:600;color:#26312A">📞 Appel du ' + esc(rdvFrDate(n.dateAppel)) + (meta.label ? ' <span style="font-size:11px;font-weight:700;color:' + meta.color + '">· ' + meta.label + '</span>' : '') + '</span>';
+    h += '<div style="display:flex;gap:6px">';
+    h += '<button onclick="toggleFathomText(this)" style="padding:4px 10px;background:#ebf4ff;color:#2b6cb0;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation">Voir</button>';
+    h += '<button onclick="rdvGoToNote(' + jsAttr(n.id) + ')" style="padding:4px 10px;background:#E7EEE1;color:#2C4432;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;touch-action:manipulation">✏️ Ouvrir</button>';
+    h += '</div></div>';
+    h += '<div style="display:none;padding:0 16px 12px;font-size:13px;color:#3E4A3A;white-space:pre-wrap;line-height:1.6;border-top:1px solid #f7fafc">' + detail + '</div>';
+    h += '</div>';
+    return h;
+  }
+  // Message sous le champ "Cliente liée" d'une note RDV : dit tout de suite si le nom correspond à une fiche.
+  function rdvLinkStatusHtml(value) {
+    if (!rdvNorm(value)) return '';
+    var by = buildByClient(), found = null;
+    Object.keys(by).forEach(function (k) {
+      if (found) return;
+      var c = by[k];
+      if (rdvNorm(value) === rdvNorm(k) || (c.email && rdvNorm(value) === rdvNorm(c.email)) || rdvSameName(value, c.name)) found = c.name;
+    });
+    return found
+      ? '<span style="color:#2C4432">✅ Liée à la fiche « ' + esc(found) + ' » — la note s\'affiche dans sa fiche (Base clientes).</span>'
+      : '<span style="color:#8A5A12">⚠️ Aucune fiche cliente à ce nom pour l\'instant — choisis un nom dans la liste proposée.</span>';
+  }
+  function rdvRefreshLinkStatus(value) {
+    var el = document.getElementById('rdvLinkStatus');
+    if (el) el.innerHTML = rdvLinkStatusHtml(value);
+  }
+  function rdvClientDatalistHtml() {
+    var by = buildByClient();
+    var names = {};
+    Object.keys(by).forEach(function (k) { if (by[k].name && k !== 'null' && k !== 'undefined') names[by[k].name] = 1; });
+    return '<datalist id="rdvClienteDatalist">' + Object.keys(names).sort().map(function (n) { return '<option value="' + esc(n) + '"></option>'; }).join('') + '</datalist>';
+  }
+
   function renderClientCard(k, cl, recaps, opts) {
     opts = opts || {};
     var safeKey = k.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
@@ -11214,6 +11461,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var _mens = findMensForClient(k, cl.name);
     if (cl.bilans.length) html += '<span style="background:#e6fffa;color:#2C4432;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px">' + cl.bilans.length + ' bilan' + (cl.bilans.length > 1 ? 's' : '') + '</span>';
     if (recaps.length) html += '<span style="background:#ebf4ff;color:#2b6cb0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px">🎙️ ' + recaps.length + ' récap' + (recaps.length > 1 ? 's' : '') + '</span>';
+    var _rdvNotes = rdvNotesForClient(k, cl);
+    if (_rdvNotes.length) html += '<span style="background:#E7EEE1;color:#2C4432;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px">📞 ' + _rdvNotes.length + ' appel' + (_rdvNotes.length > 1 ? 's' : '') + ' de vente</span>';
     if (_mens) html += '<span style="background:#fefcbf;color:#744210;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px">📏 ' + _mens.entries.length + ' prise' + (_mens.entries.length > 1 ? 's' : '') + '</span>';
     if (opts.archived) {
       html += '<button onclick="event.stopPropagation();unarchiveClient(\'' + safeKey + '\')" style="padding:3px 9px;background:#e6fffa;color:#2C4432;border:none;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer">↩️ Réactiver</button>';
@@ -11262,6 +11511,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function ficheFoldBodyOpen(id) { return '<div id="fold-' + id + '" style="display:' + (ficheIsFolded(id) ? 'none' : 'block') + '">'; }
   function renderClientFicheBody(k, cl, recaps, safeKey, safeId) {
     var html = '';
+    var _rdvNotes = rdvNotesForClient(k, cl);
     var _mens = findMensForClient(k, cl.name); // recalculé ici : la carte de la galerie (voir renderClientGalleryCard) en a sa propre copie pour son badge, celle-ci alimente le panneau Mensurations plus bas
     html += renderEcloreLinkBlock(k, cl.name, safeKey);
     html += renderMenageLinkBlock(k, cl.name, safeKey);
@@ -11326,6 +11576,12 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     html += '<div style="padding:10px 16px 14px">';
     html += '<button onclick="addFathomRecap(\'' + safeKey + '\',\'' + esc(cl.name).replace(/'/g,"\\'") + '\')" style="width:100%;padding:9px;background:linear-gradient(135deg,#4299e1,#2b6cb0);color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation">➕ Ajouter un récap Fathom</button>';
     html += '</div>';
+    // ── Notes de son appel de vente (Notes RDV liées à cette cliente) ──
+    if (_rdvNotes.length) {
+      html += ficheFoldTitle(safeId + '_rdv', '📞 Notes de son appel de vente', _rdvNotes.length, 'padding:8px 16px 4px;font-size:11px;font-weight:700;color:#8C9686;text-transform:uppercase;letter-spacing:0.5px') + ficheFoldBodyOpen(safeId + '_rdv');
+      _rdvNotes.forEach(function (n) { html += rdvNoteBlockHtml(n); });
+      html += '</div>';
+    }
     // ── Galerie photos avant/après ─────────────────────────────
     html += '<div style="padding:12px 16px;border-bottom:1px solid #F7F1E6">';
     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
@@ -12056,7 +12312,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     html += '<div class="form-group"><label>Statut</label><select onchange="rdvUpdateField(' + jsAttr(id) + ',' + jsAttr('statut') + ',this.value)">';
     RDV_STATUT_ORDER.forEach(function (s) { html += '<option value="' + s + '"' + (it.statut === s ? ' selected' : '') + '>' + RDV_STATUT_META[s].label + '</option>'; });
     html += '</select></div></div>';
-    html += '<div class="form-grid" style="grid-template-columns:1fr"><div class="form-group"><label>Cliente liée (si signée)</label><input type="text" placeholder="Note ici son nom exact dans Base clientes" value="' + esc(it.clienteLiee || '') + '" oninput="rdvUpdateField(' + jsAttr(id) + ',' + jsAttr('clienteLiee') + ',this.value)"></div></div>';
+    html += '<div class="form-grid" style="grid-template-columns:1fr"><div class="form-group"><label>Cliente liée (si signée)</label><input type="text" list="rdvClienteDatalist" autocomplete="off" placeholder="Choisis son nom dans la liste (Base clientes)" value="' + esc(it.clienteLiee || '') + '" oninput="rdvUpdateField(' + jsAttr(id) + ',' + jsAttr('clienteLiee') + ',this.value);rdvRefreshLinkStatus(this.value)">' + rdvClientDatalistHtml() + '<div id="rdvLinkStatus" style="font-size:12px;margin-top:5px;line-height:1.4">' + rdvLinkStatusHtml(it.clienteLiee) + '</div></div></div>';
     html += '</div>';
 
     RDV_SECTIONS.forEach(function (sec) {
