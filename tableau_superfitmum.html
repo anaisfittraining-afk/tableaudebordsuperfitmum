@@ -1699,7 +1699,7 @@
   <!-- ASSOCIATION : ADMINISTRATIF (générateur de modèles) + FRAIS DU BÉNÉVOLE + ADHÉRENTS -->
   <div class="view" id="view-evenements">
     <div class="section-title" style="margin-bottom:6px"><h2>🌟 Événements</h2></div>
-    <p style="color:#66735F;font-size:13px;margin-bottom:16px;max-width:760px">Programme ici tous tes événements — ceux de l'association (co-NAÎTRE en mouvement) et ceux de tes clientes Épanouissement — puis suis qui s'inscrit. Tu peux proposer jusqu'à 3 activités par événement : chaque cliente peut en choisir une ou plusieurs.</p>
+    <p style="color:#66735F;font-size:13px;margin-bottom:16px;max-width:760px">Programme ici tous tes événements — ceux de l'association (co-NAÎTRE en mouvement) et ceux de tes clientes Épanouissement — puis suis qui s'inscrit. Tu peux proposer autant d'activités que tu veux par événement : chaque cliente peut en choisir une ou plusieurs.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;padding:12px;background:#fff;border:1px solid #E2DCC8;border-radius:8px;max-width:900px">
       <input type="text" id="evTrimNom" placeholder="Nom de l'événement (ex : Atelier de rentrée)" style="flex:1 1 100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
       <label style="font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">Date<input type="date" id="evTrimDate" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
@@ -1718,10 +1718,13 @@
       <input type="text" id="evTrimPrix" placeholder="Prix (facultatif, ex : 25 €)" style="flex:1 1 160px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
       <label id="evTrimExtWrap" style="flex:1 1 100%;display:flex;gap:8px;align-items:center;font-size:12.5px;color:#26312A;margin-top:4px;cursor:pointer"><input type="checkbox" id="evTrimExt" onchange="evTrimPublicChanged()"> 🌐 Ouvrir aux personnes extérieures (un lien public d'inscription s'affichera sur l'événement)</label>
       <input type="text" id="evTrimLienCrm" placeholder="Lien HighLevel de cet événement (facultatif — pour que les inscrites arrivent dans ton CRM)" style="flex:1 1 100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
-      <div style="flex:1 1 100%;font-size:12px;color:#66735F;margin-top:4px">Activités proposées (facultatif, 3 maximum — chaque cliente peut en choisir une ou plusieurs) :</div>
-      <input type="text" id="evTrimAct1" placeholder="Activité 1 (ex : Pilates en plein air)" style="flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
-      <input type="text" id="evTrimAct2" placeholder="Activité 2" style="flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
-      <input type="text" id="evTrimAct3" placeholder="Activité 3" style="flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+      <div style="flex:1 1 100%;font-size:12px;color:#66735F;margin-top:4px">Activités proposées (facultatif, autant que tu veux — chaque cliente peut en choisir une ou plusieurs ; une case laissée vide est ignorée) :</div>
+      <div id="evTrimActsList" style="flex:1 1 100%;display:flex;gap:8px;flex-wrap:wrap">
+        <input type="text" class="evTrimActInput" placeholder="Activité 1 (ex : Pilates en plein air)" style="flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+        <input type="text" class="evTrimActInput" placeholder="Activité 2" style="flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+        <input type="text" class="evTrimActInput" placeholder="Activité 3" style="flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+      </div>
+      <button type="button" onclick="evTrimActAdd()" style="padding:7px 12px;background:#fff;color:#3F5D46;border:1.5px dashed #9ae6b4;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">➕ Ajouter une activité</button>
       <button id="evTrimSubmitBtn" onclick="evTrimAdd()" style="padding:9px 16px;background:#3F5D46;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">➕ Programmer l'événement</button>
       <button id="evTrimCancelBtn" onclick="evTrimCancelEdit()" style="display:none;padding:9px 16px;background:#fff;color:#66735F;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Annuler la modification</button>
     </div>
@@ -16763,7 +16766,33 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   var EV_TRIM_EDIT_ID = null; // id de l'événement en cours de modification (null = on en crée un nouveau)
   var EV_TRIM_FILTER = 'tous'; // filtre d'affichage : tous | association | epanouissement
-  var EV_TRIM_MAX_ACT = 3;
+  // Activités d'un événement : autant que souhaité. Les cases vides sont ignorées ; « Ajouter une activité » en ajoute une.
+  var EV_TRIM_ACT_STYLE = 'flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px';
+  function evTrimActAdd(value) {
+    var box = document.getElementById('evTrimActsList');
+    if (!box) return;
+    var inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'evTrimActInput'; inp.style.cssText = EV_TRIM_ACT_STYLE;
+    inp.placeholder = 'Activité ' + (box.querySelectorAll('.evTrimActInput').length + 1);
+    if (typeof value === 'string') inp.value = value;
+    box.appendChild(inp);
+    if (typeof value !== 'string') inp.focus();
+  }
+  function evTrimActsSet(noms) {
+    var box = document.getElementById('evTrimActsList');
+    if (!box) return;
+    box.innerHTML = '';
+    var n = Math.max(3, (noms || []).length);
+    for (var i = 0; i < n; i++) evTrimActAdd((noms && noms[i]) || '');
+  }
+  function evTrimActsGet() {
+    var noms = [];
+    Array.prototype.forEach.call(document.querySelectorAll('#evTrimActsList .evTrimActInput'), function(el) {
+      var v = (el.value || '').trim();
+      if (v && noms.indexOf(v) === -1) noms.push(v);
+    });
+    return noms;
+  }
   function evTrimStatus(msg) {
     var el = document.getElementById('evTrimStatus');
     if (!el) return;
@@ -16794,7 +16823,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (crm) { crm.disabled = off || !(ext && ext.checked); crm.style.opacity = crm.disabled ? '0.5' : ''; }
   }
   function evTrimClearForm() {
-    ['evTrimNom', 'evTrimDate', 'evTrimHeure', 'evTrimPrix', 'evTrimAct1', 'evTrimAct2', 'evTrimAct3'].forEach(function(i) { var el = document.getElementById(i); if (el) el.value = ''; });
+    ['evTrimNom', 'evTrimDate', 'evTrimHeure', 'evTrimPrix'].forEach(function(i) { var el = document.getElementById(i); if (el) el.value = ''; });
+    evTrimActsSet([]);
     var t = document.getElementById('evTrimType'); if (t) t.value = 'payant';
     var p = document.getElementById('evTrimPublic'); if (p) p.value = 'tous';
     var x = document.getElementById('evTrimExt'); if (x) x.checked = false;
@@ -16811,12 +16841,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var prix = (document.getElementById('evTrimPrix').value || '').trim();
     if (!nom || !date || !heure) { evTrimStatus('⚠️ Indique le nom, la date et l\'heure.'); return; }
     if (!dashFbDB) { evTrimStatus('⚠️ Connexion indisponible, réessaie dans un instant.'); return; }
-    var noms = [];
-    ['evTrimAct1', 'evTrimAct2', 'evTrimAct3'].forEach(function(i) {
-      var v = (document.getElementById(i).value || '').trim();
-      if (v && noms.indexOf(v) === -1) noms.push(v);
-    });
-    noms = noms.slice(0, EV_TRIM_MAX_ACT);
+    var noms = evTrimActsGet();
     evTrimStatus('');
     // Une activité gardée à l'identique garde son identifiant (ses inscriptions restent rattachées) ; une
     // activité renommée ou ajoutée reçoit un nouvel identifiant.
@@ -16858,7 +16883,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     document.getElementById('evTrimType').value = e.payant ? 'payant' : 'gratuit';
     document.getElementById('evTrimPrix').value = e.prix || '';
     var acts = evTrimActivites(e);
-    ['evTrimAct1', 'evTrimAct2', 'evTrimAct3'].forEach(function(i, k) { document.getElementById(i).value = acts[k] ? acts[k].nom : ''; });
+    evTrimActsSet(acts.map(function(a) { return a.nom; }));
     var xEl = document.getElementById('evTrimExt'); if (xEl) xEl.checked = !!e.exterieur;
     var lcEl = document.getElementById('evTrimLienCrm'); if (lcEl) lcEl.value = e.lienCrm || '';
     evTrimPublicChanged();
@@ -17022,7 +17047,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     el.innerHTML = out;
   }
   // ── Rencontres collectives (Google Agenda, titre « [Rencontre collective] … ») : elles apparaissent aussi dans
-  // l'onglet Événements, avec la même possibilité de proposer jusqu'à 3 activités (une ou plusieurs au choix de
+  // l'onglet Événements, avec la même possibilité de proposer autant d'activités que souhaité (une ou plusieurs au choix de
   // chaque cliente). Les réponses sont celles de l'application Épanouissement (epanouissement_global/rencontre_rsvp) ;
   // les activités sont dans epanouissement_global/rencontre_activites/<idSûr> = [{ id, nom }, ...]. ──
   var DASH_RENCONTRE_ACTS = {};
@@ -17066,16 +17091,24 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     renderEvTrimRencontres();
     var el = document.getElementById('rcAct1'); if (el) el.focus();
   }
+  function dashRencontreActAdd() {
+    var box = document.getElementById('rcActsBox');
+    if (!box) return;
+    var n = box.querySelectorAll('.rcActInput').length + 1;
+    var inp = document.createElement('input');
+    inp.type = 'text'; inp.className = 'rcActInput'; inp.id = 'rcAct' + n; inp.placeholder = 'Activité ' + n;
+    inp.style.cssText = 'flex:1 1 180px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px';
+    box.appendChild(inp);
+    inp.focus();
+  }
   function dashRencontreEditClose() { DASH_RENCONTRE_EDIT = null; renderEvTrimRencontres(); }
   function dashRencontreActsSave(safeId) {
     if (!dashFbDB) { showToast('⚠️ Connexion indisponible, réessaie dans un instant.'); return; }
     var noms = [];
-    ['rcAct1', 'rcAct2', 'rcAct3'].forEach(function(i) {
-      var el = document.getElementById(i);
-      var v = el ? (el.value || '').trim() : '';
+    Array.prototype.forEach.call(document.querySelectorAll('#rcActsBox .rcActInput'), function(el) {
+      var v = (el.value || '').trim();
       if (v && noms.indexOf(v) === -1) noms.push(v);
     });
-    noms = noms.slice(0, 3);
     var prev = dashRencontreActivites(safeId);
     var acts = noms.map(function(n, i) {
       var same = prev.filter(function(p) { return p.nom === n; })[0];
@@ -17092,7 +17125,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (EV_TRIM_FILTER === 'association') { el.innerHTML = ''; return; }
     // On ne réécrit pas la zone pendant qu'on tape dans l'éditeur d'activités.
     var ae = document.activeElement;
-    if (ae && /^rcAct[123]$/.test(ae.id || '')) return;
+    if (ae && /^rcAct\d+$/.test(ae.id || '')) return;
     var now = new Date();
     var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
     // Fusion : rencontres lues dans Google Agenda + rencontres déjà connues par les réponses des clientes.
@@ -17113,7 +17146,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var upcoming = all.filter(function(r) { return !r.date || r.date >= today; }).sort(function(a, b) { return (a.date + a.heure).localeCompare(b.date + b.heure); });
     var past = all.filter(function(r) { return r.date && r.date < today; }).sort(function(a, b) { return (b.date + b.heure).localeCompare(a.date + a.heure); });
     var out = '<h2 style="font-size:16px;margin:28px 0 6px;color:#26312A">🤝 Rencontres collectives co-NAÎTRE</h2>';
-    out += '<p style="color:#66735F;font-size:12.5px;margin:0 0 12px;max-width:760px">Ce sont les événements « [Rencontre collective] » de ton Google Agenda, visibles par toutes les clientes Épanouissement (toujours offertes). Tu peux ici leur ajouter jusqu\'à 3 activités : chaque cliente peut en choisir une ou plusieurs. Pour créer, déplacer ou supprimer une rencontre, passe par ton Google Agenda.</p>';
+    out += '<p style="color:#66735F;font-size:12.5px;margin:0 0 12px;max-width:760px">Ce sont les événements « [Rencontre collective] » de ton Google Agenda, visibles par toutes les clientes Épanouissement (toujours offertes). Tu peux ici leur ajouter autant d\'activités que tu veux : chaque cliente peut en choisir une ou plusieurs. Pour créer, déplacer ou supprimer une rencontre, passe par ton Google Agenda.</p>';
     if (DASH_RENCONTRES_CAL.loading) out += '<p style="color:#8C9686;font-size:12.5px">Chargement de ton Google Agenda…</p>';
     else if (DASH_RENCONTRES_CAL.error === 'config') out += '<p style="color:#c05621;font-size:12.5px">⚠️ Ton Google Agenda n\'est pas encore relié (onglet Communication) : seules les rencontres déjà répondues par des clientes apparaissent ici.</p>';
     else if (DASH_RENCONTRES_CAL.error === 'fetch') out += '<p style="color:#c05621;font-size:12.5px">⚠️ Impossible de lire ton Google Agenda pour l\'instant. <a href="#" onclick="dashRencontresFetch(true);return false;" style="color:#3F5D46;font-weight:700">Réessayer</a></p>';
@@ -17138,8 +17171,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       o += '</div>';
       if (DASH_RENCONTRE_EDIT === r.sid) {
         var INP = 'flex:1 1 180px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px';
-        o += '<div style="margin-top:10px;padding:10px;background:#FAF7EF;border:1px solid #E2DCC8;border-radius:8px"><div style="font-size:12px;color:#66735F;margin-bottom:6px">Activités proposées (3 maximum — chaque cliente peut en choisir une ou plusieurs). Laisse vide pour aucune activité.</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">';
-        [1, 2, 3].forEach(function(i) { o += '<input type="text" id="rcAct' + i + '" value="' + esc(acts[i - 1] ? acts[i - 1].nom : '') + '" placeholder="Activité ' + i + '" style="' + INP + '">'; });
+        o += '<div style="margin-top:10px;padding:10px;background:#FAF7EF;border:1px solid #E2DCC8;border-radius:8px"><div style="font-size:12px;color:#66735F;margin-bottom:6px">Activités proposées (autant que tu veux — chaque cliente peut en choisir une ou plusieurs). Une case vide est ignorée.</div><div id="rcActsBox" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">';
+        for (var ri = 1; ri <= Math.max(3, acts.length); ri++) o += '<input type="text" class="rcActInput" id="rcAct' + ri + '" value="' + esc(acts[ri - 1] ? acts[ri - 1].nom : '') + '" placeholder="Activité ' + ri + '" style="' + INP + '">';
+        o += '</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button onclick="dashRencontreActAdd()" style="padding:8px 12px;background:#fff;color:#3F5D46;border:1.5px dashed #9ae6b4;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">➕ Ajouter une activité</button>';
         o += '<button onclick="dashRencontreActsSave(' + jsAttr(r.sid) + ')" style="padding:8px 14px;background:#3F5D46;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">💾 Enregistrer</button>';
         o += '<button onclick="dashRencontreEditClose()" style="padding:8px 14px;background:#fff;color:#66735F;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Annuler</button>';
         o += '</div></div>';
