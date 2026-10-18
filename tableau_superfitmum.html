@@ -387,6 +387,7 @@
   <div class="nav-tab" data-mode="pro" data-view="task_compta" onclick="showView('task_compta', this)"><span class="nav-tab-ic">💰</span><span class="nav-tab-lb">Pôle Admin.</span></div>
   <div class="nav-tab" data-mode="pro" data-view="monprojet" onclick="showView('monprojet', this)"><span class="nav-tab-ic">🗂️</span><span class="nav-tab-lb">Mon projet</span></div>
   <div class="nav-tab" data-mode="pro" data-view="association" onclick="showView('association', this)"><span class="nav-tab-ic">🏛️</span><span class="nav-tab-lb">Association</span></div>
+  <div class="nav-tab" data-mode="pro" data-view="evenements" onclick="showView('evenements', this)"><span class="nav-tab-ic">🌟</span><span class="nav-tab-lb">Événements</span></div>
   <div class="nav-tab" data-mode="pro" data-view="formations" onclick="showView('formations', this)"><span class="nav-tab-ic">🎓</span><span class="nav-tab-lb">Formation</span></div>
   <div class="nav-tab" data-mode="perso" data-view="admin_perso" onclick="showView('admin_perso', this)"><span class="nav-tab-ic">🧾</span><span class="nav-tab-lb">Administratif</span></div>
   <div class="nav-tab" data-mode="perso" data-view="raccourcis_perso" onclick="showView('raccourcis_perso', this)"><span class="nav-tab-ic">🔗</span><span class="nav-tab-lb">Raccourcis</span></div>
@@ -462,6 +463,10 @@
       <div class="home-tile" data-mode="pro" onclick="showView('association', document.querySelector('.nav-tab[data-view=association]'))">
         <div class="home-tile-ico" style="background:#EDEEE3;color:#66735F;">🏛️</div>
         <div><div class="home-tile-label">Association</div><div class="home-tile-sub">Adhérentes et réservations</div></div>
+      </div>
+      <div class="home-tile" data-mode="pro" onclick="showView('evenements', document.querySelector('.nav-tab[data-view=evenements]'))">
+        <div class="home-tile-ico" style="background:#FBEEE7;color:#D97A52;">🌟</div>
+        <div><div class="home-tile-label">Événements</div><div class="home-tile-sub">Association et clientes Épanouissement</div></div>
       </div>
       <div class="home-tile" data-mode="pro" onclick="showView('formations', document.querySelector('.nav-tab[data-view=formations]'))">
         <div class="home-tile-ico" style="background:#E7EEE1;color:#3F5D46;">🎓</div>
@@ -1692,6 +1697,41 @@
   </div>
 
   <!-- ASSOCIATION : ADMINISTRATIF (générateur de modèles) + FRAIS DU BÉNÉVOLE + ADHÉRENTS -->
+  <div class="view" id="view-evenements">
+    <div class="section-title" style="margin-bottom:6px"><h2>🌟 Événements</h2></div>
+    <p style="color:#66735F;font-size:13px;margin-bottom:16px;max-width:760px">Programme ici tous tes événements — ceux de l'association (co-NAÎTRE en mouvement) et ceux de tes clientes Épanouissement — puis suis qui s'inscrit. Tu peux proposer jusqu'à 3 activités par événement : chaque cliente peut en choisir une ou plusieurs.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px;padding:12px;background:#fff;border:1px solid #E2DCC8;border-radius:8px;max-width:900px">
+      <input type="text" id="evTrimNom" placeholder="Nom de l'événement (ex : Atelier de rentrée)" style="flex:1 1 100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+      <label style="font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">Date<input type="date" id="evTrimDate" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
+      <label style="font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">Heure<input type="time" id="evTrimHeure" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
+      <label style="font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">Pour qui ?
+        <select id="evTrimPublic" onchange="evTrimPublicChanged()" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;background:#fff">
+          <option value="tous">Association + clientes Épanouissement</option>
+          <option value="association">Association uniquement (co-NAÎTRE en mouvement)</option>
+          <option value="epanouissement">Clientes Épanouissement uniquement</option>
+        </select></label>
+      <label id="evTrimTarifWrap" style="font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">Tarif
+        <select id="evTrimType" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;background:#fff">
+          <option value="payant">Payant (offert avec le Pass Complet)</option>
+          <option value="gratuit">Gratuit pour tous</option>
+        </select></label>
+      <input type="text" id="evTrimPrix" placeholder="Prix (facultatif, ex : 25 €)" style="flex:1 1 160px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+      <label id="evTrimExtWrap" style="flex:1 1 100%;display:flex;gap:8px;align-items:center;font-size:12.5px;color:#26312A;margin-top:4px;cursor:pointer"><input type="checkbox" id="evTrimExt" onchange="evTrimPublicChanged()"> 🌐 Ouvrir aux personnes extérieures (un lien public d'inscription s'affichera sur l'événement)</label>
+      <input type="text" id="evTrimLienCrm" placeholder="Lien HighLevel de cet événement (facultatif — pour que les inscrites arrivent dans ton CRM)" style="flex:1 1 100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+      <div style="flex:1 1 100%;font-size:12px;color:#66735F;margin-top:4px">Activités proposées (facultatif, 3 maximum — chaque cliente peut en choisir une ou plusieurs) :</div>
+      <input type="text" id="evTrimAct1" placeholder="Activité 1 (ex : Pilates en plein air)" style="flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+      <input type="text" id="evTrimAct2" placeholder="Activité 2" style="flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+      <input type="text" id="evTrimAct3" placeholder="Activité 3" style="flex:1 1 200px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+      <button id="evTrimSubmitBtn" onclick="evTrimAdd()" style="padding:9px 16px;background:#3F5D46;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">➕ Programmer l'événement</button>
+      <button id="evTrimCancelBtn" onclick="evTrimCancelEdit()" style="display:none;padding:9px 16px;background:#fff;color:#66735F;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">Annuler la modification</button>
+    </div>
+    <div id="evTrimHint" style="font-size:12px;color:#66735F;margin:0 0 8px;max-width:900px">Payant = payant, sauf pour le Pass Complet (offert). Pour les clientes Épanouissement, tous les événements sont offerts. Les clientes sans Pass Complet voient « S'inscrire et régler », qui mène vers ton lien d'inscription Pilates (Desvres). Pour accueillir des personnes qui ne sont ni clientes ni adhérentes, coche « Ouvrir aux personnes extérieures » : un lien public d'inscription apparaît sur l'événement.</div>
+    <div id="evTrimStatus" style="font-size:12.5px;color:#c05621;margin:-2px 0 14px;display:none"></div>
+    <div id="evTrimFilters" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 14px"></div>
+    <div id="evTrimContent"></div>
+    <div id="evTrimRencontres"></div>
+  </div>
+
   <div class="view" id="view-association">
     <div class="section-title" style="margin-bottom:6px"><h2>🏛️ Association</h2></div>
     <div class="sub-nav-bar" style="display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid #E2DCC8;overflow-x:auto">
@@ -2675,7 +2715,7 @@
     else if (client.cycle === 'pms') card.innerHTML += '<div class="cycle-banner cycle-banner-pms">🌙 Syndrome prémenstruel &nbsp;·&nbsp; Vigilance moral &amp; motivation</div>';
     if (client.mantra) card.innerHTML += '<div class="mantra-strip">✨ "'+esc(client.mantra)+'"</div>';
     if (client.pasmoyen) card.innerHTML += '<div style="padding:4px 16px;font-size:11px;color:#66735F;background:#f7fafc;border-bottom:1px solid #F7F1E6">👟 '+esc(String(client.pasmoyen))+' pas / jour en moyenne</div>';
-    if (client.vacuum && client.vacuum.series) card.innerHTML += '<div style="padding:4px 16px;font-size:11px;color:#66735F;background:#f7fafc;border-bottom:1px solid #F7F1E6">🌬️ Vacuum : '+client.vacuum.series+' série'+(client.vacuum.series>1?'s':'')+' sur '+(client.vacuum.jours||0)+' jour'+(client.vacuum.jours>1?'s':'')+' cette semaine</div>';
+    if (client.vacuum && client.vacuum.series) card.innerHTML += '<div style="padding:4px 16px;font-size:11px;color:#66735F;background:#f7fafc;border-bottom:1px solid #F7F1E6">🌬️ Vacuum : '+client.vacuum.series+' répétition'+(client.vacuum.series>1?'s':'')+' sur '+(client.vacuum.jours||0)+' jour'+(client.vacuum.jours>1?'s':'')+' cette semaine</div>';
     var _cardPoids = (client.mensurations||{})['m-poids'] || (client.mensurations||{})['poids'] || '';
     if (!_cardPoids) { var _cpDM=getDashMens(), _cpKs=Object.keys(_cpDM), _cpSafe=(client.email||client.name||'').replace(/[^a-zA-Z0-9]/g,'_'); for(var _cpi=0;_cpi<_cpKs.length;_cpi++){if(_cpKs[_cpi].replace(/[^a-zA-Z0-9]/g,'_')===_cpSafe&&(_cpDM[_cpKs[_cpi]]||[]).length){_cardPoids=(_cpDM[_cpKs[_cpi]][0]['m-poids']||'');break;}} }
     if (_cardPoids) card.innerHTML += '<div style="padding:4px 16px;font-size:11px;color:#2C4432;background:#E7EEE1;border-bottom:1px solid #CFE0C9;font-weight:600">⚖️ '+_cardPoids+' kg</div>';
@@ -2843,7 +2883,7 @@
       body += '</div>';
     }
     if (client.pasmoyen) body += '<div class="modal-section-title">👟 Nombre de pas moyen</div><div class="modal-comment" style="background:#E7EEE1;border-left:3px solid #68d391"><b>'+esc(String(client.pasmoyen))+'</b> pas / jour</div>';
-    if (client.vacuum && client.vacuum.series) body += '<div class="modal-section-title">🌬️ Vacuum abdominal</div><div class="modal-comment" style="background:#E7EEE1;border-left:3px solid #68d391"><b>'+client.vacuum.series+'</b> série'+(client.vacuum.series>1?'s':'')+' sur <b>'+(client.vacuum.jours||0)+'</b> jour'+(client.vacuum.jours>1?'s':'')+' cette semaine</div>';
+    if (client.vacuum && client.vacuum.series) body += '<div class="modal-section-title">🌬️ Vacuum abdominal</div><div class="modal-comment" style="background:#E7EEE1;border-left:3px solid #68d391"><b>'+client.vacuum.series+'</b> répétition'+(client.vacuum.series>1?'s':'')+' sur <b>'+(client.vacuum.jours||0)+'</b> jour'+(client.vacuum.jours>1?'s':'')+' cette semaine</div>';
     if (client.blocage) body += '<div class="modal-section-title">🚧 Blocages</div><div class="modal-comment" style="background:#fff5f5;border-left:3px solid #fc8181">'+esc(client.blocage)+'</div>';
     // ── Sections personnelles partagées volontairement (opt-in côté cliente, voir epanouissement/index.html) ──
     if (client.vision || client.enfant || client.objectifs || client.reves || client.ecriture || client.nightDreams) {
@@ -3277,6 +3317,7 @@
     if (id === 'pole_vente') setTimeout(renderContratTab, 50);
     if (id === 'pole_livraison') setTimeout(renderUrgentDashTab, 50);
     if (id === 'association') setTimeout(renderAssoAdmin, 50);
+    if (id === 'evenements') setTimeout(function() { renderEvTrimTab(); dashRencontresFetch(false); renderEvTrimRencontres(); }, 50);
     if (id === 'formations') setTimeout(renderFormations, 50);
   }
 
@@ -11830,7 +11871,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var prios = [c.priosem1, c.priosem2, c.priosem3].filter(Boolean);
     if (prios.length) lines.push('Priorités de la semaine : ' + prios.join(' / '));
     if (c.pasmoyen) lines.push('Pas moyen / jour : ' + c.pasmoyen);
-    if (c.vacuum && c.vacuum.series) lines.push('Vacuum abdominal : ' + c.vacuum.series + ' série' + (c.vacuum.series > 1 ? 's' : '') + ' sur ' + (c.vacuum.jours || 0) + ' jour' + (c.vacuum.jours > 1 ? 's' : '') + ' cette semaine');
+    if (c.vacuum && c.vacuum.series) lines.push('Vacuum abdominal : ' + c.vacuum.series + ' répétition' + (c.vacuum.series > 1 ? 's' : '') + ' sur ' + (c.vacuum.jours || 0) + ' jour' + (c.vacuum.jours > 1 ? 's' : '') + ' cette semaine');
     if (c.blocage) lines.push('Blocages : ' + c.blocage);
     return lines.join('\n');
   }
@@ -12001,7 +12042,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         var prios = [c.priosem1, c.priosem2, c.priosem3].filter(Boolean);
         if (prios.length) para('Priorités : ' + prios.join(' / '), { size: 8.5, gap: 1.5 });
         if (c.pasmoyen) para('Pas moyen / jour : ' + c.pasmoyen, { size: 8.5, gap: 1.5 });
-        if (c.vacuum && c.vacuum.series) para('Vacuum abdominal : ' + c.vacuum.series + ' série' + (c.vacuum.series > 1 ? 's' : '') + ' sur ' + (c.vacuum.jours || 0) + ' jour' + (c.vacuum.jours > 1 ? 's' : '') + ' cette semaine', { size: 8.5, gap: 1.5 });
+        if (c.vacuum && c.vacuum.series) para('Vacuum abdominal : ' + c.vacuum.series + ' répétition' + (c.vacuum.series > 1 ? 's' : '') + ' sur ' + (c.vacuum.jours || 0) + ' jour' + (c.vacuum.jours > 1 ? 's' : '') + ' cette semaine', { size: 8.5, gap: 1.5 });
         if (c.blocage) para('Blocages : ' + c.blocage, { size: 8.5, gap: 1.5 });
         y += 3;
       });
@@ -13118,6 +13159,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     dashFbDB.ref('epanouissement_global/rencontre_rsvp').on('value', function(snap) {
       DASH_RENCONTRE_RSVP = snap.val() || {};
       renderRencontreRsvpPanel();
+      renderEvTrimRencontres();
     });
     dashFbDB.ref('dash_resa_template').on('value', function(snap) {
       var v = snap.val();
@@ -13199,6 +13241,22 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       RESA_REPLAYS_ALL = snap.val() || {};
       renderReplaysTab();
     });
+    dashFbDB.ref('reservations/evenements').on('value', function(snap) {
+      EV_TRIM_ALL = snap.val() || {};
+      renderEvTrimTab();
+    });
+    dashFbDB.ref('epanouissement_global/rencontre_activites').on('value', function(snap) {
+      DASH_RENCONTRE_ACTS = snap.val() || {};
+      renderEvTrimRencontres();
+    });
+    dashFbDB.ref('reservations/evenements_rsvp').on('value', function(snap) {
+      EV_TRIM_RSVP_ALL = snap.val() || {};
+      renderEvTrimTab();
+    });
+    dashFbDB.ref('reservations/evenements_externes').on('value', function(snap) {
+      EV_TRIM_EXT_ALL = snap.val() || {};
+      renderEvTrimTab();
+    });
     dashFbDB.ref('epanouissement_global/coachMessage').on('value', function(snap) {
       DASH_COACH_MESSAGE = snap.val() || null;
       renderCoachMsgTab();
@@ -13210,6 +13268,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     dashFbDB.ref('epanouissement_global/agendaConfig').on('value', function(snap) {
       DASH_AGENDA_CONFIG = snap.val() || null;
       renderAgendaConfigTab();
+      DASH_RENCONTRES_CAL.fetchedAt = 0;
+      var evView = document.getElementById('view-evenements');
+      if (evView && evView.classList.contains('active')) dashRencontresFetch(true);
     });
     dashFbDB.ref('reservations/pendingValidations').on('value', function(snap) {
       DASH_PENDING_RESA = snap.val() || {};
@@ -15015,6 +15076,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   var RESA_JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']; // index 0 = lundi
   var RESA_CRENEAUX_ALL = {}; // miroir local du chemin Firebase reservations/creneaux
   var RESA_CLIENTS_ALL = {}; // miroir local du chemin Firebase reservations/clients
+  var EV_TRIM_RSVP_ALL = {}; // miroir de reservations/evenements_rsvp — { codeCliente: { idEvenement: {name, response, at} } }
+  var EV_TRIM_ALL = {}; // miroir local du chemin Firebase reservations/evenements — { id: {nom, date, heure, payant, prix, lien, addedAt} }
   var RESA_REPLAYS_ALL = {}; // miroir local du chemin Firebase reservations/replays — { id: {titre, url, addedAt} }
   var DASH_COACH_MESSAGE = null; // miroir local du chemin Firebase epanouissement_global/coachMessage — { message, link, active, updatedAt }
   var DASH_AGENDA_CONFIG = null; // miroir local du chemin Firebase epanouissement_global/agendaConfig — { apiKey, calendarId, updatedAt }
@@ -16644,6 +16707,469 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       out += '<button onclick="resaDeleteReplay(' + jsAttr(r.id) + ')" title="Retirer" style="padding:6px 10px;background:#fff5f5;border:1px solid #fed7d7;color:#c53030;border-radius:6px;font-size:12px;cursor:pointer">🗑️</button>';
       out += '</div></div>';
     });
+    el.innerHTML = out;
+  }
+  // ── Événements (association + clientes Épanouissement) : liste partagée programmée ici, visible dans
+  // reservation.html (co-NAÎTRE en mouvement : payant sauf Pass Complet) et/ou dans l'agenda de l'application
+  // Épanouissement (toujours offert), selon le champ « Pour qui ? ». Chemin Firebase 'reservations/evenements/<id>' :
+  // { nom, date, heure, public: 'tous'|'association'|'epanouissement', payant, prix, activites: [{id, nom}] (3 max), addedAt }.
+  // Les inscriptions (présence + activité choisie) sont dans 'reservations/evenements_rsvp/<code>/<id>'. ──
+  var EV_TRIM_EXT_ALL = {}; // miroir de reservations/evenements_externes — { idEvenement: { cléEmail: {prenom, nom, email, telephone, activites, source, at} } }
+  // Personnes extérieures inscrites via le lien public (reservation.html?evenement=<id>).
+  function evTrimExternes(id) {
+    var m = (EV_TRIM_EXT_ALL && EV_TRIM_EXT_ALL[id]) || {};
+    return Object.keys(m).map(function(k) {
+      var r = m[k] || {};
+      var acts = r.activites ? (Array.isArray(r.activites) ? r.activites : Object.keys(r.activites).map(function(x) { return r.activites[x]; })) : [];
+      return { name: ((r.prenom || '') + ' ' + (r.nom || '')).trim() || r.email || k, prenom: r.prenom || '', nomFamille: r.nom || '', email: r.email || '', telephone: r.telephone || '', source: r.source || '', at: r.firstAt || r.at || '', response: 'oui', app: 'ext', activites: acts.filter(function(a) { return a && a.id; }) };
+    }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+  }
+  function evTrimCopyText(txt, okMsg) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function() { showToast(okMsg); }).catch(function() { window.prompt('Copie ce texte :', txt); });
+    } else { window.prompt('Copie ce texte :', txt); }
+  }
+  function evTrimPublicLink(id) {
+    var sel = document.getElementById('evExtSrc_' + id);
+    var src = sel ? sel.value : '';
+    return RESA_HOSTED_BASE_URL + '?evenement=' + encodeURIComponent(id) + (src ? '&src=' + encodeURIComponent(src) : '');
+  }
+  function evTrimCopyLink(id) { evTrimCopyText(evTrimPublicLink(id), '📋 Lien d\'inscription copié'); }
+  function evTrimCopyExt(id) {
+    var e = EV_TRIM_ALL[id] || {};
+    var known = {}; evTrimActivites(e).forEach(function(a) { known[a.id] = a.nom; });
+    var lines = ['Prénom\tNom\tEmail\tTéléphone\tActivités\tOrigine\tInscrite le'];
+    evTrimExternes(id).forEach(function(r) {
+      lines.push([r.prenom, r.nomFamille, r.email, r.telephone, (r.activites || []).map(function(a) { return known[a.id] || a.nom || ''; }).join(', '), r.source, String(r.at || '').slice(0, 10)].join('\t'));
+    });
+    evTrimCopyText(lines.join('\n'), '📋 Liste copiée (à coller dans un tableur ou HighLevel)');
+  }
+  // Lien de suivi en lecture seule pour l'associée : clé secrète propre à l'événement (suiviToken), désactivable.
+  function evTrimSuiviUrl(e) { return RESA_HOSTED_BASE_URL + '?suivi=' + encodeURIComponent(e.id) + '&k=' + encodeURIComponent(e.suiviToken); }
+  function evTrimSuiviCopy(id) {
+    var e = EV_TRIM_ALL[id];
+    if (!e) return;
+    if (e.suiviToken) { evTrimCopyText(evTrimSuiviUrl(Object.assign({ id: id }, e)), '📋 Lien de suivi copié'); return; }
+    var tok = '';
+    try { var arr = new Uint8Array(12); window.crypto.getRandomValues(arr); tok = Array.prototype.map.call(arr, function(b) { return b.toString(36).padStart(2, '0'); }).join(''); } catch (err) { tok = Date.now().toString(36) + Math.random().toString(36).slice(2, 12); }
+    if (!dashFbDB) return;
+    dashFbDB.ref('reservations/evenements/' + id).update({ suiviToken: tok }).catch(function() {});
+    evTrimCopyText(evTrimSuiviUrl({ id: id, suiviToken: tok }), '📋 Lien de suivi créé et copié');
+  }
+  function evTrimSuiviRevoke(id) {
+    if (!dashFbDB) return;
+    if (!window.confirm('Désactiver le lien de suivi ? Ton associée ne pourra plus voir les inscriptions avec l\'ancien lien (tu pourras en recréer un).')) return;
+    dashFbDB.ref('reservations/evenements/' + id).update({ suiviToken: null }).then(function() { showToast('🔒 Lien de suivi désactivé'); }).catch(function() {});
+  }
+  var EV_TRIM_EDIT_ID = null; // id de l'événement en cours de modification (null = on en crée un nouveau)
+  var EV_TRIM_FILTER = 'tous'; // filtre d'affichage : tous | association | epanouissement
+  var EV_TRIM_MAX_ACT = 3;
+  function evTrimStatus(msg) {
+    var el = document.getElementById('evTrimStatus');
+    if (!el) return;
+    el.style.display = msg ? 'block' : 'none';
+    el.textContent = msg || '';
+  }
+  function evTrimActivites(e) {
+    var a = e && e.activites;
+    if (!a) return [];
+    var list = Array.isArray(a) ? a : Object.keys(a).map(function(k) { return a[k]; });
+    return list.filter(function(x) { return x && x.id && x.nom; });
+  }
+  function evTrimPublicOf(e) { return (e && (e.public === 'association' || e.public === 'epanouissement')) ? e.public : 'tous'; }
+  function evTrimPublicChanged() {
+    var pub = document.getElementById('evTrimPublic').value;
+    var wrap = document.getElementById('evTrimTarifWrap');
+    var prix = document.getElementById('evTrimPrix');
+    var off = pub === 'epanouissement'; // offert aux clientes Épanouissement : pas de tarif à choisir
+    if (wrap) wrap.style.opacity = off ? '0.4' : '';
+    document.getElementById('evTrimType').disabled = off;
+    if (prix) prix.disabled = off;
+    // Les événements réservés aux clientes Épanouissement ne s'ouvrent pas au public extérieur.
+    var ext = document.getElementById('evTrimExt');
+    var extWrap = document.getElementById('evTrimExtWrap');
+    var crm = document.getElementById('evTrimLienCrm');
+    if (ext) { if (off) ext.checked = false; ext.disabled = off; }
+    if (extWrap) extWrap.style.opacity = off ? '0.4' : '';
+    if (crm) { crm.disabled = off || !(ext && ext.checked); crm.style.opacity = crm.disabled ? '0.5' : ''; }
+  }
+  function evTrimClearForm() {
+    ['evTrimNom', 'evTrimDate', 'evTrimHeure', 'evTrimPrix', 'evTrimAct1', 'evTrimAct2', 'evTrimAct3'].forEach(function(i) { var el = document.getElementById(i); if (el) el.value = ''; });
+    var t = document.getElementById('evTrimType'); if (t) t.value = 'payant';
+    var p = document.getElementById('evTrimPublic'); if (p) p.value = 'tous';
+    var x = document.getElementById('evTrimExt'); if (x) x.checked = false;
+    var lc = document.getElementById('evTrimLienCrm'); if (lc) lc.value = '';
+    evTrimPublicChanged();
+  }
+  function evTrimAdd() {
+    var nom = (document.getElementById('evTrimNom').value || '').trim();
+    var date = (document.getElementById('evTrimDate').value || '').trim();
+    var heure = (document.getElementById('evTrimHeure').value || '').trim();
+    var pub = document.getElementById('evTrimPublic').value;
+    if (pub !== 'association' && pub !== 'epanouissement') pub = 'tous';
+    var type = document.getElementById('evTrimType').value === 'gratuit' ? 'gratuit' : 'payant';
+    var prix = (document.getElementById('evTrimPrix').value || '').trim();
+    if (!nom || !date || !heure) { evTrimStatus('⚠️ Indique le nom, la date et l\'heure.'); return; }
+    if (!dashFbDB) { evTrimStatus('⚠️ Connexion indisponible, réessaie dans un instant.'); return; }
+    var noms = [];
+    ['evTrimAct1', 'evTrimAct2', 'evTrimAct3'].forEach(function(i) {
+      var v = (document.getElementById(i).value || '').trim();
+      if (v && noms.indexOf(v) === -1) noms.push(v);
+    });
+    noms = noms.slice(0, EV_TRIM_MAX_ACT);
+    evTrimStatus('');
+    // Une activité gardée à l'identique garde son identifiant (ses inscriptions restent rattachées) ; une
+    // activité renommée ou ajoutée reçoit un nouvel identifiant.
+    var prev = EV_TRIM_EDIT_ID ? evTrimActivites(EV_TRIM_ALL[EV_TRIM_EDIT_ID]) : [];
+    var activites = noms.map(function(n, i) {
+      var same = prev.filter(function(p) { return p.nom === n; })[0];
+      return { id: same ? same.id : ('a' + Date.now().toString(36) + i), nom: n };
+    });
+    var offert = pub === 'epanouissement';
+    var extEl = document.getElementById('evTrimExt');
+    var exterieur = !!(extEl && extEl.checked) && !offert;
+    var lienCrm = exterieur ? (document.getElementById('evTrimLienCrm').value || '').trim() : '';
+    if (lienCrm && !/^https?:\/\//i.test(lienCrm)) lienCrm = 'https://' + lienCrm;
+    var fields = { nom: nom, date: date, heure: heure, public: pub, payant: offert ? false : type === 'payant', prix: (!offert && type === 'payant') ? prix : '', activites: activites, exterieur: exterieur, lienCrm: lienCrm };
+    if (EV_TRIM_EDIT_ID) {
+      // Modification d'un événement existant : la date de création et les réponses des clientes sont conservées.
+      var editId = EV_TRIM_EDIT_ID;
+      if (!EV_TRIM_ALL[editId]) { evTrimStatus('⚠️ Cet événement n\'existe plus (il a été retiré).'); evTrimCancelEdit(); return; }
+      dashFbDB.ref('reservations/evenements/' + editId).update(fields).then(function() {
+        evTrimCancelEdit();
+        showToast('✅ Événement modifié');
+      }).catch(function(err) { evTrimStatus('❌ ' + (err && err.message ? err.message : 'erreur de publication.')); });
+      return;
+    }
+    var id = 'ev' + Date.now();
+    dashFbDB.ref('reservations/evenements/' + id).set(Object.assign({ addedAt: new Date().toISOString() }, fields)).then(function() {
+      evTrimClearForm();
+      showToast('🌟 Événement programmé');
+    }).catch(function(err) { evTrimStatus('❌ ' + (err && err.message ? err.message : 'erreur de publication.')); });
+  }
+  function evTrimEdit(id) {
+    var e = EV_TRIM_ALL[id];
+    if (!e) return;
+    EV_TRIM_EDIT_ID = id;
+    document.getElementById('evTrimNom').value = e.nom || '';
+    document.getElementById('evTrimDate').value = e.date || '';
+    document.getElementById('evTrimHeure').value = e.heure || '';
+    document.getElementById('evTrimPublic').value = evTrimPublicOf(e);
+    document.getElementById('evTrimType').value = e.payant ? 'payant' : 'gratuit';
+    document.getElementById('evTrimPrix').value = e.prix || '';
+    var acts = evTrimActivites(e);
+    ['evTrimAct1', 'evTrimAct2', 'evTrimAct3'].forEach(function(i, k) { document.getElementById(i).value = acts[k] ? acts[k].nom : ''; });
+    var xEl = document.getElementById('evTrimExt'); if (xEl) xEl.checked = !!e.exterieur;
+    var lcEl = document.getElementById('evTrimLienCrm'); if (lcEl) lcEl.value = e.lienCrm || '';
+    evTrimPublicChanged();
+    document.getElementById('evTrimSubmitBtn').textContent = '💾 Enregistrer les modifications';
+    document.getElementById('evTrimCancelBtn').style.display = '';
+    evTrimStatus('✏️ Tu modifies : ' + (e.nom || '') + '. Les réponses déjà reçues sont conservées (si tu renommes ou retires une activité, ses inscrites sont signalées).');
+    var nomEl = document.getElementById('evTrimNom');
+    nomEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    nomEl.focus();
+  }
+  function evTrimCancelEdit() {
+    EV_TRIM_EDIT_ID = null;
+    evTrimClearForm();
+    var b = document.getElementById('evTrimSubmitBtn'); if (b) b.textContent = '➕ Programmer l\'événement';
+    var c = document.getElementById('evTrimCancelBtn'); if (c) c.style.display = 'none';
+    evTrimStatus('');
+  }
+  function evTrimDelete(id) {
+    if (!dashFbDB) return;
+    var nbExt = evTrimExternes(id).length;
+    if (!window.confirm('Retirer cet événement ? Il disparaîtra des applications des clientes, avec leurs inscriptions.' + (nbExt ? '\n\n⚠️ ' + nbExt + ' personne(s) extérieure(s) inscrite(s) seront aussi retirées de ce tableau (pense à copier la liste avant).' : ''))) return;
+    if (EV_TRIM_EDIT_ID === id) evTrimCancelEdit();
+    dashFbDB.ref('reservations/evenements/' + id).remove().catch(function() {});
+    if (nbExt) dashFbDB.ref('reservations/evenements_externes/' + id).remove().catch(function() {});
+    // On retire aussi les réponses de présence liées à cet événement.
+    Object.keys(EV_TRIM_RSVP_ALL || {}).forEach(function(code) {
+      if (EV_TRIM_RSVP_ALL[code] && EV_TRIM_RSVP_ALL[code][id]) dashFbDB.ref('reservations/evenements_rsvp/' + code + '/' + id).remove().catch(function() {});
+    });
+  }
+  function evTrimSetFilter(f) { EV_TRIM_FILTER = (f === 'association' || f === 'epanouissement') ? f : 'tous'; renderEvTrimTab(); renderEvTrimRencontres(); }
+  // Regroupe les réponses de présence d'un événement. Une même personne qui aurait répondu depuis deux
+  // applications (deux codes) n'est comptée qu'une fois (réponse la plus récente).
+  function evTrimResponses(id) {
+    var byName = {};
+    Object.keys(EV_TRIM_RSVP_ALL || {}).forEach(function(code) {
+      var r = EV_TRIM_RSVP_ALL[code] && EV_TRIM_RSVP_ALL[code][id];
+      if (!r || (r.response !== 'oui' && r.response !== 'non')) return;
+      var name = (r.name || '').trim() || code;
+      var k = name.toLowerCase();
+      var acts = r.activites ? (Array.isArray(r.activites) ? r.activites : Object.keys(r.activites).map(function(x) { return r.activites[x]; })) : (r.activite ? [{ id: r.activite, nom: r.activiteNom || '' }] : []);
+      acts = acts.filter(function(a) { return a && a.id; });
+      if (!byName[k] || (r.at || '') > (byName[k].at || '')) byName[k] = { name: name, response: r.response, at: r.at || '', app: r.app || '', activites: r.response === 'oui' ? acts : [] };
+    });
+    return Object.keys(byName).map(function(k) { return byName[k]; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+  }
+  function evTrimOriginTag(r) {
+    if (r.app === 'epa') return ' <span style="color:#7a5a9a;font-size:11px">(Épanouissement)</span>';
+    if (r.app === 'resa') return ' <span style="color:#8C9686;font-size:11px">(Association)</span>';
+    if (r.app === 'ext') return ' <span style="color:#b25e12;font-size:11px">(Extérieure)</span>';
+    return '';
+  }
+  function evTrimNamesHtml(list) { return list.map(function(r) { return esc(r.name) + evTrimOriginTag(r); }).join(', '); }
+  // Liste des « viennent » avec, entre parenthèses, les activités choisies par chacune.
+  function evTrimNamesWithActs(list, known) {
+    return list.map(function(r) {
+      var noms = (r.activites || []).map(function(a) { return known[a.id] ? known[a.id] : (a.nom || '?') + ' (retirée)'; });
+      return esc(r.name) + evTrimOriginTag(r) + (noms.length ? ' <span style="color:#66735F">— ' + noms.map(esc).join(', ') + '</span>' : '');
+    }).join('<br>');
+  }
+  function evTrimDateLabel(date, heure) {
+    var p = String(date || '').split('-').map(Number);
+    if (p.length !== 3 || !p[0]) return esc(date || '');
+    var d = new Date(p[0], p[1] - 1, p[2]);
+    var jours = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+    var mois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    return jours[d.getDay()] + ' ' + p[2] + ' ' + mois[p[1] - 1] + ' ' + p[0] + (heure ? ' à ' + String(heure).replace(':', 'h') : '');
+  }
+  function evTrimBadge(txt, bg, bd, col) {
+    return '<span style="background:' + bg + ';border:1px solid ' + bd + ';color:' + col + ';border-radius:20px;padding:2px 9px;font-size:11.5px;font-weight:600;white-space:nowrap">' + txt + '</span>';
+  }
+  function renderEvTrimTab() {
+    var el = document.getElementById('evTrimContent');
+    if (!el) return;
+    var fEl = document.getElementById('evTrimFilters');
+    if (fEl) {
+      fEl.innerHTML = [['tous', 'Tous'], ['association', '🏛️ Association'], ['epanouissement', '🦋 Clientes Épanouissement']].map(function(f) {
+        var on = EV_TRIM_FILTER === f[0];
+        return '<button onclick="evTrimSetFilter(\'' + f[0] + '\')" style="padding:6px 14px;border-radius:20px;font-size:12.5px;font-weight:600;cursor:pointer;border:1.5px solid ' + (on ? '#3F5D46' : '#E2DCC8') + ';background:' + (on ? '#3F5D46' : '#fff') + ';color:' + (on ? '#fff' : '#66735F') + '">' + f[1] + '</button>';
+      }).join('');
+    }
+    var now = new Date();
+    var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    var all = Object.keys(EV_TRIM_ALL).map(function(id) { return Object.assign({ id: id }, EV_TRIM_ALL[id]); }).filter(function(e) {
+      if (EV_TRIM_FILTER === 'association') return evTrimPublicOf(e) !== 'epanouissement';
+      if (EV_TRIM_FILTER === 'epanouissement') return evTrimPublicOf(e) !== 'association';
+      return true;
+    });
+    if (!all.length) { el.innerHTML = '<div class="empty-state"><div class="icon">🌟</div><p>Aucun événement' + (EV_TRIM_FILTER === 'tous' ? ' programmé pour l\'instant.' : ' dans cette catégorie.') + '</p></div>'; return; }
+    function key(e) { return (e.date || '') + ' ' + (e.heure || ''); }
+    var upcoming = all.filter(function(e) { return (e.date || '') >= today; }).sort(function(a, b) { return key(a).localeCompare(key(b)); });
+    var past = all.filter(function(e) { return (e.date || '') < today; }).sort(function(a, b) { return key(b).localeCompare(key(a)); });
+    function row(e, isPast) {
+      var pub = evTrimPublicOf(e);
+      var pubBadge = pub === 'association' ? evTrimBadge('🏛️ Association', '#EDEEE3', '#CFD3BF', '#4A5740')
+        : pub === 'epanouissement' ? evTrimBadge('🦋 Clientes Épanouissement', '#F1EAF6', '#D9C9E6', '#6a4a8a')
+        : evTrimBadge('🏛️ + 🦋 Association et Épanouissement', '#EDEEE3', '#CFD3BF', '#4A5740');
+      var tarif = pub === 'epanouissement' ? evTrimBadge('🎁 Offert', '#E7EEE1', '#B7CDAE', '#2C4432')
+        : e.payant ? evTrimBadge('💶 Payant' + (e.prix ? ' — ' + esc(e.prix) : '') + ' · offert avec le Pass Complet' + (pub === 'tous' ? ' et aux clientes Épanouissement' : ''), '#fdf3e9', '#ecceac', '#8a5a26')
+        : evTrimBadge('🎁 Gratuit pour tous', '#E7EEE1', '#B7CDAE', '#2C4432');
+      var acts = evTrimActivites(e);
+      var rs = evTrimResponses(e.id);
+      var ext = evTrimExternes(e.id);
+      var oui = rs.filter(function(r) { return r.response === 'oui'; }).concat(ext);
+      var non = rs.filter(function(r) { return r.response === 'non'; });
+      var o = '<div style="margin-bottom:10px;padding:12px 14px;background:#fff;border:1px solid #E2DCC8;border-radius:10px;max-width:900px;' + (isPast ? 'opacity:.65' : '') + '">';
+      o += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
+      o += '<div style="font-size:13px;color:#26312A"><b style="font-size:14px">' + esc(e.nom) + '</b><div style="font-size:12px;color:#66735F;margin:2px 0 6px">' + evTrimDateLabel(e.date, e.heure) + '</div>';
+      o += '<div style="display:flex;gap:6px;flex-wrap:wrap">' + pubBadge + tarif + '</div></div>';
+      o += '<div style="display:flex;gap:6px;flex-shrink:0">';
+      o += '<button onclick="evTrimEdit(' + jsAttr(e.id) + ')" title="Modifier" style="padding:6px 10px;background:#E7EEE1;border:1px solid #9ae6b4;color:#2C4432;border-radius:6px;font-size:12px;cursor:pointer">✏️ Modifier</button>';
+      o += '<button onclick="evTrimDelete(' + jsAttr(e.id) + ')" title="Retirer" style="padding:6px 10px;background:#fff5f5;border:1px solid #fed7d7;color:#c53030;border-radius:6px;font-size:12px;cursor:pointer">🗑️</button>';
+      o += '</div></div>';
+      o += '<div style="display:flex;gap:18px;margin-top:10px;flex-wrap:wrap">';
+      var known = {};
+      acts.forEach(function(a) { known[a.id] = a.nom; });
+      o += '<div style="min-width:220px"><div style="font-size:12px;font-weight:700;color:#2C4432">✅ Viennent (' + oui.length + ')</div>' + (oui.length ? '<div style="font-size:12.5px;color:#3E4A3A;margin-top:3px">' + (acts.length ? evTrimNamesWithActs(oui, known) : evTrimNamesHtml(oui)) + '</div>' : '<div style="font-size:12px;color:#8C9686;margin-top:3px">Personne pour l\'instant</div>') + '</div>';
+      o += '<div style="min-width:170px"><div style="font-size:12px;font-weight:700;color:#c53030">❌ Ne viennent pas (' + non.length + ')</div>' + (non.length ? '<div style="font-size:12.5px;color:#3E4A3A;margin-top:3px">' + evTrimNamesHtml(non) + '</div>' : '<div style="font-size:12px;color:#8C9686;margin-top:3px">Personne</div>') + '</div>';
+      o += '</div>';
+      o += '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:#66735F"><span>👥 Suivi pour ton associée (lecture seule) :</span>' +
+        '<button onclick="evTrimSuiviCopy(' + jsAttr(e.id) + ')" style="padding:5px 10px;background:#fff;border:1.5px solid #E2DCC8;border-radius:6px;font-size:11.5px;color:#26312A;cursor:pointer">' + (e.suiviToken ? '📋 Copier le lien de suivi' : '🔗 Créer et copier le lien de suivi') + '</button>' +
+        (e.suiviToken ? '<button onclick="evTrimSuiviRevoke(' + jsAttr(e.id) + ')" style="padding:5px 10px;background:#fff5f5;border:1px solid #fed7d7;border-radius:6px;font-size:11.5px;color:#c53030;cursor:pointer">Désactiver</button>' : '') + '</div>';
+      if (e.exterieur) {
+        o += '<div style="margin-top:12px;padding:10px 12px;background:#FFF8EE;border:1px solid #F0D9B5;border-radius:8px">';
+        o += '<div style="font-size:12px;font-weight:700;color:#8a5a26;margin-bottom:6px">🌐 Ouvert aux personnes extérieures — lien public d\'inscription</div>';
+        o += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+        o += '<select id="evExtSrc_' + esc(e.id) + '" style="padding:6px 8px;border:1.5px solid #E2DCC8;border-radius:6px;font-size:12px;background:#fff"><option value="">Origine : non précisée</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option><option value="whatsapp">WhatsApp</option><option value="mail">Mail / newsletter</option><option value="site">Site internet</option><option value="flyer">Flyer / affiche</option></select>';
+        o += '<button onclick="evTrimCopyLink(' + jsAttr(e.id) + ')" style="padding:6px 12px;background:#3F5D46;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">📋 Copier le lien</button>';
+        o += '<a href="' + esc(evTrimPublicLink(e.id)) + '" target="_blank" rel="noopener" style="padding:6px 10px;border:1.5px solid #E2DCC8;border-radius:6px;font-size:12px;color:#66735F;text-decoration:none;background:#fff">👁️ Voir la page</a>';
+        o += '</div>';
+        o += '<div style="font-size:11.5px;color:#66735F;margin-top:6px">' + (e.lienCrm ? '✅ Les inscrites sont envoyées vers ton lien HighLevel (CRM) après leur inscription.' : (e.payant ? '↪️ Événement payant : les inscrites sont envoyées vers ton lien d\'inscription Pilates (Desvres) pour régler.' : '⚠️ Pas de lien HighLevel renseigné : les inscrites sont enregistrées ici seulement. Ajoute-le via ✏️ Modifier pour les faire entrer dans ton CRM, ou copie la liste ci-dessous.')) + '</div>';
+        o += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px"><div style="font-size:12px;font-weight:700;color:#8a5a26">Inscrites extérieures (' + ext.length + ')</div>' + (ext.length ? '<button onclick="evTrimCopyExt(' + jsAttr(e.id) + ')" style="padding:5px 10px;background:#fff;border:1.5px solid #E2DCC8;border-radius:6px;font-size:11.5px;color:#66735F;cursor:pointer">📋 Copier la liste</button>' : '') + '</div>';
+        if (ext.length) {
+          o += '<div style="margin-top:6px;overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;color:#3E4A3A;width:100%;min-width:480px"><tr style="text-align:left;color:#8C9686"><th style="padding:3px 8px 3px 0">Nom</th><th style="padding:3px 8px">Email</th><th style="padding:3px 8px">Téléphone</th><th style="padding:3px 8px">Activités</th><th style="padding:3px 8px">Origine</th><th style="padding:3px 0 3px 8px">Le</th></tr>';
+          ext.forEach(function(r) {
+            o += '<tr style="border-top:1px solid #F0E9D6"><td style="padding:4px 8px 4px 0">' + esc(r.name) + '</td><td style="padding:4px 8px">' + esc(r.email) + '</td><td style="padding:4px 8px">' + esc(r.telephone) + '</td><td style="padding:4px 8px">' + (r.activites || []).map(function(a) { return esc(known[a.id] || a.nom || ''); }).join(', ') + '</td><td style="padding:4px 8px">' + esc(r.source || '—') + '</td><td style="padding:4px 0 4px 8px;white-space:nowrap">' + esc(String(r.at || '').slice(0, 10)) + '</td></tr>';
+          });
+          o += '</table></div>';
+        } else {
+          o += '<div style="font-size:12px;color:#8C9686;margin-top:3px">Personne pour l\'instant</div>';
+        }
+        o += '</div>';
+      }
+      if (acts.length) {
+        o += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #E2DCC8"><div style="font-size:12px;font-weight:700;color:#66735F;margin-bottom:6px">Par activité (une cliente peut être dans plusieurs)</div><div style="display:flex;gap:18px;flex-wrap:wrap">';
+        acts.forEach(function(a) {
+          var inscrites = oui.filter(function(r) { return (r.activites || []).some(function(x) { return x.id === a.id; }); });
+          o += '<div style="min-width:170px"><div style="font-size:12px;font-weight:700;color:#2C4432">🎯 ' + esc(a.nom) + ' (' + inscrites.length + ')</div>' + (inscrites.length ? '<div style="font-size:12.5px;color:#3E4A3A;margin-top:3px">' + evTrimNamesHtml(inscrites) + '</div>' : '') + '</div>';
+        });
+        var sans = oui.filter(function(r) { return !(r.activites || []).length; });
+        if (sans.length) o += '<div style="min-width:170px"><div style="font-size:12px;font-weight:700;color:#8a5a26">⏳ Viennent, activité pas encore choisie (' + sans.length + ')</div><div style="font-size:12.5px;color:#3E4A3A;margin-top:3px">' + evTrimNamesHtml(sans) + '</div></div>';
+        o += '</div></div>';
+      }
+      return o + '</div>';
+    }
+    var out = '<h3 style="font-size:14px;margin:4px 0 10px;color:#26312A">À venir (' + upcoming.length + ')</h3>';
+    out += upcoming.length ? upcoming.map(function(e) { return row(e, false); }).join('') : '<p style="color:#8C9686;font-size:13px">Aucun événement à venir.</p>';
+    if (past.length) {
+      out += '<h3 style="font-size:14px;margin:18px 0 10px;color:#8C9686">Passés (' + past.length + ')</h3>';
+      out += past.map(function(e) { return row(e, true); }).join('');
+    }
+    el.innerHTML = out;
+  }
+  // ── Rencontres collectives (Google Agenda, titre « [Rencontre collective] … ») : elles apparaissent aussi dans
+  // l'onglet Événements, avec la même possibilité de proposer jusqu'à 3 activités (une ou plusieurs au choix de
+  // chaque cliente). Les réponses sont celles de l'application Épanouissement (epanouissement_global/rencontre_rsvp) ;
+  // les activités sont dans epanouissement_global/rencontre_activites/<idSûr> = [{ id, nom }, ...]. ──
+  var DASH_RENCONTRE_ACTS = {};
+  var DASH_RENCONTRES_CAL = { list: [], loading: false, error: null, fetchedAt: 0 };
+  var DASH_RENCONTRE_EDIT = null; // idSûr de la rencontre dont on édite les activités
+  var DASH_RENCONTRE_PREFIX = /^\s*\[rencontre collective\]\s*/i;
+  function dashRencontreSafeId(id) { return String(id || '').replace(/[.#$\/\[\]]/g, '_'); }
+  function dashRencontresFetch(force) {
+    var c = DASH_AGENDA_CONFIG;
+    if (!c || !c.apiKey || !c.calendarId) { DASH_RENCONTRES_CAL.list = []; DASH_RENCONTRES_CAL.error = 'config'; renderEvTrimRencontres(); return; }
+    if (!force && DASH_RENCONTRES_CAL.fetchedAt && (Date.now() - DASH_RENCONTRES_CAL.fetchedAt) < 5 * 60 * 1000) { renderEvTrimRencontres(); return; }
+    if (DASH_RENCONTRES_CAL.loading) return;
+    DASH_RENCONTRES_CAL.loading = true; DASH_RENCONTRES_CAL.error = null;
+    renderEvTrimRencontres();
+    var timeMin = new Date(); timeMin.setHours(0, 0, 0, 0);
+    var url = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(c.calendarId) +
+      '/events?key=' + encodeURIComponent(c.apiKey) + '&timeMin=' + encodeURIComponent(timeMin.toISOString()) +
+      '&singleEvents=true&orderBy=startTime&maxResults=250';
+    fetch(url).then(function(res) {
+      if (!res.ok) throw new Error('http ' + res.status);
+      return res.json();
+    }).then(function(data) {
+      DASH_RENCONTRES_CAL.list = (data.items || []).map(function(ev) {
+        return { id: ev.id, title: ev.summary || '', start: ev.start && (ev.start.dateTime || ev.start.date), allDay: !!(ev.start && ev.start.date && !ev.start.dateTime) };
+      }).filter(function(e) { return e.start && DASH_RENCONTRE_PREFIX.test(e.title); });
+      DASH_RENCONTRES_CAL.fetchedAt = Date.now(); DASH_RENCONTRES_CAL.loading = false; DASH_RENCONTRES_CAL.error = null;
+      renderEvTrimRencontres();
+    }).catch(function() {
+      DASH_RENCONTRES_CAL.loading = false; DASH_RENCONTRES_CAL.error = 'fetch';
+      renderEvTrimRencontres();
+    });
+  }
+  function dashRencontreActivites(safeId) {
+    var a = DASH_RENCONTRE_ACTS[safeId];
+    if (!a) return [];
+    var list = Array.isArray(a) ? a : Object.keys(a).map(function(k) { return a[k]; });
+    return list.filter(function(x) { return x && x.id && x.nom; });
+  }
+  function dashRencontreEditOpen(safeId) {
+    DASH_RENCONTRE_EDIT = safeId;
+    renderEvTrimRencontres();
+    var el = document.getElementById('rcAct1'); if (el) el.focus();
+  }
+  function dashRencontreEditClose() { DASH_RENCONTRE_EDIT = null; renderEvTrimRencontres(); }
+  function dashRencontreActsSave(safeId) {
+    if (!dashFbDB) { showToast('⚠️ Connexion indisponible, réessaie dans un instant.'); return; }
+    var noms = [];
+    ['rcAct1', 'rcAct2', 'rcAct3'].forEach(function(i) {
+      var el = document.getElementById(i);
+      var v = el ? (el.value || '').trim() : '';
+      if (v && noms.indexOf(v) === -1) noms.push(v);
+    });
+    noms = noms.slice(0, 3);
+    var prev = dashRencontreActivites(safeId);
+    var acts = noms.map(function(n, i) {
+      var same = prev.filter(function(p) { return p.nom === n; })[0];
+      return { id: same ? same.id : ('a' + Date.now().toString(36) + i), nom: n };
+    });
+    var ref = dashFbDB.ref('epanouissement_global/rencontre_activites/' + safeId);
+    var p = acts.length ? ref.set(acts) : ref.remove();
+    p.then(function() { DASH_RENCONTRE_EDIT = null; renderEvTrimRencontres(); showToast('✅ Activités enregistrées'); })
+     .catch(function(err) { showToast('❌ ' + (err && err.message ? err.message : 'erreur')); });
+  }
+  function renderEvTrimRencontres() {
+    var el = document.getElementById('evTrimRencontres');
+    if (!el) return;
+    if (EV_TRIM_FILTER === 'association') { el.innerHTML = ''; return; }
+    // On ne réécrit pas la zone pendant qu'on tape dans l'éditeur d'activités.
+    var ae = document.activeElement;
+    if (ae && /^rcAct[123]$/.test(ae.id || '')) return;
+    var now = new Date();
+    var today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+    // Fusion : rencontres lues dans Google Agenda + rencontres déjà connues par les réponses des clientes.
+    var map = {};
+    (DASH_RENCONTRES_CAL.list || []).forEach(function(r) {
+      var sid = dashRencontreSafeId(r.id);
+      map[sid] = { sid: sid, title: String(r.title || '').replace(DASH_RENCONTRE_PREFIX, '').trim(), start: r.start, allDay: !!r.allDay, responses: {} };
+    });
+    Object.keys(DASH_RENCONTRE_RSVP || {}).forEach(function(sid) {
+      var n = DASH_RENCONTRE_RSVP[sid] || {};
+      if (!map[sid]) map[sid] = { sid: sid, title: String(n.title || 'Rencontre collective').replace(DASH_RENCONTRE_PREFIX, '').trim(), start: n.start || '', allDay: !!n.allDay, responses: {} };
+      map[sid].responses = n.responses || {};
+    });
+    Object.keys(DASH_RENCONTRE_ACTS || {}).forEach(function(sid) { if (map[sid]) return; });
+    function dateOf(r) { if (!r.start) return ''; if (r.allDay) return r.start; var d = new Date(r.start); return isNaN(d) ? '' : (d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')); }
+    function heureOf(r) { if (!r.start || r.allDay) return ''; var d = new Date(r.start); return isNaN(d) ? '' : (String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')); }
+    var all = Object.keys(map).map(function(k) { var r = map[k]; r.date = dateOf(r); r.heure = heureOf(r); return r; });
+    var upcoming = all.filter(function(r) { return !r.date || r.date >= today; }).sort(function(a, b) { return (a.date + a.heure).localeCompare(b.date + b.heure); });
+    var past = all.filter(function(r) { return r.date && r.date < today; }).sort(function(a, b) { return (b.date + b.heure).localeCompare(a.date + a.heure); });
+    var out = '<h2 style="font-size:16px;margin:28px 0 6px;color:#26312A">🤝 Rencontres collectives co-NAÎTRE</h2>';
+    out += '<p style="color:#66735F;font-size:12.5px;margin:0 0 12px;max-width:760px">Ce sont les événements « [Rencontre collective] » de ton Google Agenda, visibles par toutes les clientes Épanouissement (toujours offertes). Tu peux ici leur ajouter jusqu\'à 3 activités : chaque cliente peut en choisir une ou plusieurs. Pour créer, déplacer ou supprimer une rencontre, passe par ton Google Agenda.</p>';
+    if (DASH_RENCONTRES_CAL.loading) out += '<p style="color:#8C9686;font-size:12.5px">Chargement de ton Google Agenda…</p>';
+    else if (DASH_RENCONTRES_CAL.error === 'config') out += '<p style="color:#c05621;font-size:12.5px">⚠️ Ton Google Agenda n\'est pas encore relié (onglet Communication) : seules les rencontres déjà répondues par des clientes apparaissent ici.</p>';
+    else if (DASH_RENCONTRES_CAL.error === 'fetch') out += '<p style="color:#c05621;font-size:12.5px">⚠️ Impossible de lire ton Google Agenda pour l\'instant. <a href="#" onclick="dashRencontresFetch(true);return false;" style="color:#3F5D46;font-weight:700">Réessayer</a></p>';
+    function row(r, isPast) {
+      var acts = dashRencontreActivites(r.sid);
+      var known = {}; acts.forEach(function(a) { known[a.id] = a.nom; });
+      var rs = [];
+      Object.keys(r.responses || {}).forEach(function(code) {
+        var x = r.responses[code] || {};
+        if (x.response !== 'oui' && x.response !== 'non') return;
+        var al = x.activites ? (Array.isArray(x.activites) ? x.activites : Object.keys(x.activites).map(function(k) { return x.activites[k]; })) : [];
+        rs.push({ name: (x.name || '').trim() || code, response: x.response, activites: x.response === 'oui' ? al.filter(function(a) { return a && a.id; }) : [] });
+      });
+      rs.sort(function(a, b) { return a.name.localeCompare(b.name); });
+      var oui = rs.filter(function(x) { return x.response === 'oui'; });
+      var non = rs.filter(function(x) { return x.response === 'non'; });
+      var o = '<div style="margin-bottom:10px;padding:12px 14px;background:#fff;border:1px solid #E2DCC8;border-radius:10px;max-width:900px;' + (isPast ? 'opacity:.65' : '') + '">';
+      o += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
+      o += '<div style="font-size:13px;color:#26312A"><b style="font-size:14px">' + esc(r.title) + '</b><div style="font-size:12px;color:#66735F;margin:2px 0 6px">' + (r.date ? evTrimDateLabel(r.date, r.heure) : '') + '</div>';
+      o += '<div style="display:flex;gap:6px;flex-wrap:wrap">' + evTrimBadge('🤝 Rencontre collective', '#EDEEE3', '#CFD3BF', '#4A5740') + evTrimBadge('🦋 Clientes Épanouissement', '#F1EAF6', '#D9C9E6', '#6a4a8a') + evTrimBadge('🎁 Offert', '#E7EEE1', '#B7CDAE', '#2C4432') + '</div></div>';
+      o += '<button onclick="dashRencontreEditOpen(' + jsAttr(r.sid) + ')" style="padding:6px 10px;background:#E7EEE1;border:1px solid #9ae6b4;color:#2C4432;border-radius:6px;font-size:12px;cursor:pointer;flex-shrink:0">🎯 Activités' + (acts.length ? ' (' + acts.length + ')' : '') + '</button>';
+      o += '</div>';
+      if (DASH_RENCONTRE_EDIT === r.sid) {
+        var INP = 'flex:1 1 180px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px';
+        o += '<div style="margin-top:10px;padding:10px;background:#FAF7EF;border:1px solid #E2DCC8;border-radius:8px"><div style="font-size:12px;color:#66735F;margin-bottom:6px">Activités proposées (3 maximum — chaque cliente peut en choisir une ou plusieurs). Laisse vide pour aucune activité.</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">';
+        [1, 2, 3].forEach(function(i) { o += '<input type="text" id="rcAct' + i + '" value="' + esc(acts[i - 1] ? acts[i - 1].nom : '') + '" placeholder="Activité ' + i + '" style="' + INP + '">'; });
+        o += '<button onclick="dashRencontreActsSave(' + jsAttr(r.sid) + ')" style="padding:8px 14px;background:#3F5D46;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">💾 Enregistrer</button>';
+        o += '<button onclick="dashRencontreEditClose()" style="padding:8px 14px;background:#fff;color:#66735F;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Annuler</button>';
+        o += '</div></div>';
+      }
+      function names(list) { return list.map(function(x) { return esc(x.name); }).join(', '); }
+      o += '<div style="display:flex;gap:18px;margin-top:10px;flex-wrap:wrap">';
+      o += '<div style="min-width:220px"><div style="font-size:12px;font-weight:700;color:#2C4432">✅ Viennent (' + oui.length + ')</div>' + (oui.length ? '<div style="font-size:12.5px;color:#3E4A3A;margin-top:3px">' + oui.map(function(x) {
+        var noms = (x.activites || []).map(function(a) { return known[a.id] ? known[a.id] : (a.nom || '?') + ' (retirée)'; });
+        return esc(x.name) + (noms.length ? ' <span style="color:#66735F">— ' + noms.map(esc).join(', ') + '</span>' : '');
+      }).join('<br>') + '</div>' : '<div style="font-size:12px;color:#8C9686;margin-top:3px">Personne pour l\'instant</div>') + '</div>';
+      o += '<div style="min-width:170px"><div style="font-size:12px;font-weight:700;color:#c53030">❌ Ne viennent pas (' + non.length + ')</div>' + (non.length ? '<div style="font-size:12.5px;color:#3E4A3A;margin-top:3px">' + names(non) + '</div>' : '<div style="font-size:12px;color:#8C9686;margin-top:3px">Personne</div>') + '</div>';
+      o += '</div>';
+      if (acts.length) {
+        o += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #E2DCC8"><div style="font-size:12px;font-weight:700;color:#66735F;margin-bottom:6px">Par activité (une cliente peut être dans plusieurs)</div><div style="display:flex;gap:18px;flex-wrap:wrap">';
+        acts.forEach(function(a) {
+          var ins = oui.filter(function(x) { return (x.activites || []).some(function(y) { return y.id === a.id; }); });
+          o += '<div style="min-width:170px"><div style="font-size:12px;font-weight:700;color:#2C4432">🎯 ' + esc(a.nom) + ' (' + ins.length + ')</div>' + (ins.length ? '<div style="font-size:12.5px;color:#3E4A3A;margin-top:3px">' + names(ins) + '</div>' : '') + '</div>';
+        });
+        var sans = oui.filter(function(x) { return !(x.activites || []).length; });
+        if (sans.length) o += '<div style="min-width:170px"><div style="font-size:12px;font-weight:700;color:#8a5a26">⏳ Viennent, activité pas encore choisie (' + sans.length + ')</div><div style="font-size:12.5px;color:#3E4A3A;margin-top:3px">' + names(sans) + '</div></div>';
+        o += '</div></div>';
+      }
+      return o + '</div>';
+    }
+    out += '<h3 style="font-size:14px;margin:10px 0 10px;color:#26312A">À venir (' + upcoming.length + ')</h3>';
+    out += upcoming.length ? upcoming.map(function(r) { return row(r, false); }).join('') : '<p style="color:#8C9686;font-size:13px">Aucune rencontre collective à venir.</p>';
+    if (past.length) {
+      out += '<h3 style="font-size:14px;margin:18px 0 10px;color:#8C9686">Passées (' + past.length + ')</h3>';
+      out += past.map(function(r) { return row(r, true); }).join('');
+    }
     el.innerHTML = out;
   }
   // ── Message ponctuel à toutes les clientes Épanouissement (texte + lien optionnel), publié depuis
