@@ -1704,6 +1704,7 @@
       <input type="text" id="evTrimNom" placeholder="Nom de l'événement (ex : Atelier de rentrée)" style="flex:1 1 100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
       <label style="font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">Date<input type="date" id="evTrimDate" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
       <label style="font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">Heure<input type="time" id="evTrimHeure" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
+      <label style="font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">Heure de fin (facultatif)<input type="time" id="evTrimHeureFin" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
       <label style="font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">Pour qui ?
         <select id="evTrimPublic" onchange="evTrimPublicChanged()" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;background:#fff">
           <option value="tous">Association + clientes Épanouissement</option>
@@ -16823,7 +16824,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (crm) { crm.disabled = off || !(ext && ext.checked); crm.style.opacity = crm.disabled ? '0.5' : ''; }
   }
   function evTrimClearForm() {
-    ['evTrimNom', 'evTrimDate', 'evTrimHeure', 'evTrimPrix'].forEach(function(i) { var el = document.getElementById(i); if (el) el.value = ''; });
+    ['evTrimNom', 'evTrimDate', 'evTrimHeure', 'evTrimHeureFin', 'evTrimPrix'].forEach(function(i) { var el = document.getElementById(i); if (el) el.value = ''; });
     evTrimActsSet([]);
     var t = document.getElementById('evTrimType'); if (t) t.value = 'payant';
     var p = document.getElementById('evTrimPublic'); if (p) p.value = 'tous';
@@ -16835,11 +16836,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var nom = (document.getElementById('evTrimNom').value || '').trim();
     var date = (document.getElementById('evTrimDate').value || '').trim();
     var heure = (document.getElementById('evTrimHeure').value || '').trim();
+    var heureFin = (document.getElementById('evTrimHeureFin').value || '').trim();
     var pub = document.getElementById('evTrimPublic').value;
     if (pub !== 'association' && pub !== 'epanouissement') pub = 'tous';
     var type = document.getElementById('evTrimType').value === 'gratuit' ? 'gratuit' : 'payant';
     var prix = (document.getElementById('evTrimPrix').value || '').trim();
     if (!nom || !date || !heure) { evTrimStatus('⚠️ Indique le nom, la date et l\'heure.'); return; }
+    if (heureFin && heureFin <= heure) { evTrimStatus('⚠️ L\'heure de fin doit être après l\'heure de début.'); return; }
     if (!dashFbDB) { evTrimStatus('⚠️ Connexion indisponible, réessaie dans un instant.'); return; }
     var noms = evTrimActsGet();
     evTrimStatus('');
@@ -16855,7 +16858,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var exterieur = !!(extEl && extEl.checked) && !offert;
     var lienCrm = exterieur ? (document.getElementById('evTrimLienCrm').value || '').trim() : '';
     if (lienCrm && !/^https?:\/\//i.test(lienCrm)) lienCrm = 'https://' + lienCrm;
-    var fields = { nom: nom, date: date, heure: heure, public: pub, payant: offert ? false : type === 'payant', prix: (!offert && type === 'payant') ? prix : '', activites: activites, exterieur: exterieur, lienCrm: lienCrm };
+    var fields = { nom: nom, date: date, heure: heure, heureFin: heureFin, public: pub, payant: offert ? false : type === 'payant', prix: (!offert && type === 'payant') ? prix : '', activites: activites, exterieur: exterieur, lienCrm: lienCrm };
     if (EV_TRIM_EDIT_ID) {
       // Modification d'un événement existant : la date de création et les réponses des clientes sont conservées.
       var editId = EV_TRIM_EDIT_ID;
@@ -16879,6 +16882,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     document.getElementById('evTrimNom').value = e.nom || '';
     document.getElementById('evTrimDate').value = e.date || '';
     document.getElementById('evTrimHeure').value = e.heure || '';
+    document.getElementById('evTrimHeureFin').value = e.heureFin || '';
     document.getElementById('evTrimPublic').value = evTrimPublicOf(e);
     document.getElementById('evTrimType').value = e.payant ? 'payant' : 'gratuit';
     document.getElementById('evTrimPrix').value = e.prix || '';
@@ -16943,13 +16947,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       return esc(r.name) + evTrimOriginTag(r) + (noms.length ? ' <span style="color:#66735F">— ' + noms.map(esc).join(', ') + '</span>' : '');
     }).join('<br>');
   }
-  function evTrimDateLabel(date, heure) {
+  function evTrimDateLabel(date, heure, heureFin) {
     var p = String(date || '').split('-').map(Number);
     if (p.length !== 3 || !p[0]) return esc(date || '');
     var d = new Date(p[0], p[1] - 1, p[2]);
     var jours = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
     var mois = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-    return jours[d.getDay()] + ' ' + p[2] + ' ' + mois[p[1] - 1] + ' ' + p[0] + (heure ? ' à ' + String(heure).replace(':', 'h') : '');
+    return jours[d.getDay()] + ' ' + p[2] + ' ' + mois[p[1] - 1] + ' ' + p[0] + (heure ? (heureFin ? ' de ' + String(heure).replace(':', 'h') + ' à ' + String(heureFin).replace(':', 'h') : ' à ' + String(heure).replace(':', 'h')) : '');
   }
   function evTrimBadge(txt, bg, bd, col) {
     return '<span style="background:' + bg + ';border:1px solid ' + bd + ';color:' + col + ';border-radius:20px;padding:2px 9px;font-size:11.5px;font-weight:600;white-space:nowrap">' + txt + '</span>';
@@ -16990,7 +16994,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       var non = rs.filter(function(r) { return r.response === 'non'; });
       var o = '<div style="margin-bottom:10px;padding:12px 14px;background:#fff;border:1px solid #E2DCC8;border-radius:10px;max-width:900px;' + (isPast ? 'opacity:.65' : '') + '">';
       o += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
-      o += '<div style="font-size:13px;color:#26312A"><b style="font-size:14px">' + esc(e.nom) + '</b><div style="font-size:12px;color:#66735F;margin:2px 0 6px">' + evTrimDateLabel(e.date, e.heure) + '</div>';
+      o += '<div style="font-size:13px;color:#26312A"><b style="font-size:14px">' + esc(e.nom) + '</b><div style="font-size:12px;color:#66735F;margin:2px 0 6px">' + evTrimDateLabel(e.date, e.heure, e.heureFin) + '</div>';
       o += '<div style="display:flex;gap:6px;flex-wrap:wrap">' + pubBadge + tarif + '</div></div>';
       o += '<div style="display:flex;gap:6px;flex-shrink:0">';
       o += '<button onclick="evTrimEdit(' + jsAttr(e.id) + ')" title="Modifier" style="padding:6px 10px;background:#E7EEE1;border:1px solid #9ae6b4;color:#2C4432;border-radius:6px;font-size:12px;cursor:pointer">✏️ Modifier</button>';
