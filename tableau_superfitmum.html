@@ -1500,6 +1500,7 @@ window.EXERCISE_LIBRARY = [
     <div id="homeNewProspects" style="display:none;max-width:860px;margin:0 0 18px"></div>
     <!-- Réservations confirmées (créneau choisi, payé s'il y a un paiement) : juste sous les nouvelles prospectes -->
     <div id="homeReservations" style="display:none;max-width:860px;margin:0 0 18px"></div>
+    <div id="homeNoConnexion" style="display:none;max-width:860px;margin:0 0 18px"></div>
     <div id="homeClientes" style="display:none;max-width:860px;margin:0 0 18px"></div>
     <div class="home-sub">Choisis un onglet pour commencer.</div>
     <!-- Sélecteur Pro/Perso dupliqué ici en gros, en plus de la barre du bas — accès direct depuis
@@ -2350,10 +2351,23 @@ window.EXERCISE_LIBRARY = [
       </div>
       <button type="button" class="btn-add" style="background:#E7EEE1;color:#2C4432;margin-top:0" onclick="contratPrefillFromGrille()">📊 Pré-remplir les tarifs depuis ma grille tarifaire</button>
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#8C9686;margin:16px 0 8px">Période d'essai (facultatif)</div>
+      <div id="ctrEssaiBtns" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button type="button" class="ctr-offer-btn active" data-j="0" onclick="contratSetEssai(0)">Aucune</button>
+        <button type="button" class="ctr-offer-btn" data-j="7" onclick="contratSetEssai(7)">7 jours</button>
+        <button type="button" class="ctr-offer-btn" data-j="14" onclick="contratSetEssai(14)">14 jours</button>
+        <button type="button" class="ctr-offer-btn" data-j="30" onclick="contratSetEssai(30)">30 jours</button>
+      </div>
+      <div id="ctrEssaiInfo" style="font-size:12px;color:#66735F;margin-bottom:8px">Aucune ligne « période d'essai » ne sera ajoutée au contrat.</div>
       <div class="form-grid">
-        <div class="form-group"><label>Durée de l'essai (jours, 0 = aucun)</label><input type="number" min="0" id="ctrEssaiJours" placeholder="0"></div>
+        <div class="form-group"><label>Autre durée (jours, 0 = aucun)</label><input type="number" min="0" id="ctrEssaiJours" placeholder="0" oninput="contratEssaiRefresh()"></div>
         <div class="form-group"><label>Conditions de l'essai (vide = texte par défaut)</label><input type="text" id="ctrEssaiTexte" placeholder="ex : remboursement intégral si elle arrête avant le 14e jour"></div>
       </div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#8C9686;margin:16px 0 8px">Modalité de paiement</div>
+      <div id="ctrPaiementBtns" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button type="button" class="ctr-offer-btn active" data-p="" onclick="contratSetPaiement('')">Mensuel (par défaut)</button>
+        <button type="button" class="ctr-offer-btn" data-p="echu" onclick="contratSetPaiement('echu')">À mois échu</button>
+      </div>
+      <div id="ctrPaiementInfo" style="font-size:12px;color:#66735F;margin-bottom:8px">Paiement mensuel classique : aucune ligne en plus dans le contrat.</div>
 
       <button class="btn-add" onclick="contratGenerateLink()" style="margin-top:6px">🔗 Générer le lien de signature</button>
       <button class="btn-add" onclick="contratPreview()" style="margin-top:6px;background:#E7EEE1;color:#2C4432">👁️ Aperçu du contrat (sans coordonnées, PDF possible)</button>
@@ -13399,7 +13413,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       var idx2 = list.findIndex(function(p) { return p.id === rec.id; });
       if (idx2 >= 0) list[idx2] = rec; else list.push(rec);
       saveClientMealPlans(MEAL_EDITOR.clientKey, list);
-      renderArchives();
+      progRefreshViews(); // met aussi à jour la fiche cliente ouverte
     }
     showToast('💾 Plan alimentaire enregistré.');
     closeMealPlanEditor();
@@ -13495,7 +13509,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var rec = { id: progUid('mcp'), nom: copy.nom, description: copy.description, accent: copy.accent, icone: copy.icone, sections: copy.sections, sourceTemplateId: t.id, sourceTemplateNom: t.nom, createdAt: now, updatedAt: now, publishedAt: null, publishedCode: null };
     list.push(rec);
     saveClientMealPlans(key, list);
-    renderArchives();
+    progRefreshViews(); // met aussi à jour la fiche cliente ouverte
     showToast('🥗 Modèle assigné — tu peux l\'ajuster pour elle.');
     openMealPlanEditor('client', key, clientName, rec.id);
   }
@@ -13503,7 +13517,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (!window.confirm('Supprimer ce plan alimentaire pour cette cliente ?')) return;
     var list = getClientMealPlans(clientKey).filter(function(p) { return p.id !== planId; });
     saveClientMealPlans(clientKey, list);
-    renderArchives();
+    progRefreshViews();
     showToast('🗑️ Plan supprimé.');
   }
   function mealPlanPath(code) { return 'epanouissement/' + code + '/programme_alimentaire'; }
@@ -13529,7 +13543,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       list[idx].publishedAt = payload.publishedAt;
       list[idx].publishedCode = code;
       saveClientMealPlans(clientKey, list);
-      renderArchives();
+      progRefreshViews();
       showToast('📤 Plan alimentaire envoyé dans son espace co-NAÎTRE.');
     }).catch(function(err) {
       console.error('[co-NAÎTRE] Échec publication plan alimentaire :', err);
@@ -15780,6 +15794,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   ];
   var dashFbDB = null;
   var DASH_ACCESS_REGISTRY = {}; // { appKey: { code: entry, ... }, ... }
+  var DASH_ACCESS_LOADED = {}; // { appKey: true } une fois le registre lu depuis Firebase
   var DASH_URGENT_ALL = {}; // { code: { requestId: {...} }, ... } — épanouissement uniquement
   // Réservations en attente de validation, arrivées via le webhook du CRM (HighLevel) après paiement
   // validé sur une inscription Fitness Park ou Desvres lancée depuis reservation.html (voir
@@ -15818,7 +15833,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     DASH_APPS.forEach(function(app) {
       dashFbDB.ref(app.registryPath).on('value', function(snap) {
         DASH_ACCESS_REGISTRY[app.key] = snap.val() || {};
+        DASH_ACCESS_LOADED[app.key] = true;
         renderAccesTab();
+        try { renderNoConnexion(); } catch (e) {}
       });
     });
     dashFbDB.ref('contrats').on('value', function(snap) {
@@ -20586,6 +20603,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
             o.engagement = g('acqO-engagement-' + oid); var tv = g('acqO-tarif-' + oid), ev = g('acqO-essai-' + oid);
             o.tarif = tv === '' ? null : +tv; o.essaiJours = ev === '' ? null : Math.max(0, parseInt(ev, 10) || 0); o.grille = document.getElementById('acqO-grille-' + oid).checked;
             if (document.getElementById('acqO-fctr-' + oid)) o.formuleContrat = g('acqO-fctr-' + oid);
+            if (document.getElementById('acqO-paie-' + oid)) o.paiement = g('acqO-paie-' + oid) === 'echu' ? 'echu' : '';
           }
           if (document.getElementById('acqO-formule-' + oid)) { o.formule = g('acqO-formule-' + oid); var sv = g('acqO-seances-' + oid), cv = g('acqO-cot-' + oid); o.seances = sv === '' ? null : +sv; o.cotisation = cv === '' ? null : +cv; }
         }
@@ -20621,9 +20639,23 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (!window.confirm('Retirer cette formule du tunnel ?')) return;
     acqHarvest(); delete acqCurrent(ACQ_FSEL).offres[oid]; acqRender();
   }
+  // Enregistre le tunnel et dit TOUJOURS ce qui s'est passé (message à côté du bouton) : avant, si la connexion
+  // à la base était absente ou lente, rien ne s'affichait (ni succès ni erreur) alors que rien n'était enregistré.
   function acqSaveFunnel() {
-    acqHarvest(); var id = ACQ_FSEL, f = acqCurrent(id);
-    dashFbDB.ref('acquisition/funnels/' + id).set(f).then(function() { showToast('✅ Tunnel enregistré'); }).catch(function(err) { alert('Erreur : ' + (err && err.message ? err.message : 'inconnue')); });
+    var st = document.getElementById('acqSaveStatus'), done = false, timer = null;
+    var say = function(t, kind) { if (st) { st.textContent = t; st.style.color = kind === 'ok' ? '#2C4432' : (kind === 'ko' ? '#B3261E' : '#9C6F00'); } };
+    try { acqHarvest(); } catch (e) { say('❌ Impossible de lire le formulaire (' + (e && e.message ? e.message : 'erreur') + '). Rien n\'est enregistré.', 'ko'); return; }
+    var db = dashFbDB; if (!db) { try { initSyncFirebase(); } catch (e) {} db = dashFbDB; }
+    if (!db) { say('❌ Pas de connexion à la base en ligne : le tunnel n\'est PAS enregistré. Recharge la page du tableau de bord (Cmd+R), reviens ici et réessaie.', 'ko'); return; }
+    var id = ACQ_FSEL, f = acqCurrent(id), path = 'acquisition/funnels/' + id;
+    say('⏳ Enregistrement en cours…', 'wait');
+    timer = setTimeout(function() { if (!done) say('⚠️ Pas de réponse du serveur après 10 secondes : le tunnel n\'est peut-être PAS enregistré (connexion internet ?). Ne ferme pas la page, vérifie ta connexion : l\'enregistrement se terminera tout seul au retour de la connexion, ce message deviendra alors vert.', 'wait'); }, 10000);
+    db.ref(path).set(f).then(function() { return db.ref(path + '/offres').once('value'); }).then(function(snap) {
+      done = true; clearTimeout(timer);
+      var o = snap.val() || {}, ids = Object.keys(o), n = ids.filter(function(k) { return o[k] && o[k].lien; }).length, t = new Date();
+      say('✅ Tunnel enregistré à ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ' — ' + n + ' lien(s) de paiement sur ' + ids.length + ' formule(s).', 'ok');
+      showToast('✅ Tunnel enregistré');
+    }).catch(function(err) { done = true; clearTimeout(timer); say('❌ Erreur : ' + (err && err.message ? err.message : 'inconnue') + '. Le tunnel n\'est PAS enregistré.', 'ko'); });
   }
   function acqResize(file, maxW, cb) {
     var r = new FileReader();
@@ -20678,7 +20710,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       + lab('Bandeau') + '<input type="text" id="acqF-bandeau" value="' + esc(f.bandeau || '') + '" style="' + inp + '">'
       + lab('Message important (encadré jaune, ex : « cartes prélevées une seule fois »)') + '<input type="text" id="acqF-note" value="' + esc(f.note || '') + '" style="' + inp + '">'
       + lab('Message après paiement') + '<textarea id="acqF-merciTexte" style="' + inp + ';min-height:54px">' + esc(f.merciTexte || '') + '</textarea></div>';
-    if (f.type === 'appel') { out += acqAppelHtml(f, inp, lab) + '<div><button onclick="acqSaveFunnel()" style="padding:12px 22px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">💾 Enregistrer ce tunnel</button></div></div>'; return out; }
+    if (f.type === 'appel') { out += acqAppelHtml(f, inp, lab) + '<div><button onclick="acqSaveFunnel()" style="padding:12px 22px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">💾 Enregistrer ce tunnel</button><div id="acqSaveStatus" style="margin-top:10px;font-size:13px;font-weight:700;max-width:760px"></div></div></div>'; return out; }
     if (f.type === 'vente') out += acqVenteHtml(f, inp, lab);
     out += '<div style="font-weight:700;margin:6px 0 8px">' + (f.type === 'vente' ? 'Formules de l\'accompagnement (prix à vérifier — repris de l\'ancienne page de vente)' : 'Formules proposées') + '</div>';
     var ids = Object.keys(f.offres || {}).sort(function(a, b) { return (f.offres[a].ordre || 0) - (f.offres[b].ordre || 0); });
@@ -20694,6 +20726,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
           + '<div><label style="font-size:11px;font-weight:700;color:#66735F">Tarif mensuel du contrat (€)</label><input type="number" id="acqO-tarif-' + oid + '" value="' + esc(o.tarif == null ? '' : o.tarif) + '" placeholder="vide = prix affiché" style="' + inp + '"></div>'
           + '<div><label style="font-size:11px;font-weight:700;color:#66735F">Essai (jours, vide = réglage général)</label><input type="number" min="0" id="acqO-essai-' + oid + '" value="' + esc(o.essaiJours == null ? '' : o.essaiJours) + '" style="' + inp + '"></div></div>'
           + '<div style="margin-top:8px"><label style="font-size:11px;font-weight:700;color:#66735F">Formule du contrat</label><select id="acqO-fctr-' + oid + '" style="' + inp + '"><option value="complete"' + (!o.formuleContrat || o.formuleContrat === 'complete' ? ' selected' : '') + '>Formule complète</option><option value="bilanmensuel"' + (o.formuleContrat === 'bilanmensuel' ? ' selected' : '') + '>Formule réduite plateforme + masterclass</option>' + (o.formuleContrat === 'reduite' ? '<option value="reduite" selected>Sans masterclass ni plateforme (coaching seul, messieurs)</option>' : '') + '</select></div>'
+          + '<div style="margin-top:8px"><label style="font-size:11px;font-weight:700;color:#66735F">Paiement dans le contrat</label><select id="acqO-paie-' + oid + '" style="' + inp + '"><option value=""' + (o.paiement === 'echu' ? '' : ' selected') + '>Mensuel (par défaut)</option><option value="echu"' + (o.paiement === 'echu' ? ' selected' : '') + '>À mois échu (ligne 8.1 ajoutée au contrat)</option></select></div>'
           + '<label style="font-size:12.5px;display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="acqO-grille-' + oid + '" ' + (o.grille ? 'checked' : '') + '> 📊 Prendre le tarif dans ma grille tarifaire (« nouveau tarif conseillé » de la durée choisie, ou le prix « formule réduite » si tu as choisi la formule réduite) — le prix affiché suit la grille</label>'
           + '<button onclick="acqDupReduite(\'' + oid + '\')" style="margin-top:8px;padding:6px 12px;border:1.5px solid #6F8F6C;background:#fff;color:#3F5D46;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">➕ Créer la même offre en formule réduite plateforme + masterclass</button>' : '')
         + acqOfferMapHtml(id, oid, o, inp)
@@ -20703,7 +20736,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         + '<button onclick="acqDelOffer(\'' + oid + '\')" style="margin-left:auto;background:none;border:none;color:#c53030;font-size:12px;cursor:pointer;text-decoration:underline">Retirer</button></div></div>';
     });
     out += '<button onclick="acqAddOffer()" style="padding:8px 14px;border:1.5px dashed #6F8F6C;background:#fff;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:16px">➕ Ajouter une formule</button>';
-    out += '<div><button onclick="acqSaveFunnel()" style="padding:12px 22px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">💾 Enregistrer ce tunnel</button></div></div>';
+    out += '<div><button onclick="acqSaveFunnel()" style="padding:12px 22px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">💾 Enregistrer ce tunnel</button><div id="acqSaveStatus" style="margin-top:10px;font-size:13px;font-weight:700;max-width:760px"></div></div></div>';
     return out;
   }
   // ── Chiffres (30 derniers jours) ──
@@ -21016,6 +21049,93 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     return '<div style="background:' + bg + ';border:1.5px solid ' + border + ';border-radius:14px;padding:14px 16px"><div style="font-weight:800;font-size:15px;color:' + color + ';margin:0 0 10px">' + title + ' (' + count + ')</div>' + inner + '</div>';
   }
   function acqHomeSet(id, html) { var el = document.getElementById(id); if (!el) return; el.innerHTML = html; el.style.display = html ? 'block' : 'none'; }
+
+  // ── Alerte « cliente pas connectée aujourd'hui » ─────────────────────────────────────────────────
+  // Utilise la date de dernière ouverture (lastSeen) que chaque application (co-NAÎTRE, Maisonnée) écrit
+  // déjà dans son registre à chaque ouverture : aucune donnée des clientes n'est modifiée. Réglages
+  // (heure de l'alerte, clientes ignorées) dans la clé locale sfm_alerte_connexion_v1.
+  var NC_KEY = 'sfm_alerte_connexion_v1';
+  function ncGet() {
+    var o = {}; try { o = JSON.parse(localStorage.getItem(NC_KEY) || '{}') || {}; } catch (e) {}
+    return { actif: o.actif !== false, heure: (o.heure == null ? 18 : Math.max(0, Math.min(23, parseInt(o.heure, 10) || 0))), muted: o.muted || {}, relance: o.relance || {} };
+  }
+  function ncSave(o) { try { localStorage.setItem(NC_KEY, JSON.stringify(o)); } catch (e) {} renderNoConnexion(); }
+  function ncMute(k) { var o = ncGet(); o.muted[k] = true; ncSave(o); }
+  function ncUnmute(k) { var o = ncGet(); delete o.muted[k]; ncSave(o); }
+  function ncSetHeure(v) { var o = ncGet(); o.heure = parseInt(v, 10); ncSave(o); }
+  function ncToggle() { var o = ncGet(); o.actif = !o.actif; ncSave(o); }
+  // Retrouve le téléphone d'une cliente : registre de l'application, puis prospects, puis contrats (rapprochement e-mail puis nom)
+  function ncPhone(row) {
+    var e = row.entry || {}, mail = (e.email || '').toLowerCase().trim(), nm = dashNormalizeName(e.name), tel = e.telephone || e.tel || '';
+    var scan = function(obj, nameKey) { Object.keys(obj || {}).forEach(function(k) { if (tel) return; var d = obj[k] || {}; var dm = (d.email || '').toLowerCase().trim(), dn = dashNormalizeName(d[nameKey] || ((d.prenom || '') + ' ' + (d.nom || ''))); if (d.telephone && ((mail && dm === mail) || (nm && dn === nm))) tel = d.telephone; }); };
+    scan(typeof ACQ_LEADS !== 'undefined' ? ACQ_LEADS : {}, 'nom'); scan(typeof CONTRATS_ALL !== 'undefined' ? CONTRATS_ALL : {}, 'nom');
+    return tel;
+  }
+  function ncMessage(row) {
+    var prenom = String(row.entry && row.entry.name || row.label).trim().split(/\s+/)[0] || '';
+    var appTxt = row.app.key === 'menage' ? 'ta Maisonnée' : 'ton espace co-NAÎTRE';
+    return 'Coucou ' + prenom + ' ! Je pensais à toi : tu n\'as pas encore ouvert ' + appTxt + ' aujourd\'hui. Prends quelques minutes pour toi, ' + (row.app.key === 'menage' ? 'elle' : 'il') + ' t\'attend 🌿 Une question, un coup de mou ? Écris-moi, je suis là. Anaïs';
+  }
+  // mode : 'wa' (WhatsApp) ou 'mail' ; note l'heure de la relance pour l'afficher sur la carte
+  function ncRelance(key, mode) {
+    var row = ncCollect().late.filter(function(x) { return x.key === key; })[0]; if (!row) return;
+    var msg = ncMessage(row), o = ncGet(); o.relance[key] = new Date().toISOString();
+    try { localStorage.setItem(NC_KEY, JSON.stringify(o)); } catch (e) {}
+    if (mode === 'wa') { var n = acqWaNumber(ncPhone(row)); window.open('https://wa.me/' + (n || '') + '?text=' + encodeURIComponent(msg), '_blank'); }
+    else location.href = 'mailto:' + encodeURIComponent((row.entry && row.entry.email) || '') + '?subject=' + encodeURIComponent('Un petit coucou de la part d\'Anaïs') + '&body=' + encodeURIComponent(msg);
+    renderNoConnexion();
+  }
+  function ncDayKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function ncCollect() {
+    var o = ncGet(), today = ncDayKey(new Date()), archNames = {};
+    try { var byC = buildByClient(); getArchivedClientKeys().forEach(function(k) { if (byC[k]) archNames[dashNormalizeName(byC[k].name)] = true; }); } catch (e) {}
+    var late = [], ok = 0, muted = [];
+    dashAccessMergedList().forEach(function(it) {
+      var e = it.entry || {};
+      if (e.revoked) return;
+      var label = (e.name || '').trim() || (e.email || '').trim();
+      if (!label) return; // ouverture du lien nu : pas une cliente identifiée
+      if (archNames[dashNormalizeName(e.name)]) return; // cliente archivée
+      var key = it.app.key + '|' + it.code, seen = e.lastSeen ? new Date(e.lastSeen) : null;
+      var connectedToday = seen && !isNaN(seen.getTime()) && ncDayKey(seen) === today;
+      var row = { key: key, app: it.app, label: label, lastSeen: e.lastSeen || '', entry: e };
+      if (o.muted[key]) { muted.push(row); return; }
+      if (connectedToday) ok++; else late.push(row);
+    });
+    late.sort(function(a, b) { return (a.lastSeen || '').localeCompare(b.lastSeen || ''); });
+    return { late: late, ok: ok, muted: muted, cfg: o };
+  }
+  function renderNoConnexion() {
+    var el = document.getElementById('homeNoConnexion'); if (!el) return;
+    var loaded = DASH_APPS.some(function(a) { return DASH_ACCESS_LOADED[a.key]; });
+    if (!loaded) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    var r = ncCollect(), cfg = r.cfg, hNow = new Date().getHours(), alerte = hNow >= cfg.heure;
+    if (!cfg.actif) {
+      el.innerHTML = '<div style="font-size:12px;color:#8C9686">🔕 Alerte « cliente pas connectée » désactivée. <a href="#" onclick="ncToggle();return false" style="color:#3F5D46;font-weight:700">Réactiver</a></div>'; el.style.display = 'block'; return;
+    }
+    if (!r.late.length && !r.muted.length && !(alerte && r.ok)) { el.style.display = 'none'; el.innerHTML = ''; return; }
+    var color = alerte ? '#922B21' : '#8A6A1F', bg = alerte ? '#FFF5F5' : '#FFFBEF', border = alerte ? '#F5B5B0' : '#EBD9A8';
+    var sel = '<select onchange="ncSetHeure(this.value)" style="padding:3px 6px;border:1px solid #E2DCC8;border-radius:6px;font-size:12px">';
+    for (var h = 10; h <= 22; h++) sel += '<option value="' + h + '"' + (h === cfg.heure ? ' selected' : '') + '>' + h + 'h</option>';
+    sel += '</select>';
+    var inner = '';
+    if (!r.late.length) inner += '<div style="font-size:13px;color:#2C4432;background:#E7EEE1;border-radius:10px;padding:10px 12px">✅ Toutes tes clientes suivies se sont connectées aujourd\'hui (' + r.ok + ').</div>';
+    else {
+      inner += '<div style="font-size:12.5px;color:#66735F;margin-bottom:10px">' + (alerte ? 'Il est passé ' + cfg.heure + 'h : ces clientes n\'ont pas ouvert leur application aujourd\'hui. Un petit message de ta part peut les relancer.' : 'Pour l\'instant, ces clientes n\'ont pas encore ouvert leur application aujourd\'hui. L\'alerte passera en rouge à ' + cfg.heure + 'h.') + '</div>';
+      r.late.forEach(function(x) {
+        var rel = cfg.relance[x.key];
+        inner += '<div style="background:#fff;border:1px solid ' + border + ';border-radius:12px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div><div style="font-weight:700;font-size:14px;color:#26312A">' + esc(x.label) + '</div><div style="font-size:12px;color:#66735F">' + x.app.icon + ' ' + esc(x.app.label) + ' · dernière connexion : ' + (x.lastSeen ? dashAccessRelativeDate(x.lastSeen) : 'jamais connectée') + '</div>' + (rel && ncDayKey(new Date(rel)) === ncDayKey(new Date()) ? '<div style="font-size:12px;color:#2C4432;margin-top:3px">✅ Relancée aujourd\'hui à ' + new Date(rel).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</div>' : '') + '</div><div style="display:flex;gap:6px;flex-wrap:wrap"><button onclick="ncRelance(' + jsAttr(x.key) + ',\'wa\')" style="' + ACQ_BT + ';background:#E7EEE1;color:#2C4432">💬 WhatsApp</button>' + (x.entry && x.entry.email ? '<button onclick="ncRelance(' + jsAttr(x.key) + ',\'mail\')" style="' + ACQ_BT + ';background:#E7EEE1;color:#2C4432">✉️ E-mail</button>' : '') + '<button onclick="ncMute(' + jsAttr(x.key) + ')" style="' + ACQ_BT + '">🔕 Ne plus suivre</button></div></div>';
+      });
+    }
+    inner += '<div style="font-size:12px;color:#66735F;margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">Alerte rouge à partir de ' + sel + '<a href="#" onclick="ncToggle();return false" style="color:#8C9686">Désactiver l\'alerte</a></div>';
+    if (r.muted.length) {
+      inner += '<details style="margin-top:8px;font-size:12px;color:#66735F"><summary style="cursor:pointer">Clientes ignorées (' + r.muted.length + ')</summary>' + r.muted.map(function(x) { return '<div style="margin:6px 0">' + esc(x.label) + ' · ' + esc(x.app.label) + ' <a href="#" onclick="ncUnmute(' + jsAttr(x.key) + ');return false" style="color:#3F5D46;font-weight:700">Suivre à nouveau</a></div>'; }).join('') + '</details>';
+    }
+    el.innerHTML = acqHomeBox(color, bg, border, '📵 ' + (alerte ? 'Pas connectées aujourd\'hui' : 'Pas encore connectées aujourd\'hui'), r.late.length, inner);
+    el.style.display = 'block';
+  }
+  setInterval(function() { try { renderNoConnexion(); } catch (e) {} }, 300000);
+  setTimeout(function() { try { renderNoConnexion(); } catch (e) {} }, 4000);
   function renderHomeBlocks() {
     var td = dailyOffsetDateKey(0), now = Date.now(), all = Object.keys(ACQ_LEADS || {}).map(function (k) { var d = ACQ_LEADS[k] || {}; d._id = k; return d; });
     var prosp = [], resa = [], clientes = [];
@@ -21288,7 +21408,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var ej = essaiOverride != null ? essaiOverride : (o.essaiJours != null ? o.essaiJours : (f.essaiJours || 0));
     return { nom: nom, prenom: prenom, adresse: ident.adresse || '', sexe: 'f', formule: (o.formuleContrat === 'bilanmensuel' || o.formuleContrat === 'reduite') ? o.formuleContrat : 'complete', offer: o.engagement === '12mois' ? '12mois' : '4mois',
       tarifBase: String(tarifOverride !== '' && tarifOverride != null ? tarifOverride : acqTarifFormule(o)), tarifRemise: '', montantAici: (tarifOverride !== '' && tarifOverride != null) ? '' : acqAiciFormule(o), resteCharge: (tarifOverride !== '' && tarifOverride != null) ? '' : acqAiciFormule(o),
-      essaiJours: Math.max(0, parseInt(ej, 10) || 0), essaiTexte: ident.essaiTexte != null ? ident.essaiTexte : (f.essaiTexte || ''),
+      essaiJours: Math.max(0, parseInt(ej, 10) || 0), essaiTexte: ident.essaiTexte != null ? ident.essaiTexte : (f.essaiTexte || ''), paiement: o.paiement === 'echu' ? 'echu' : '',
       status: 'attente', source: 'tunnel', createdAt: new Date().toISOString() };
   }
   function acqCtPrepare() { acqCtCreate(); }
@@ -22505,6 +22625,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   var CONTRAT_FORM_OFFER = '4mois';
   var CONTRAT_FORM_SEXE = 'f';
   var CONTRAT_FORM_FORMULE = 'complete';
+  var CONTRAT_FORM_PAIEMENT = ''; // '' = mensuel, 'echu' = à mois échu
 
   function contratSetOffer(type) {
     CONTRAT_FORM_OFFER = type;
@@ -22524,6 +22645,20 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var a = document.getElementById('ctrMontantAici'), r = document.getElementById('ctrResteCharge'); if (!a || !r) return;
     if (r.value === '' || r.dataset.auto === '1') { r.value = a.value; r.dataset.auto = '1'; }
   }
+  // Période d'essai : un clic sur une durée remplit le champ et indique la ligne qui sera ajoutée au contrat (article 5.1)
+  function contratEssaiRefresh() {
+    var j = Math.max(0, parseInt((document.getElementById('ctrEssaiJours') || {}).value, 10) || 0);
+    document.querySelectorAll('#ctrEssaiBtns .ctr-offer-btn').forEach(function(b) { b.classList.toggle('active', parseInt(b.getAttribute('data-j'), 10) === j); });
+    var info = document.getElementById('ctrEssaiInfo');
+    if (info) info.innerHTML = j > 0 ? '✅ Le contrat contiendra la ligne <b>« 5.1 Période d\'essai de ' + j + ' jour' + (j > 1 ? 's' : '') + ' »</b> (après avoir cliqué sur « Générer le lien » ou « Aperçu »).' : 'Aucune ligne « période d\'essai » ne sera ajoutée au contrat.';
+  }
+  function contratSetPaiement(p) {
+    CONTRAT_FORM_PAIEMENT = p === 'echu' ? 'echu' : '';
+    document.querySelectorAll('#ctrPaiementBtns .ctr-offer-btn').forEach(function(b) { b.classList.toggle('active', (b.getAttribute('data-p') || '') === CONTRAT_FORM_PAIEMENT); });
+    var i = document.getElementById('ctrPaiementInfo');
+    if (i) i.innerHTML = CONTRAT_FORM_PAIEMENT === 'echu' ? '✅ Le contrat contiendra la ligne <b>« 8.1 Paiement à mois échu »</b> (après avoir cliqué sur « Générer le lien » ou « Aperçu »).' : 'Paiement mensuel classique : aucune ligne en plus dans le contrat.';
+  }
+  function contratSetEssai(j) { var e = document.getElementById('ctrEssaiJours'); if (e) e.value = j || ''; contratEssaiRefresh(); }
   function contratSetSexe(val) {
     CONTRAT_FORM_SEXE = val;
     setTimeout(contratSyncFormuleBtn, 0);
@@ -22562,7 +22697,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var v = function(id) { var e = document.getElementById(id); return e ? (e.value || '').trim() : ''; };
     var data = { nom: v('ctrNom'), prenom: v('ctrPrenom'), ddn: v('ctrDdn'), lieuNaiss: v('ctrLieuNaiss'), adresse: v('ctrAdresse'), dateContrat: v('ctrDateContrat'), lieuContrat: v('ctrLieuContrat'),
       sexe: CONTRAT_FORM_SEXE, formule: CONTRAT_FORM_FORMULE, offer: CONTRAT_FORM_OFFER, tarifBase: v('ctrTarifBase'), tarifRemise: '', montantAici: v('ctrMontantAici'), resteCharge: v('ctrResteCharge'),
-      essaiJours: Math.max(0, parseInt(v('ctrEssaiJours'), 10) || 0), essaiTexte: v('ctrEssaiTexte') };
+      essaiJours: Math.max(0, parseInt(v('ctrEssaiJours'), 10) || 0), essaiTexte: v('ctrEssaiTexte'), paiement: CONTRAT_FORM_PAIEMENT };
     var b64 = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
     window.open(CONTRAT_HOSTED_BASE_URL + '?apercu=1#' + b64, '_blank');
   }
@@ -22607,6 +22742,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       resteCharge: (document.getElementById('ctrResteCharge').value || '').trim(),
       essaiJours: Math.max(0, parseInt(document.getElementById('ctrEssaiJours').value, 10) || 0),
       essaiTexte: (document.getElementById('ctrEssaiTexte').value || '').trim(),
+      paiement: CONTRAT_FORM_PAIEMENT,
       status: 'attente',
       createdAt: existingCreatedAt || new Date().toISOString()
     };
