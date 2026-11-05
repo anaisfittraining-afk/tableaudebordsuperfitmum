@@ -1298,7 +1298,7 @@ window.EXERCISE_LIBRARY = [
     .modal-pillar-score { font-size: 17px; font-weight: 800; }
     .modal-comment { font-size: 12px; color: #3E4A3A; background: #f7fafc; border-radius: 8px; padding: 7px 10px; margin-top: 3px; line-height: 1.5; }
     .modal-close { width: 100%; margin-top: 18px; padding: 11px; background: #F7F1E6; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; color: #3E4A3A; cursor: pointer; }
-    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #26312A; color: white; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 2000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #26312A; color: white; padding: 12px 20px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 2147483000; opacity: 0; transition: opacity 0.3s; /* au-dessus de la fiche cliente et de toutes les fenêtres : avant, le message restait caché derrière */ pointer-events: none; }
     .toast.show { opacity: 1; }
     .import-panel { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 16px; border-left: 4px solid #3F5D46; }
     /* DAY NAV */
@@ -1497,6 +1497,8 @@ window.EXERCISE_LIBRARY = [
   <div class="view active" id="view-accueil">
     <div class="home-hero">Bonjour Anaïs 👋</div>
     <!-- Nouvelles prospectes des tunnels : tout en haut de l'accueil (rempli par renderDailyAcq, masqué s'il n'y en a pas) -->
+    <!-- Messages des clientes (application co-NAÎTRE) : tout en haut, avant les prospects -->
+    <div id="homeMessages" style="display:none;max-width:860px;margin:0 0 18px"></div>
     <div id="homeNewProspects" style="display:none;max-width:860px;margin:0 0 18px"></div>
     <!-- Réservations confirmées (créneau choisi, payé s'il y a un paiement) : juste sous les nouvelles prospectes -->
     <div id="homeReservations" style="display:none;max-width:860px;margin:0 0 18px"></div>
@@ -3181,6 +3183,21 @@ window.EXERCISE_LIBRARY = [
   </div>
 </div>
 
+<!-- MESSAGERIE : conversation avec une cliente -->
+<div class="modal-overlay" id="msgOverlay" onclick="if(event.target===this)msgClose()">
+  <div class="modal" id="msgModal">
+    <h2 id="msgTitle"></h2>
+    <div class="modal-sub" id="msgSub"></div>
+    <div id="msgThreadD" style="max-height:48vh;overflow-y:auto;margin:12px 0;padding:2px"></div>
+    <textarea id="msgReplyD" placeholder="Ta réponse…" style="width:100%;min-height:80px;padding:10px 12px;border:1.5px solid #E2DCC8;border-radius:12px;font-size:14px;font-family:inherit;box-sizing:border-box"></textarea>
+    <div id="msgStatusD" style="font-size:12px;color:#66735F;margin:6px 0 0;min-height:16px"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button id="msgSendD" onclick="msgReply()" style="flex:1;padding:11px;border:none;border-radius:12px;background:#2C4432;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Envoyer la réponse</button>
+      <button onclick="msgClose()" style="padding:11px 16px;border:1.5px solid #E2DCC8;border-radius:12px;background:#fff;font-weight:700;font-size:14px;cursor:pointer">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM DELETE MODAL -->
 <div class="modal-overlay" id="confirmOverlay">
   <div class="modal" style="max-width:360px;text-align:center">
@@ -3587,7 +3604,7 @@ window.EXERCISE_LIBRARY = [
       cycle: data.cycle||'', cycleJ: data.cycleJ||'',
       mantra: data.mantra||'',
       priosem1: data.priosem1||'', priosem2: data.priosem2||'', priosem3: data.priosem3||'',
-      blocage: data.blocage||'', devperso: data.devperso||'', smiles: data.smiles||'', pasmoyen: data.pasmoyen||'',
+      blocage: data.blocage||'', devperso: data.devperso||'', smiles: data.smiles||'', pasmoyen: data.pasmoyen||'', pas: data.pas||null,
       // { series, jours } — total de séries de vacuum abdominal faites cette semaine-là et nombre de
       // jours où elle en a fait au moins une (voir bilanWeekVacuumSummary() côté epanouissement/
       // index.html, qui agrège automatiquement le suivi quotidien de l'onglet ☀️ Aujourd'hui) ; absent
@@ -3997,7 +4014,7 @@ window.EXERCISE_LIBRARY = [
     if (client.cycle === 'oui') card.innerHTML += '<div class="cycle-banner cycle-banner-regle">🌸 En règles' + (client.cycleJ ? ' — Jour ' + client.cycleJ : '') + ' &nbsp;·&nbsp; Attention énergie &amp; récupération</div>';
     else if (client.cycle === 'pms') card.innerHTML += '<div class="cycle-banner cycle-banner-pms">🌙 Syndrome prémenstruel &nbsp;·&nbsp; Vigilance moral &amp; motivation</div>';
     if (client.mantra) card.innerHTML += '<div class="mantra-strip">✨ "'+esc(client.mantra)+'"</div>';
-    if (client.pasmoyen) card.innerHTML += '<div style="padding:4px 16px;font-size:11px;color:#66735F;background:#f7fafc;border-bottom:1px solid #F7F1E6">👟 '+esc(String(client.pasmoyen))+' pas / jour en moyenne</div>';
+    if (client.pasmoyen) card.innerHTML += '<div style="padding:4px 16px;font-size:11px;color:#66735F;background:#f7fafc;border-bottom:1px solid #F7F1E6">👟 '+esc(String(client.pasmoyen))+' pas / jour en moyenne'+pasDetailShort(client)+'</div>';
     if (client.vacuum && client.vacuum.series) card.innerHTML += '<div style="padding:4px 16px;font-size:11px;color:#66735F;background:#f7fafc;border-bottom:1px solid #F7F1E6">🌬️ Vacuum : '+client.vacuum.series+' répétition'+(client.vacuum.series>1?'s':'')+' sur '+(client.vacuum.jours||0)+' jour'+(client.vacuum.jours>1?'s':'')+' cette semaine</div>';
     var _cardPoids = (client.mensurations||{})['m-poids'] || (client.mensurations||{})['poids'] || '';
     if (!_cardPoids) { var _cpDM=getDashMens(), _cpKs=Object.keys(_cpDM), _cpSafe=(client.email||client.name||'').replace(/[^a-zA-Z0-9]/g,'_'); for(var _cpi=0;_cpi<_cpKs.length;_cpi++){if(_cpKs[_cpi].replace(/[^a-zA-Z0-9]/g,'_')===_cpSafe&&(_cpDM[_cpKs[_cpi]]||[]).length){_cardPoids=(_cpDM[_cpKs[_cpi]][0]['m-poids']||'');break;}} }
@@ -4166,7 +4183,7 @@ window.EXERCISE_LIBRARY = [
       for (var i=0;i<priosSem.length;i++) body += '<div class="modal-prio-item"><div class="modal-prio-num">'+(i+1)+'</div><span>'+esc(priosSem[i])+'</span></div>';
       body += '</div>';
     }
-    if (client.pasmoyen) body += '<div class="modal-section-title">👟 Nombre de pas moyen</div><div class="modal-comment" style="background:#E7EEE1;border-left:3px solid #68d391"><b>'+esc(String(client.pasmoyen))+'</b> pas / jour</div>';
+    if (client.pasmoyen) body += '<div class="modal-section-title">👟 Nombre de pas moyen</div><div class="modal-comment" style="background:#E7EEE1;border-left:3px solid #68d391"><b>'+esc(String(client.pasmoyen))+'</b> pas / jour'+pasDetailLong(client)+'</div>';
     if (client.vacuum && client.vacuum.series) body += '<div class="modal-section-title">🌬️ Vacuum abdominal</div><div class="modal-comment" style="background:#E7EEE1;border-left:3px solid #68d391"><b>'+client.vacuum.series+'</b> répétition'+(client.vacuum.series>1?'s':'')+' sur <b>'+(client.vacuum.jours||0)+'</b> jour'+(client.vacuum.jours>1?'s':'')+' cette semaine</div>';
     if (client.blocage) body += '<div class="modal-section-title">🚧 Blocages</div><div class="modal-comment" style="background:#fff5f5;border-left:3px solid #fc8181">'+esc(client.blocage)+'</div>';
     // ── Sections personnelles partagées volontairement (opt-in côté cliente, voir epanouissement/index.html) ──
@@ -4674,30 +4691,30 @@ window.EXERCISE_LIBRARY = [
     } else fallback();
   }
 
-  // Envoi via WhatsApp BUSINESS (et non le WhatsApp classique) :
-  //  - ordinateur : WhatsApp Web (web.whatsapp.com) — c'est le compte relié à cette page qui s'ouvre,
-  //    donc celui de ton WhatsApp Business si c'est lui que tu y as relié ;
-  //  - Android : lien direct vers l'appli WhatsApp Business (package com.whatsapp.w4b) ;
-  //  - iPhone : iOS ne permet pas de choisir entre les deux applis depuis une page web, on passe par
-  //    le lien standard wa.me.
-  function prepSendWhatsApp() {
-    var phone = prepPhone();
-    var text = encodeURIComponent(prepBuildMessage(true));
+  // TOUS les boutons WhatsApp du tableau de bord passent par cette fonction : WhatsApp BUSINESS, jamais le WhatsApp classique.
+  //  - ordinateur : WhatsApp Web (c'est le compte relié à cette page, donc ton WhatsApp Business si tu l'y as relié) ;
+  //  - Android : lien direct vers l'appli WhatsApp Business (package com.whatsapp.w4b), repli sur wa.me ;
+  //  - iPhone : essai de l'appli WhatsApp Business (whatsapp-smb://), repli sur wa.me si elle ne s'ouvre pas.
+  // phone : numéro international sans « + » (peut être vide : on choisit alors le contact dans WhatsApp) ; rawText : message non encodé.
+  function waBusinessOpen(phone, rawText) {
+    phone = String(phone || '').replace(/\D/g, '');
+    var text = rawText ? encodeURIComponent(rawText) : '';
+    var qs = (phone ? 'phone=' + phone : '') + (phone && text ? '&' : '') + (text ? 'text=' + text : '');
     var ua = navigator.userAgent || '';
-    var isAndroid = /Android/i.test(ua);
-    var isIOS = /iPhone|iPad|iPod/i.test(ua);
-    var url;
-    if (isAndroid) {
-      var fallback = encodeURIComponent('https://wa.me/' + phone + '?text=' + text);
-      url = 'intent://send/?' + (phone ? 'phone=' + phone + '&' : '') + 'text=' + text +
-        '#Intent;scheme=smsto;package=com.whatsapp.w4b;S.browser_fallback_url=' + fallback + ';end';
-      window.location.href = url;
+    var wameUrl = 'https://wa.me/' + phone + (text ? '?text=' + text : '');
+    if (/Android/i.test(ua)) {
+      window.location.href = 'intent://send/?' + qs + '#Intent;scheme=smsto;package=com.whatsapp.w4b;S.browser_fallback_url=' + encodeURIComponent(wameUrl) + ';end';
       return;
     }
-    if (isIOS) url = 'https://wa.me/' + phone + '?text=' + text;
-    else url = 'https://web.whatsapp.com/send?' + (phone ? 'phone=' + phone + '&' : '') + 'text=' + text;
-    window.open(url, '_blank', 'noopener');
+    if (/iPhone|iPad|iPod/i.test(ua)) {
+      var t0 = Date.now();
+      window.location.href = 'whatsapp-smb://send' + (qs ? '?' + qs : '');
+      setTimeout(function() { if (!document.hidden && Date.now() - t0 < 2500) window.location.href = wameUrl; }, 1200);
+      return;
+    }
+    window.open('https://web.whatsapp.com/send' + (qs ? '?' + qs : ''), '_blank', 'noopener');
   }
+  function prepSendWhatsApp() { waBusinessOpen(prepPhone(), prepBuildMessage(true)); }
 
   function prepCopyMessage() { prepCopy(prepBuildMessage(true), 'Message copié ✅'); }
   function prepCopyLink() { prepCopy(PREP_PUBLIC_URL, 'Lien copié ✅'); }
@@ -14585,7 +14602,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (c.smiles) lines.push('Smiles de la semaine : ' + c.smiles);
     var prios = [c.priosem1, c.priosem2, c.priosem3].filter(Boolean);
     if (prios.length) lines.push('Priorités de la semaine : ' + prios.join(' / '));
-    if (c.pasmoyen) lines.push('Pas moyen / jour : ' + c.pasmoyen);
+    if (c.pasmoyen) lines.push('Pas moyen / jour : ' + c.pasmoyen + pasDetailPlain(c));
     if (c.vacuum && c.vacuum.series) lines.push('Vacuum abdominal : ' + c.vacuum.series + ' répétition' + (c.vacuum.series > 1 ? 's' : '') + ' sur ' + (c.vacuum.jours || 0) + ' jour' + (c.vacuum.jours > 1 ? 's' : '') + ' cette semaine');
     if (c.blocage) lines.push('Blocages : ' + c.blocage);
     return lines.join('\n');
@@ -14756,7 +14773,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         if (c.smiles) para('Smiles de la semaine : ' + c.smiles, { size: 8.5, gap: 1.5 });
         var prios = [c.priosem1, c.priosem2, c.priosem3].filter(Boolean);
         if (prios.length) para('Priorités : ' + prios.join(' / '), { size: 8.5, gap: 1.5 });
-        if (c.pasmoyen) para('Pas moyen / jour : ' + c.pasmoyen, { size: 8.5, gap: 1.5 });
+        if (c.pasmoyen) para('Pas moyen / jour : ' + c.pasmoyen + pasDetailPlain(c), { size: 8.5, gap: 1.5 });
         if (c.vacuum && c.vacuum.series) para('Vacuum abdominal : ' + c.vacuum.series + ' répétition' + (c.vacuum.series > 1 ? 's' : '') + ' sur ' + (c.vacuum.jours || 0) + ' jour' + (c.vacuum.jours > 1 ? 's' : '') + ' cette semaine', { size: 8.5, gap: 1.5 });
         if (c.blocage) para('Blocages : ' + c.blocage, { size: 8.5, gap: 1.5 });
         y += 3;
@@ -15838,6 +15855,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         try { renderNoConnexion(); } catch (e) {}
       });
     });
+    // Messagerie clientes → coach (application co-NAÎTRE). Lecture seule ici ; on n'écrit que
+    // sous epanouissement_global/messagerie/<code> (réponses de la coach + « lu »).
+    dashFbDB.ref('epanouissement_global/messagerie').on('value', function(snap) {
+      DASH_MSG = snap.val() || {};
+      try { renderMessagesHome(); } catch (e) {}
+      try { if (MSG_OPEN) msgRenderOpen(); } catch (e) {}
+    });
     dashFbDB.ref('contrats').on('value', function(snap) {
       CONTRATS_ALL = snap.val() || {};
       renderContratTab();
@@ -16106,7 +16130,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         return {
           date: d.date, scores: d.scores, comments: d.comments, cycle: d.cycle, cycleJ: d.cycleJ,
           mantra: d.mantra, priosem1: d.priosem1, priosem2: d.priosem2, priosem3: d.priosem3,
-          blocage: d.blocage, devperso: d.devperso, smiles: d.smiles, pasmoyen: d.pasmoyen, vacuum: d.vacuum
+          blocage: d.blocage, devperso: d.devperso, smiles: d.smiles, pasmoyen: d.pasmoyen, pas: d.pas, vacuum: d.vacuum
         };
       });
       var mensInfo = findMensForClient(key, clientName);
@@ -20300,7 +20324,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   function accFicheCopy(key, name) { var r = accRec(key); if (r) accCopy(accMessage(key, name, r.code), '📋 Message copié — colle-le dans WhatsApp ou un e-mail'); }
   function accFicheCodeOnly(key) { var r = accRec(key); if (r) accCopy(r.code, '📋 Code copié'); }
-  function accFicheWa(key, name) { var r = accRec(key); if (r) window.open('https://wa.me/?text=' + encodeURIComponent(accMessage(key, name, r.code)), '_blank', 'noopener'); }
+  function accFicheWa(key, name) { var r = accRec(key); if (r) waBusinessOpen('', accMessage(key, name, r.code)); }
   function accFicheMail(key, name) {
     var r = accRec(key); if (!r) return; var cl = buildByClient()[key] || {};
     window.location.href = 'mailto:' + encodeURIComponent(cl.email || r.email || '') + '?subject=' + encodeURIComponent('Ton accès à ton espace co-NAÎTRE') + '&body=' + encodeURIComponent(accMessage(key, name, r.code));
@@ -20438,7 +20462,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       + '<div style="font-size:12.5px;color:#9c6f00;margin:3px 0 6px">⚠️ Vérifie d\'abord dans Stripe que son paiement est bien arrivé, puis envoie-lui son code. Sa fiche cliente est déjà créée.</div>';
     if (!rec) return h + '<div style="font-size:12.5px;color:#a4302a">Code en cours de création…</div></div>';
     h += '<div style="font-family:ui-monospace,Menlo,monospace;font-size:20px;font-weight:800;letter-spacing:2px;color:#2C4432;margin-bottom:8px">' + esc(rec.code) + '</div><div style="display:flex;gap:6px;flex-wrap:wrap">'
-      + (wa ? '<a href="https://wa.me/' + wa + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener" style="' + b + 'background:#E7EEE1;color:#2C4432;text-decoration:none;border:none">💬 WhatsApp</a>' : '')
+      + (wa ? '<a href="#" onclick="waBusinessOpen(' + jsAttr(wa) + ',' + jsAttr(msg) + ');return false" style="' + b + 'background:#E7EEE1;color:#2C4432;text-decoration:none;border:none">💬 WhatsApp Business</a>' : '')
       + '<button onclick="acqCodeMail(' + jsAttr(d._id) + ')" style="' + b + 'background:#fff;color:#2C4432;border:1.5px solid #b7c9b3">✉️ Envoyer par e-mail</button>'
       + '<button onclick="accCopy(' + jsAttr(msg) + ',\'📋 Message copié\')" style="' + b + 'background:#fff;color:#2C4432;border:1.5px solid #E2DCC8">📋 Copier le message</button>'
       + '<button onclick="acqCodeSent(' + jsAttr(d._id) + ')" style="' + b + 'background:linear-gradient(135deg,#3F5D46,#2C4432);color:#fff;border:none">✅ Code envoyé</button></div></div>';
@@ -20555,7 +20579,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
         + (d.email ? '<a href="mailto:' + esc(d.email) + '" style="padding:6px 12px;background:#E7EEE1;color:#2C4432;border-radius:16px;font-size:12.5px;font-weight:700;text-decoration:none">✉️ ' + esc(d.email) + '</a>' : '')
         + (d.telephone ? '<a href="tel:' + esc(d.telephone) + '" style="padding:6px 12px;background:#E7EEE1;color:#2C4432;border-radius:16px;font-size:12.5px;font-weight:700;text-decoration:none">📞 ' + esc(d.telephone) + '</a>' : '')
-        + (wa ? '<a href="https://wa.me/' + wa + '" target="_blank" rel="noopener" style="padding:6px 12px;background:#E7EEE1;color:#2C4432;border-radius:16px;font-size:12.5px;font-weight:700;text-decoration:none">💬 WhatsApp</a>' : '')
+        + (wa ? '<a href="#" onclick="waBusinessOpen(' + jsAttr(wa) + ',\'\');return false" style="padding:6px 12px;background:#E7EEE1;color:#2C4432;border-radius:16px;font-size:12.5px;font-weight:700;text-decoration:none">💬 WhatsApp Business</a>' : '')
         + acqRdvButtons(d) + (d.contratSigne ? '<button onclick="acqOpenContrat(' + jsAttr(d._id) + ')" style="padding:6px 12px;background:#FFF1E0;color:#8a4a2a;border:none;border-radius:16px;font-size:12.5px;font-weight:700;cursor:pointer">✍️ Contrat signé — voir</button>' : '')
         + '</div>'
         + '<textarea placeholder="Notes (ex : rappelée le 12, hésite entre deux formules…)" onchange="acqSaveNote(' + jsAttr(d._id) + ',this.value)" style="width:100%;margin-top:10px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:10px;font-size:13px;font-family:inherit;min-height:44px;resize:vertical">' + esc(d.notes || '') + '</textarea>'
@@ -20907,7 +20931,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   function acqContactBtns(d) {
     var wa = acqWaNumber(d.telephone), b = 'padding:5px 10px;background:#E7EEE1;color:#2C4432;border-radius:14px;font-size:12px;font-weight:700;text-decoration:none;border:none;cursor:pointer';
-    return (d.telephone ? '<a href="tel:' + esc(d.telephone) + '" style="' + b + '">📞 ' + esc(d.telephone) + '</a>' : '') + (wa ? '<a href="https://wa.me/' + wa + '" target="_blank" rel="noopener" style="' + b + '">💬 WhatsApp</a>' : '') + (d.email ? '<a href="mailto:' + esc(d.email) + '" style="' + b + '">✉️ E-mail</a>' : '');
+    return (d.telephone ? '<a href="tel:' + esc(d.telephone) + '" style="' + b + '">📞 ' + esc(d.telephone) + '</a>' : '') + (wa ? '<a href="#" onclick="waBusinessOpen(' + jsAttr(wa) + ',\'\');return false" style="' + b + '">💬 WhatsApp Business</a>' : '') + (d.email ? '<a href="mailto:' + esc(d.email) + '" style="' + b + '">✉️ E-mail</a>' : '');
   }
   function acqMarkSeen(id) { dashFbDB.ref('acquisition/leads/' + id).update({ vu: true }); }
   function acqMarkSeenAll() { var g = acqDailyGroups(); g.nouvelles.forEach(function(d) { if (!d.status || d.status === 'converti' || d.status === 'rdv' || d.status === 'paye') dashFbDB.ref('acquisition/leads/' + d._id).update({ vu: true }); }); }
@@ -21081,7 +21105,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var row = ncCollect().late.filter(function(x) { return x.key === key; })[0]; if (!row) return;
     var msg = ncMessage(row), o = ncGet(); o.relance[key] = new Date().toISOString();
     try { localStorage.setItem(NC_KEY, JSON.stringify(o)); } catch (e) {}
-    if (mode === 'wa') { var n = acqWaNumber(ncPhone(row)); window.open('https://wa.me/' + (n || '') + '?text=' + encodeURIComponent(msg), '_blank'); }
+    if (mode === 'wa') { var n = acqWaNumber(ncPhone(row)); waBusinessOpen(n, msg); }
     else location.href = 'mailto:' + encodeURIComponent((row.entry && row.entry.email) || '') + '?subject=' + encodeURIComponent('Un petit coucou de la part d\'Anaïs') + '&body=' + encodeURIComponent(msg);
     renderNoConnexion();
   }
@@ -21133,6 +21157,103 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     }
     el.innerHTML = acqHomeBox(color, bg, border, '📵 ' + (alerte ? 'Pas connectées aujourd\'hui' : 'Pas encore connectées aujourd\'hui'), r.late.length, inner);
     el.style.display = 'block';
+  }
+
+  // ── 💬 Messagerie avec les clientes (05/11/2026) ─────────────────────────────────────────────────
+  // Les clientes écrivent depuis l'application co-NAÎTRE (« Écrire à Anaïs »). Chemin Firebase :
+  // epanouissement_global/messagerie/<code>/{msgs, meta}. Le bloc « Messages » s'affiche en tout
+  // premier sur l'accueil tant qu'une cliente attend une réponse. Rien d'autre n'est lu ni modifié.
+  var DASH_MSG = {}, MSG_OPEN = null, MSG_BASE_TITLE = document.title;
+
+  // 👟 Détail des pas envoyé par l'application (payload.pas : moyenne, jours notés, objectif, jours où l'objectif est atteint).
+  function pasDetailPlain(c) {
+    var p = c && c.pas; if (!p || !p.jours) return '';
+    return ' (' + p.jours + ' jour' + (p.jours > 1 ? 's' : '') + ' noté' + (p.jours > 1 ? 's' : '') + ', objectif ' + p.objectif + ' atteint ' + (p.joursObjectif || 0) + ' fois)';
+  }
+  function pasDetailShort(c) { var t = pasDetailPlain(c); return t ? esc(t) : ''; }
+  function pasDetailLong(c) {
+    var p = c && c.pas; if (!p || !p.jours) return '';
+    var det = (p.detail || []).map(function(x) { return String(x.d || '').slice(8, 10) + '/' + String(x.d || '').slice(5, 7) + ' : ' + x.n; }).join(' · ');
+    return '<div style="font-size:12px;color:#4A5546;margin-top:4px">' + esc(pasDetailPlain(c).trim()) + (det ? '<br>' + esc(det) : '') + '</div>';
+  }
+  function msgName(code) {
+    var m = (DASH_MSG[code] && DASH_MSG[code].meta) || {};
+    if (m.name) return m.name;
+    var n = '';
+    try { DASH_APPS.forEach(function(a) { var e = (DASH_ACCESS_REGISTRY[a.key] || {})[code]; if (e && e.name && !n) n = e.name; }); } catch (e) {}
+    return n || ('Cliente (' + code + ')');
+  }
+  // Les clientes de l'application de réservation Pilates (co-NAÎTRE en mouvement) ont une clé « mouv_<code> ».
+  function msgApp(code) { return String(code).indexOf('mouv_') === 0 ? ' <span style="font-size:11px;font-weight:600;color:#66735F">· 🧘 Pilates (réservation)</span>' : ''; }
+  function msgListOf(code) {
+    var m = (DASH_MSG[code] && DASH_MSG[code].msgs) || {};
+    return Object.keys(m).map(function(k) { var x = m[k] || {}; x._id = k; return x; }).filter(function(x) { return x.text; }).sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
+  }
+  function msgUnreadOf(code) {
+    var rd = ((DASH_MSG[code] && DASH_MSG[code].meta) || {}).coachReadTs || 0;
+    return msgListOf(code).filter(function(x) { return x.from === 'cliente' && (x.ts || 0) > rd; }).length;
+  }
+  function msgFmt(ts) { if (!ts) return ''; var d = new Date(ts); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  function renderMessagesHome() {
+    var codes = Object.keys(DASH_MSG || {}).filter(function(c) { return msgListOf(c).length; });
+    var unread = codes.filter(function(c) { return msgUnreadOf(c) > 0; });
+    var byLast = function(a, b) { return ((DASH_MSG[b].meta || {}).lastTs || 0) - ((DASH_MSG[a].meta || {}).lastTs || 0); };
+    unread.sort(byLast);
+    var total = unread.reduce(function(n, c) { return n + msgUnreadOf(c); }, 0);
+    try { document.title = (total ? '(' + total + ') ' : '') + MSG_BASE_TITLE; } catch (e) {}
+    var inner = '';
+    unread.forEach(function(c) {
+      var l = msgListOf(c), last = l[l.length - 1] || {}, n = msgUnreadOf(c);
+      inner += '<div style="background:#fff;border:1px solid #F0C9B2;border-radius:12px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div style="min-width:0;flex:1 1 220px"><div style="font-weight:700;font-size:14px;color:#26312A">' + esc(msgName(c)) + msgApp(c) + ' <span style="background:#B96A46;color:#fff;border-radius:20px;padding:1px 8px;font-size:11px">' + n + ' nouveau' + (n > 1 ? 'x' : '') + '</span></div><div style="font-size:13px;color:#4A5546;margin-top:3px;white-space:pre-wrap;word-break:break-word">' + esc(String(last.text || '').slice(0, 220)) + '</div><div style="font-size:11px;color:#8C9686;margin-top:2px">' + esc(msgFmt(last.ts)) + '</div></div><button onclick="msgOpen(' + jsAttr(c) + ')" style="' + ACQ_BT + ';background:#2C4432;border-color:#2C4432;color:#fff">💬 Lire et répondre</button></div>';
+    });
+    var others = codes.filter(function(c) { return unread.indexOf(c) === -1; }).sort(byLast);
+    if (others.length) {
+      inner += '<details style="margin-top:6px;font-size:12.5px;color:#66735F"><summary style="cursor:pointer">Conversations déjà lues (' + others.length + ')</summary>' + others.map(function(c) {
+        var l = msgListOf(c), last = l[l.length - 1] || {};
+        return '<div style="margin:8px 0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div><b style="color:#26312A">' + esc(msgName(c)) + '</b>' + msgApp(c) + ' · ' + esc(msgFmt(last.ts)) + (last.from === 'coach' ? ' · tu as répondu' : '') + '</div><button onclick="msgOpen(' + jsAttr(c) + ')" style="' + ACQ_BT + '">Ouvrir</button></div>';
+      }).join('') + '</details>';
+    }
+    acqHomeSet('homeMessages', (unread.length || others.length) ? acqHomeBox('#8A4A2E', '#FFF7F0', '#F0C9B2', '💬 Messages des clientes', unread.length ? total + ' nouveau' + (total > 1 ? 'x' : '') : 'aucun nouveau', inner) : '');
+  }
+  function msgOpen(code) {
+    MSG_OPEN = code;
+    var o = document.getElementById('msgOverlay'); if (o) o.classList.add('open');
+    var ta = document.getElementById('msgReplyD'); if (ta) ta.value = '';
+    var st = document.getElementById('msgStatusD'); if (st) st.textContent = '';
+    msgRenderOpen(true);
+    var t = document.getElementById('msgReplyD'); if (t) t.focus();
+  }
+  function msgClose() { MSG_OPEN = null; var o = document.getElementById('msgOverlay'); if (o) o.classList.remove('open'); try { renderMessagesHome(); } catch (e) {} }
+  function msgMarkReadD(code) {
+    if (!dashFbDB || !code || !msgUnreadOf(code)) return;
+    try { dashFbDB.ref('epanouissement_global/messagerie/' + code + '/meta/coachReadTs').set(firebase.database.ServerValue.TIMESTAMP).catch(function() {}); } catch (e) {}
+  }
+  function msgRenderOpen(scroll) {
+    var code = MSG_OPEN; if (!code) return;
+    var l = msgListOf(code), meta = (DASH_MSG[code] && DASH_MSG[code].meta) || {};
+    document.getElementById('msgTitle').textContent = '💬 ' + msgName(code);
+    document.getElementById('msgSub').textContent = meta.email || '';
+    var box = document.getElementById('msgThreadD');
+    var atBottom = scroll || (box.scrollHeight - box.scrollTop - box.clientHeight < 40);
+    box.innerHTML = l.length ? l.map(function(x) {
+      var coach = x.from === 'coach';
+      return '<div style="display:flex;justify-content:' + (coach ? 'flex-end' : 'flex-start') + ';margin:0 0 10px"><div style="max-width:86%;padding:9px 12px;border-radius:14px;background:' + (coach ? '#E7EEE1' : '#FBF6EC') + ';border:1px solid ' + (coach ? '#CFE0C9' : '#E6C9AE') + '"><div style="font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word">' + esc(x.text) + '</div><div style="font-size:10.5px;color:#8C9686;margin-top:3px;text-align:right">' + (coach ? 'Toi · ' : '') + esc(msgFmt(x.ts)) + '</div></div></div>';
+    }).join('') : '<div style="color:#8C9686;font-size:13px">Aucun message.</div>';
+    if (atBottom) box.scrollTop = box.scrollHeight;
+    msgMarkReadD(code);
+  }
+  function msgReply() {
+    var code = MSG_OPEN, ta = document.getElementById('msgReplyD'), st = document.getElementById('msgStatusD'), btn = document.getElementById('msgSendD');
+    var text = ta ? ta.value.trim() : '';
+    if (!code || !text) { if (st) st.textContent = 'Écris d\'abord ta réponse.'; return; }
+    if (!dashFbDB) { if (st) st.textContent = '⚠️ Connexion impossible pour le moment.'; return; }
+    btn.disabled = true; st.textContent = 'Envoi…';
+    var TS = firebase.database.ServerValue.TIMESTAMP, base = 'epanouissement_global/messagerie/' + code;
+    dashFbDB.ref(base + '/msgs').push({ from: 'coach', text: text.slice(0, 2000), ts: TS }).then(function() {
+      return dashFbDB.ref(base + '/meta').update({ lastTs: TS, lastFrom: 'coach', lastText: text.slice(0, 140), coachReadTs: TS });
+    }).then(function() {
+      ta.value = ''; st.textContent = '✅ Réponse envoyée — ' + msgName(code) + ' la verra à sa prochaine ouverture de l\'application.'; btn.disabled = false;
+    }).catch(function() { st.textContent = '⚠️ Réponse non envoyée — vérifie ta connexion (ton texte est conservé).'; btn.disabled = false; });
   }
   setInterval(function() { try { renderNoConnexion(); } catch (e) {} }, 300000);
   setTimeout(function() { try { renderNoConnexion(); } catch (e) {} }, 4000);
@@ -21193,7 +21314,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var edit = '<button onclick="acqWelcomeEdit()" style="float:right;margin-top:-26px;padding:4px 10px;border:1.5px solid #E2DCC8;background:#fff;border-radius:10px;font-size:11.5px;font-weight:700;cursor:pointer">✏️ Mes messages</button>';
     acqHomeSet('homeClientes', clientes.length ? acqHomeBox('#2C4432', '#F4FAF3', '#CFE0C9', '🌱 Nouvelles clientes', clientes.length, edit + h3) : '');
   }
-  // ── Message de bienvenue WhatsApp (WhatsApp Business : le lien wa.me ouvre l'application installée) ──
+  // ── Message de bienvenue WhatsApp (envoyé via WhatsApp Business, voir waBusinessOpen) ──
   var WELCOME_KEY = 'sfm_welcome_msgs_v1';
   var WELCOME_DEF = {
     vente: 'Bonjour {prenom} ! 🌿 Bienvenue dans co-NAÎTRE : ton paiement est bien reçu et je suis ravie de commencer ce chemin avec toi. Je t\'envoie très vite ton accès et les premières étapes. À très vite ! Anaïs',
@@ -21206,7 +21327,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   function acqWelcomeWa(id) {
     var d = ACQ_LEADS[id]; if (!d) return; var wa = acqWaNumber(d.telephone); if (!wa) { showToast('Pas de numéro pour ' + (d.nom || 'cette cliente')); return; }
-    window.open('https://wa.me/' + wa + '?text=' + encodeURIComponent(acqWelcomeText(d)), '_blank');
+    waBusinessOpen(wa, acqWelcomeText(d));
     if (dashFbDB) dashFbDB.ref('acquisition/leads/' + id).update({ welcomeSentAt: new Date().toISOString(), vu: true });
   }
   function acqClienteDone(id) { if (dashFbDB) dashFbDB.ref('acquisition/leads/' + id).update({ clienteVue: true, vu: true }); }
@@ -21432,7 +21553,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function acqCtCopy(id) { var l = acqCtLink(id); if (navigator.clipboard) navigator.clipboard.writeText(l).then(function() { showToast('🔗 Lien copié'); }); else window.prompt('Copie ce lien :', l); }
   function acqCtDelete(id) { if (!window.confirm('Supprimer ce contrat (le lien ne fonctionnera plus) ?')) return; dashFbDB.ref('acquisition/contratsEnvoyes/' + id).remove(); dashFbDB.ref('acquisition/leads/' + id).remove(); }
   function acqCtMsg(c, id) { return 'Bonjour ' + (c.nom || '').split(' ')[0] + ' ! Voici ton lien pour rejoindre l\'accompagnement co-NAÎTRE : tu y découvres ton espace, tu lis et signes ton contrat, puis tu règles ta formule (' + (c.offreLabel || '') + ' ' + (c.offrePrix || '') + ') en toute sécurité : ' + acqCtLink(id) + ' — Anaïs'; }
-  function acqCtWa(id) { var c = ACQ_CTS[id]; if (!c) return; var n = acqWaNumber(c.telephone); window.open('https://wa.me/' + (n || '') + '?text=' + encodeURIComponent(acqCtMsg(c, id)), '_blank'); }
+  function acqCtWa(id) { var c = ACQ_CTS[id]; if (!c) return; var n = acqWaNumber(c.telephone); waBusinessOpen(n, acqCtMsg(c, id)); }
   function acqCtMail(id) { var c = ACQ_CTS[id]; if (!c) return; location.href = 'mailto:' + encodeURIComponent(c.email || '') + '?subject=' + encodeURIComponent('Ton inscription à l\'accompagnement co-NAÎTRE') + '&body=' + encodeURIComponent(acqCtMsg(c, id)); }
   function acqContratsHtml() {
     var f = acqCurrent('accompagnement'), inp = 'width:100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-family:inherit', lb = 'display:block;font-size:11.5px;font-weight:700;color:#66735F;margin:10px 0 4px';
@@ -21992,7 +22113,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var timeMin = new Date(); timeMin.setHours(0, 0, 0, 0);
     var url = 'https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(c.calendarId) +
       '/events?key=' + encodeURIComponent(c.apiKey) + '&timeMin=' + encodeURIComponent(timeMin.toISOString()) +
-      '&singleEvents=true&orderBy=startTime&maxResults=250';
+      '&singleEvents=true&orderBy=startTime&maxResults=40&q=' + encodeURIComponent('rencontre collective');
+    // Requête ciblée (titre contenant « rencontre collective ») : les 250 premiers événements d'un agenda
+    // très chargé n'atteignaient pas les rencontres trimestrielles. Le filtre exact par préfixe reste appliqué ensuite.
     fetch(url).then(function(res) {
       if (!res.ok) throw new Error('http ' + res.status);
       return res.json();
