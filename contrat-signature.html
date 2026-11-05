@@ -276,9 +276,9 @@ canvas#sigPad {
         </button>
         <button class="offer-btn formule-btn" onclick="setFormule('bilanmensuel',this)">
           <div class="ob-title">Formule réduite</div>
-          <div class="ob-sub">Tout compris · 1 bilan par mois</div>
+          <div class="ob-sub">Plateforme + masterclass</div>
         </button>
-        <button class="offer-btn formule-btn" onclick="setFormule('reduite',this)">
+        <button class="offer-btn formule-btn" id="formuleBtn-reduite" style="display:none" onclick="setFormule('reduite',this)">
           <div class="ob-title">Sans masterclass ni plateforme</div>
           <div class="ob-sub">Coaching seul</div>
         </button>
@@ -299,6 +299,20 @@ canvas#sigPad {
         <div class="tarif-field" id="wCharge">
           <label>Reste à charge (€)</label>
           <input type="number" id="resteCharge" placeholder="50" oninput="liveUpdate()">
+        </div>
+      </div>
+      <!-- Période d'essai : visible seulement pour la coach (aperçu / page sans code). Ajoute la ligne 5.1 au contrat. -->
+      <div id="essaiBox" style="display:none;margin-top:16px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8C9686;margin-bottom:8px">Période d'essai</div>
+        <div class="offer-row" id="essaiBtns">
+          <button type="button" class="offer-btn active" data-j="0" onclick="setEssaiJours(0)"><div class="ob-title">Aucune</div></button>
+          <button type="button" class="offer-btn" data-j="7" onclick="setEssaiJours(7)"><div class="ob-title">7 jours</div></button>
+          <button type="button" class="offer-btn" data-j="14" onclick="setEssaiJours(14)"><div class="ob-title">14 jours</div></button>
+          <button type="button" class="offer-btn" data-j="30" onclick="setEssaiJours(30)"><div class="ob-title">30 jours</div></button>
+        </div>
+        <div class="tarif-row" style="margin-top:10px">
+          <div class="tarif-field"><label>Autre durée (jours)</label><input type="number" min="0" id="essaiJoursInput" placeholder="0" oninput="setEssaiJours(this.value)"></div>
+          <div class="tarif-field" style="flex:2"><label>Conditions de l'essai (vide = texte par défaut)</label><input type="text" id="essaiTexteInput" placeholder="ex : remboursement intégral si elle arrête avant le 14e jour" oninput="setEssaiTexte(this.value)"></div>
         </div>
       </div>
     </div>
@@ -402,6 +416,9 @@ canvas#sigPad {
       <button class="btn-sign" id="btnSign" onclick="buildPDF()" disabled>
         ✅ SIGNER ET TÉLÉCHARGER MON CONTRAT (PDF)
       </button>
+      <button class="btn-sign" id="btnApercu" onclick="buildPDF(true, true)" style="display:none;background:#66735F;margin-top:10px">
+        📄 TÉLÉCHARGER L'APERÇU (PDF sans signature)
+      </button>
       <div class="success" id="successMsg">
         <h3>✅ Contrat signé !</h3>
         <p>Ton PDF a été téléchargé. Envoie-le à <strong>anais.fernet@oamafernet.com</strong> pour finaliser ton inscription. 💪</p>
@@ -467,11 +484,37 @@ function setOffer(type, btn) {
 }
 
 // ── SEXE (civilité) ─────────────────────────
+// La formule « Sans masterclass ni plateforme » n'existe que pour les messieurs : visible seulement si « Monsieur » est coché
+// (un contrat déjà créé avec cette formule la garde, voir ctrApplyData).
+function syncFormuleReduiteBtn(keepIfSelected) {
+  var b = document.getElementById('formuleBtn-reduite'); if (!b) return;
+  b.style.display = (sexe === 'm' || (keepIfSelected && formule === 'reduite')) ? '' : 'none';
+  if (b.style.display === 'none' && formule === 'reduite') {
+    formule = 'complete';
+    document.querySelectorAll('.formule-btn').forEach(x => x.classList.toggle('active', (x.getAttribute('onclick') || '').indexOf("'complete'") >= 0));
+  }
+}
 function setSexe(val, btn) {
   sexe = val;
   document.querySelectorAll('.sex-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  syncFormuleReduiteBtn(false);
   liveUpdate();
+}
+
+// ── PÉRIODE D'ESSAI (coach) : ajoute / retire la ligne « 5.1 Période d'essai » du contrat ──
+function setEssaiJours(v) {
+  var j = Math.max(0, parseInt(v, 10) || 0);
+  ctrEssai = { jours: j, texte: ctrEssai.texte || '' };
+  var inp = document.getElementById('essaiJoursInput'); if (inp && document.activeElement !== inp) inp.value = j || '';
+  document.querySelectorAll('#essaiBtns .offer-btn').forEach(function(b) { b.classList.toggle('active', parseInt(b.getAttribute('data-j'), 10) === j); });
+  liveUpdate();
+}
+function setEssaiTexte(t) { ctrEssai = { jours: ctrEssai.jours || 0, texte: t || '' }; liveUpdate(); }
+function syncEssaiBox() {
+  var inp = document.getElementById('essaiJoursInput'), tx = document.getElementById('essaiTexteInput');
+  if (inp) inp.value = ctrEssai.jours || ''; if (tx) tx.value = ctrEssai.texte || '';
+  document.querySelectorAll('#essaiBtns .offer-btn').forEach(function(b) { b.classList.toggle('active', parseInt(b.getAttribute('data-j'), 10) === (ctrEssai.jours || 0)); });
 }
 
 // ── FORMULE ──────────────────────────────────
@@ -534,6 +577,7 @@ function buildContractTexts(ctx) {
     'analyse et optimisation des résultats toutes les semaines',
     'disponibilité du coach du lundi au samedi via WhatsApp'
   ];
+  if (bilanMensuel) services = services.map(function(x) { return x === 'coachings mensuels personnels' ? 'un coaching mensuel personnel' : x; }); // formule réduite : un seul coaching par mois
   t.p4services = 'Les services incluent : ' + services.join(' · ') + '.' + (bilanMensuel ? ' Formule réduite : tout est inclus, à l\'exception du nombre de bilans, réduit à un seul bilan par mois (au lieu d\'un par semaine).' : '');
   t.p4servicesPlain = t.p4services;
 
@@ -646,7 +690,7 @@ function checkReady() {
 sigPad.addEventListener('endStroke', checkReady);
 
 // ── PDF ─────────────────────────────────────
-function buildPDF(skipSave) {
+function buildPDF(skipSave, apercu) {
   const {jsPDF} = window.jspdf;
   const doc = new jsPDF({unit:'mm', format:'a4'});
   const PW=210, ml=18, mr=18, cw=PW-ml-mr;
@@ -742,7 +786,7 @@ function buildPDF(skipSave) {
 
   secTitle('Entre les parties');
   para(`Prestataire : OAM A. FERNET, Anaïs Fernet — 88 rue Marcel Caudevelle, 62360 La Capelle Les Boulogne — SIRET 818 149 254 00034`);
-  para(`${t.roleLabel} : ${prenom} ${nom}${ddn?', '+t.born+' le '+fmtDate(ddn):''}${lieu?', à '+lieu:''}${adr?', demeurant '+adr:''}`);
+  para(`${t.roleLabel} : ${(prenom || nom) ? (prenom + ' ' + nom).trim() : '………………………………'}${ddn?', '+t.born+' le '+fmtDate(ddn):''}${lieu?', à '+lieu:''}${adr?', demeurant '+adr:''}`);
 
   secTitle('Objet du contrat');
   para("Le présent contrat a pour objet de définir les conditions dans lesquelles le Prestataire s'engage à fournir des services de coaching global (de vie, sportif et nutritionnel) " + t.objCliente + ".");
@@ -806,7 +850,7 @@ function buildPDF(skipSave) {
   doc.setFontSize(8);
   doc.setTextColor(90,90,90);
   doc.text('Anaïs Fernet', c1, y);
-  doc.text(`${prenom} ${nom}`, c2, y);
+  doc.text((prenom || nom) ? `${prenom} ${nom}` : '………………………………', c2, y);
   y+=4;
 
   // Prestataire : signature d'Anaïs (image déjà présente dans le contrat à l'écran)
@@ -827,8 +871,10 @@ function buildPDF(skipSave) {
 
   // Cliente: signature image
   try {
-    const simg = sigPad.toDataURL('image/png');
-    doc.addImage(simg,'PNG', c2, y, half, 24);
+    if (!apercu && !sigPad.isEmpty()) {
+      const simg = sigPad.toDataURL('image/png');
+      doc.addImage(simg,'PNG', c2, y, half, 24);
+    }
   } catch(e){}
   doc.setDrawColor(126,217,87);
   doc.line(c2, y+24, c2+half, y+24);
@@ -840,8 +886,9 @@ function buildPDF(skipSave) {
   drawLogoFooter(2,2);
 
   // ── Save ──
-  const fname=`Contrat_${nom}_${prenom}_co-NAITRE_${new Date().toISOString().slice(0,10)}.pdf`;
+  const fname = apercu ? `Apercu_contrat_co-NAITRE_${new Date().toISOString().slice(0,10)}.pdf` : `Contrat_${nom}_${prenom}_co-NAITRE_${new Date().toISOString().slice(0,10)}.pdf`;
   doc.save(fname);
+  if (apercu) return; // aperçu : on ne touche ni au bouton de signature ni à l'enregistrement
 
   const successEl = document.getElementById('successMsg');
   const signBtnEl = document.getElementById('btnSign');
@@ -947,6 +994,7 @@ function ctrApplyData(data) {
     b.classList.toggle('active', onclickAttr.indexOf("'" + wantedFormule + "'") >= 0);
   });
   formule = wantedFormule;
+  syncFormuleReduiteBtn(true);
 
   liveUpdate();
   ctrLockFields();
@@ -1015,6 +1063,23 @@ function ctrInit() {
   });
 }
 ctrInit();
+
+// ── Aperçu (?apercu=1) : le contrat s'affiche avec les choix du formulaire de la coach, SANS nom ni coordonnées,
+// et un bouton télécharge le PDF sans signature. Rien n'est enregistré. Même bouton sur la page seule (sans code).
+(function ctrPreviewInit() {
+  var ap = new URLSearchParams(window.location.search).get('apercu') === '1';
+  if (!ap && (CTR_CODE || CTR_EMBED)) return;
+  var b = document.getElementById('btnApercu'); if (b) b.style.display = '';
+  var eb = document.getElementById('essaiBox'); if (eb) eb.style.display = '';
+  if (!ap || window.location.hash.length < 2) return;
+  try {
+    var d = JSON.parse(decodeURIComponent(escape(atob(window.location.hash.slice(1)))));
+    ctrApplyData(d); syncEssaiBox();
+    ctrFieldIds().forEach(function(id) { var el = document.getElementById(id); if (el) el.disabled = false; });
+    document.querySelectorAll('.offer-btn, .sex-btn').forEach(function(x) { x.disabled = false; });
+    ctrShowBanner('👁️ Aperçu : rien n\'est enregistré. Tu peux compléter ou laisser vide, puis télécharger le PDF.');
+  } catch (e) { console.error('Aperçu : données illisibles', e); }
+})();
 
 // ── Mode intégré (?embed=1) : la page de vente affiche ce contrat dans un cadre et reçoit sa hauteur ──
 if (CTR_EMBED) {
