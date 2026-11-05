@@ -2339,11 +2339,12 @@ window.EXERCISE_LIBRARY = [
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#8C9686;margin-bottom:8px">Formule</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
         <button type="button" class="ctr-offer-btn active" id="ctrFormuleBtn-complete" onclick="contratSetFormule('complete')">Formule complète<br><span style="font-weight:400;font-size:11px">avec masterclass + plateforme</span></button>
+        <button type="button" class="ctr-offer-btn" id="ctrFormuleBtn-bilanmensuel" onclick="contratSetFormule('bilanmensuel')">Formule réduite<br><span style="font-weight:400;font-size:11px">tout compris · 1 bilan par mois</span></button>
         <button type="button" class="ctr-offer-btn" id="ctrFormuleBtn-reduite" onclick="contratSetFormule('reduite')">Sans masterclass ni plateforme<br><span style="font-weight:400;font-size:11px">coaching seul</span></button>
       </div>
       <div class="form-grid">
         <div class="form-group"><label>Tarif de base (€/mois)</label><input type="number" id="ctrTarifBase" placeholder="250"></div>
-        <div class="form-group"><label>Tarif remisé (€/mois)</label><input type="number" id="ctrTarifRemise" placeholder="200"></div>
+        <div class="form-group" style="display:none"><label>Tarif remisé (€/mois)</label><input type="number" id="ctrTarifRemise" placeholder="200"></div>
         <div class="form-group"><label>Montant AICI (€)</label><input type="number" id="ctrMontantAici" placeholder="150"></div>
         <div class="form-group"><label>Reste à charge (€)</label><input type="number" id="ctrResteCharge" placeholder="50"></div>
       </div>
@@ -2732,6 +2733,9 @@ window.EXERCISE_LIBRARY = [
       <div class="sub-tab active" onclick="showSubView('perso_taches', this)">✅ Tâches perso</div>
       <div class="sub-tab" onclick="showSubView('perso_classeur', this)">🗂️ Classeur</div>
       <div class="sub-tab" onclick="showSubView('perso_docs', this)">📄 Documents & échéances</div>
+      <div class="sub-tab" onclick="showSubView('perso_rec', this)">🔁 Échéances & abonnements</div>
+      <div class="sub-tab" onclick="showSubView('perso_demarches', this)">📋 Démarches</div>
+      <div class="sub-tab" onclick="showSubView('perso_menu', this)">🍽️ Menu & courses</div>
       <div class="sub-tab" onclick="showSubView('perso_contacts', this)">📇 Contacts utiles</div>
       <div class="sub-tab" onclick="showSubView('perso_liens', this)">🔗 Liens importants</div>
     </div>
@@ -2768,6 +2772,16 @@ window.EXERCISE_LIBRARY = [
     </div>
 
     <!-- CLASSEUR : dossiers, sous-dossiers, fichiers et liens -->
+    <div class="view-sub" id="subview-perso_rec">
+      <div id="persoRecContent"></div>
+    </div>
+    <div class="view-sub" id="subview-perso_demarches">
+      <div id="persoDemarchesContent"></div>
+    </div>
+    <div class="view-sub" id="subview-perso_menu">
+      <div id="persoMenuContent"></div>
+    </div>
+
     <div class="view-sub" id="subview-perso_classeur">
       <div id="persoClasseurContent"></div>
     </div>
@@ -2849,11 +2863,17 @@ window.EXERCISE_LIBRARY = [
     <div class="sub-nav-bar" style="display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid #E2DCC8;overflow-x:auto">
       <div class="sub-tab active" onclick="showSubView('finances_suivi', this)">💶 Suivi</div>
       <div class="sub-tab" onclick="showSubView('finances_dettes', this)">💳 Mes dettes</div>
+      <div class="sub-tab" onclick="showSubView('finances_plan', this)">🎯 Mon plan de rétablissement</div>
     </div>
 
     <div class="view-sub active" id="subview-finances_suivi">
       <p style="color:#66735F;font-size:14px;margin-bottom:18px">Tes finances personnelles — un espace tout simple à faire évoluer au fur et à mesure : ajoute tes lignes de revenus et de dépenses ci-dessous.</p>
       <div id="gestionFinancesContent"></div>
+    </div>
+
+    <div class="view-sub" id="subview-finances_plan">
+      <p style="color:#66735F;font-size:14px;margin-bottom:18px">Ton plan pour te rétablir financièrement, à remplir pas à pas. Tout se calcule à partir de tes onglets « Suivi » et « Mes dettes » : ta situation, l'ordre de remboursement, la date où tu es libérée, tes objectifs et tes étapes.</p>
+      <div id="planFinContent"></div>
     </div>
 
     <div class="view-sub" id="subview-finances_dettes">
@@ -4806,6 +4826,7 @@ window.EXERCISE_LIBRARY = [
     if (id === 'prog_exercices') setTimeout(renderExerciseLibrary, 50);
     if (id === 'finances_suivi') setTimeout(renderGestionFinances, 50);
     if (id === 'finances_dettes') setTimeout(renderDettes, 50);
+    if (id === 'finances_plan') setTimeout(renderPlanFin, 50);
     if (id === 'asso_admin') setTimeout(renderAssoAdmin, 50);
     if (id === 'asso_frais') setTimeout(renderAssoFrais, 50);
     if (id === 'asso_adherents') setTimeout(renderAssoAdherents, 50);
@@ -4817,6 +4838,9 @@ window.EXERCISE_LIBRARY = [
     if (id === 'perso_taches') setTimeout(renderPersoTaches, 50);
     if (id === 'perso_docs') setTimeout(renderPersoDocs, 50);
     if (id === 'perso_classeur') setTimeout(renderClasseur, 50);
+    if (id === 'perso_rec') setTimeout(renderPersoRec, 50);
+    if (id === 'perso_demarches') setTimeout(renderPersoDemarches, 50);
+    if (id === 'perso_menu') setTimeout(renderPersoMenu, 50);
     if (id === 'perso_contacts') setTimeout(renderPersoContacts, 50);
     if (id === 'perso_liens') setTimeout(renderPersoLiens, 50);
   }
@@ -8400,6 +8424,428 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     el.innerHTML = out;
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🎯 PLAN DE RÉTABLISSEMENT FINANCIER — outil « à remplir ensemble » (onglet Gestion finances).
+  // Il ne contient AUCUN chiffre inventé : tout est calculé à partir de ce que tu saisis dans « Suivi »
+  // (revenus / dépenses) et « Mes dettes ». Ce n'est pas un conseil de placement : uniquement du budget
+  // et du remboursement. Données dans leur propre clé (SFM_PLAN_KEY), synchronisée comme le reste.
+  // ═══════════════════════════════════════════════════════════════════════════
+  var SFM_PLAN_KEY = 'sfm_plan_retablissement_v1';
+  var PR_ETAPES_MODELE = [
+    'Mettre à plat : saisir tous mes revenus et toutes mes dépenses (onglet « Suivi »)',
+    'Saisir toutes mes dettes avec leur taux et leur durée (onglet « Mes dettes »)',
+    'Repérer les dépenses et les abonnements dont je peux me passer, et les couper',
+    'Si une mensualité est trop lourde : contacter le créancier pour demander un étalement ou un report',
+    'Me constituer un premier petit matelas de sécurité (montant choisi plus bas)',
+    'Mettre tout ce que je peux en plus sur la dette n°1 de mon classement',
+    'Dès qu\'une dette est soldée, reporter sa mensualité sur la suivante',
+    'Faire le point 10 minutes chaque début de mois et ajuster'
+  ];
+  function prUid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  function prNum(v) { var n = parseFloat(String(v === undefined || v === null ? '' : v).replace(/\s/g, '').replace(',', '.')); return isFinite(n) ? n : 0; }
+  function prEur(n) { return (isFinite(n) ? n : 0).toLocaleString('fr-FR', { maximumFractionDigits: 0 }) + ' €'; }
+  function prGet() {
+    var p = null;
+    try { p = JSON.parse(localStorage.getItem(SFM_PLAN_KEY) || 'null'); } catch (e) {}
+    if (!p || typeof p !== 'object') p = {};
+    if (!p.methode) p.methode = 'avalanche';
+    if (!Array.isArray(p.ordre)) p.ordre = [];
+    if (!Array.isArray(p.objectifs)) p.objectifs = [];
+    if (!Array.isArray(p.etapes)) p.etapes = PR_ETAPES_MODELE.map(function(t) { return { id: prUid('et'), titre: t, fait: false, echeance: '', notes: '' }; });
+    if (p.extra === undefined) p.extra = '';
+    if (p.mensDansBudget === undefined) p.mensDansBudget = false;
+    return p;
+  }
+  function prSave(p) { localStorage.setItem(SFM_PLAN_KEY, JSON.stringify(p)); }
+  function prSet(field, val) { var p = prGet(); p[field] = (field === 'mensDansBudget') ? (val === true || val === 'true') : val; prSave(p); renderPlanFin(); }
+  function prUseMarge() { var p = prGet(), b = prSituation(); p.extra = String(Math.max(0, Math.floor(b.marge))); prSave(p); renderPlanFin(); }
+  function prSituation() {
+    var rev = 0, dep = 0;
+    getFinancesPerso().forEach(function(l) { var m = financeMonthlyAmount(l); if (l.type === 'revenu') rev += m; else dep += m; });
+    var debts = prDebts(), mens = debts.reduce(function(s, d) { return s + d.mens; }, 0), p = prGet();
+    var marge = rev - dep - (p.mensDansBudget ? 0 : mens);
+    return { rev: rev, dep: dep, mens: mens, marge: marge, debts: debts, nbLignes: getFinancesPerso().length };
+  }
+  function prDebts() {
+    var out = [];
+    getDettes().forEach(function(d) {
+      var sched = detteSchedule(d), solde = detteSoldeActuel(d, sched);
+      if (solde < 0.5) return;
+      out.push({ id: d.id, nom: d.nom || 'Dette sans nom', solde: solde, taux: prNum(d.taux), mens: sched.mensualite || 0, incomplet: !(prNum(d.montant) > 0) || !(parseInt(d.duree, 10) > 0) });
+    });
+    return out;
+  }
+  function prOrdered(debts, p) {
+    var l = debts.slice();
+    if (p.methode === 'boule') l.sort(function(a, b) { return a.solde - b.solde; });
+    else if (p.methode === 'manuel') {
+      var idx = {}; p.ordre.forEach(function(id, i) { idx[id] = i; });
+      l.sort(function(a, b) { var x = idx[a.id] === undefined ? 999 : idx[a.id], y = idx[b.id] === undefined ? 999 : idx[b.id]; return x - y; });
+    } else l.sort(function(a, b) { return (b.taux - a.taux) || (a.solde - b.solde); });
+    return l;
+  }
+  // Simulation mois par mois. roll = la mensualité d'une dette soldée est reportée sur la suivante.
+  function prSim(ordered, extra, roll) {
+    var st = ordered.map(function(d) { return { id: d.id, bal: d.solde, r: d.taux / 1200, min: d.mens, done: false }; });
+    var m = 0, interest = 0, paid = {}, freed = 0, MAX = 720;
+    while (m < MAX && st.some(function(s) { return !s.done; })) {
+      m++;
+      var pool = extra + (roll ? freed : 0);
+      st.forEach(function(s) { if (!s.done) { var i = s.bal * s.r; s.bal += i; interest += i; } });
+      st.forEach(function(s) { if (!s.done) { var pay = Math.min(s.bal, s.min); s.bal -= pay; } });
+      for (var k = 0; k < st.length && pool > 0.005; k++) {
+        var s = st[k]; if (s.done || s.bal <= 0.005) continue;
+        var pay2 = Math.min(s.bal, pool); s.bal -= pay2; pool -= pay2;
+      }
+      st.forEach(function(s) { if (!s.done && s.bal <= 0.005) { s.done = true; s.bal = 0; paid[s.id] = m; freed += s.min; } });
+    }
+    return { months: m, interest: interest, paid: paid, never: m >= MAX };
+  }
+  function prExtraFor(ordered, targetMonths) {
+    var lo = 0, hi = ordered.reduce(function(s, d) { return s + d.solde; }, 0);
+    if (!ordered.length) return 0;
+    if (prSim(ordered, 0, true).months <= targetMonths) return 0;
+    for (var i = 0; i < 40; i++) { var mid = (lo + hi) / 2; if (prSim(ordered, mid, true).months <= targetMonths) hi = mid; else lo = mid; }
+    return Math.ceil(hi);
+  }
+  function prAddMonths(n) { var d = new Date(); return new Date(d.getFullYear(), d.getMonth() + n, 1); }
+  function prDateFr(d) { return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }); }
+  function prDuree(n) { var a = Math.floor(n / 12), m = n % 12; return (a ? a + ' an' + (a > 1 ? 's' : '') : '') + (a && m ? ' et ' : '') + (m ? m + ' mois' : (a ? '' : '0 mois')); }
+  function prMonthsUntil(ym) {
+    if (!ym) return 0; var q = String(ym).split('-'), now = new Date();
+    return (parseInt(q[0], 10) - now.getFullYear()) * 12 + (parseInt(q[1], 10) - 1 - now.getMonth());
+  }
+  function prMove(id, dir) {
+    var p = prGet(), cur = prOrdered(prDebts(), p).map(function(d) { return d.id; }), i = cur.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= cur.length) return;
+    var t = cur[i]; cur[i] = cur[j]; cur[j] = t; p.ordre = cur; p.methode = 'manuel'; prSave(p); renderPlanFin();
+  }
+  function prAddObj() { var p = prGet(); p.objectifs.push({ id: prUid('ob'), nom: '', montant: '', deja: '', echeance: '' }); prSave(p); renderPlanFin(); }
+  function prSetObj(id, f, v) { var p = prGet(), o = p.objectifs.find(function(x) { return x.id === id; }); if (!o) return; o[f] = v; prSave(p); renderPlanFin(); }
+  function prDelObj(id) { if (!window.confirm('Supprimer cet objectif ?')) return; var p = prGet(); p.objectifs = p.objectifs.filter(function(x) { return x.id !== id; }); prSave(p); renderPlanFin(); }
+  function prAddEtape() { var p = prGet(); p.etapes.push({ id: prUid('et'), titre: '', fait: false, echeance: '', notes: '' }); prSave(p); renderPlanFin(); }
+  function prSetEtape(id, f, v) { var p = prGet(), e = p.etapes.find(function(x) { return x.id === id; }); if (!e) return; e[f] = (f === 'fait') ? !!v : v; prSave(p); renderPlanFin(); }
+  function prDelEtape(id) { if (!window.confirm('Supprimer cette étape ?')) return; var p = prGet(); p.etapes = p.etapes.filter(function(x) { return x.id !== id; }); prSave(p); renderPlanFin(); }
+  function prResetEtapes() { if (!window.confirm('Remplacer la liste par les étapes proposées ? Tes étapes actuelles seront perdues.')) return; var p = prGet(); p.etapes = PR_ETAPES_MODELE.map(function(t) { return { id: prUid('et'), titre: t, fait: false, echeance: '', notes: '' }; }); prSave(p); renderPlanFin(); }
+
+  function renderPlanFin() {
+    var el = document.getElementById('planFinContent'); if (!el) return;
+    var p = prGet(); if (!localStorage.getItem(SFM_PLAN_KEY)) prSave(p);
+    var S = prSituation(), debts = S.debts, ordered = prOrdered(debts, p);
+    var card = 'background:#fff;border:1.5px solid #E2DCC8;border-radius:12px;padding:14px 16px;margin-bottom:14px';
+    var h4 = 'margin:0 0 4px;font-size:15px;color:#2C4432';
+    var sub = 'margin:0 0 12px;font-size:12.5px;color:#66735F';
+    var inp = 'padding:7px 9px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;';
+    var tile = function(lab, val, col) { return '<div style="background:#fff;border:1.5px solid #E2DCC8;border-radius:12px;padding:10px 12px"><div style="font-size:10.5px;color:#8C9686;font-weight:700;text-transform:uppercase;margin-bottom:3px">' + lab + '</div><div style="font-size:19px;font-weight:700;color:' + (col || '#2C4432') + '">' + val + '</div></div>'; };
+    var out = '';
+
+    // 1. Où j'en suis
+    out += '<div style="' + card + '"><h4 style="' + h4 + '">1 · Où j\'en suis aujourd\'hui</h4><p style="' + sub + '">Calculé à partir de tes onglets « Suivi » et « Mes dettes » : rien à ressaisir ici.</p>';
+    if (!S.nbLignes && !debts.length) {
+      out += '<div style="padding:12px;background:#FFF8E6;border:1px solid #F0DFA8;border-radius:10px;font-size:13px;color:#7A5F10">Pour que le plan se remplisse, commence par ajouter tes revenus et tes dépenses dans <b>« 💶 Suivi »</b>, puis tes crédits dans <b>« 💳 Mes dettes »</b>.</div>';
+    } else {
+      out += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">'
+        + tile('Revenus / mois', prEur(S.rev), '#2F7A3E') + tile('Dépenses / mois', prEur(S.dep), '#B5442F')
+        + tile('Mensualités de dettes', prEur(S.mens)) + tile('Reste libre / mois', prEur(S.marge), S.marge >= 0 ? '#2F7A3E' : '#B5442F') + '</div>';
+      out += '<label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:#4B5A47;cursor:pointer"><input type="checkbox" ' + (p.mensDansBudget ? 'checked ' : '') + 'onchange="prSet(\'mensDansBudget\',this.checked)" style="margin-top:2px"> <span>Les mensualités de mes crédits sont <b>déjà comptées</b> dans mes dépenses (coche pour ne pas les compter deux fois).</span></label>';
+      if (S.marge < 0) out += '<p style="margin:10px 0 0;font-size:13px;color:#B5442F"><b>Chaque mois il manque ' + prEur(-S.marge) + '.</b> L\'étape 1 est donc de réduire les dépenses ou d\'augmenter les revenus avant d\'accélérer les remboursements (voir les étapes plus bas).</p>';
+    }
+    out += '</div>';
+
+    // 2. Dettes classées
+    out += '<div style="' + card + '"><h4 style="' + h4 + '">2 · Mes dettes, dans l\'ordre où je les attaque</h4><p style="' + sub + '">Toutes les dettes continuent d\'être payées à leur mensualité normale ; le surplus que tu peux y consacrer va sur la <b>n°1</b>.</p>';
+    if (!debts.length) out += '<p style="font-size:13px;color:#66735F;margin:0">Aucune dette en cours dans « Mes dettes ».</p>';
+    else {
+      out += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><span style="font-size:12.5px;color:#4B5A47">Méthode :</span><select onchange="prSet(\'methode\',this.value)" style="' + inp + '">'
+        + '<option value="avalanche"' + (p.methode === 'avalanche' ? ' selected' : '') + '>Taux le plus élevé d\'abord (le moins cher au final)</option>'
+        + '<option value="boule"' + (p.methode === 'boule' ? ' selected' : '') + '>Plus petit solde d\'abord (victoires rapides)</option>'
+        + '<option value="manuel"' + (p.methode === 'manuel' ? ' selected' : '') + '>Mon ordre à moi (flèches)</option></select></div>';
+      var simPlan = prSim(ordered, prNum(p.extra), true);
+      ordered.forEach(function(d, i) {
+        var fin = simPlan.paid[d.id];
+        out += '<div style="display:flex;gap:10px;align-items:center;padding:9px 0;border-top:' + (i ? '1px solid #F1ECDD' : 'none') + '">'
+          + '<div style="width:28px;height:28px;border-radius:50%;background:' + (i === 0 ? '#3F5D46' : '#E8E3D2') + ';color:' + (i === 0 ? '#fff' : '#4B5A47') + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:0 0 auto">' + (i + 1) + '</div>'
+          + '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px;color:#2C4432">' + esc(d.nom) + '</div>'
+          + '<div style="font-size:12px;color:#66735F">reste ' + prEur(d.solde) + ' · taux ' + (d.taux ? d.taux.toLocaleString('fr-FR') + ' %' : 'non renseigné') + ' · mensualité ' + prEur(d.mens)
+          + (fin ? ' · soldée vers <b>' + prDateFr(prAddMonths(fin)) + '</b>' : '') + '</div>'
+          + (d.incomplet ? '<div style="font-size:11.5px;color:#B5442F">⚠️ montant ou durée manquant dans « Mes dettes » : le calcul est incomplet.</div>' : '') + '</div>'
+          + '<div style="display:flex;gap:4px"><button onclick="prMove(' + jsAttr(d.id) + ',-1)" ' + (i === 0 ? 'disabled ' : '') + 'style="padding:5px 9px;border:1px solid #E2DCC8;background:#fff;border-radius:8px;cursor:pointer">↑</button><button onclick="prMove(' + jsAttr(d.id) + ',1)" ' + (i === ordered.length - 1 ? 'disabled ' : '') + 'style="padding:5px 9px;border:1px solid #E2DCC8;background:#fff;border-radius:8px;cursor:pointer">↓</button></div></div>';
+      });
+    }
+    out += '</div>';
+
+    // 3. Combien en plus, et ce que ça donne
+    out += '<div style="' + card + '"><h4 style="' + h4 + '">3 · Combien je mets en plus, et ce que ça change</h4><p style="' + sub + '">Choisis la somme que tu peux ajouter chaque mois sur la dette n°1 (en plus des mensualités).</p>';
+    out += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><input type="text" inputmode="decimal" value="' + esc(p.extra) + '" placeholder="0" style="' + inp + 'width:110px" onchange="prSet(\'extra\',this.value)"> <span style="font-size:13px;color:#4B5A47">€ en plus par mois</span>'
+      + (S.marge > 0 ? ' <button onclick="prUseMarge()" style="padding:7px 11px;border:1.5px solid #3F5D46;background:#fff;color:#3F5D46;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer">Utiliser mon reste libre (' + prEur(S.marge) + ')</button>' : '') + '</div>';
+    if (debts.length) {
+      var base = prSim(ordered, 0, false), plan = prSim(ordered, prNum(p.extra), true);
+      var okMens = debts.every(function(d) { return d.mens > 0; });
+      out += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">';
+      out += '<div style="background:#F7F3E8;border-radius:10px;padding:11px 13px"><div style="font-size:11px;font-weight:700;color:#8C9686;text-transform:uppercase">Sans rien changer</div>'
+        + (base.never ? '<div style="font-size:13px;color:#B5442F;margin-top:4px">Pas de fin prévue : complète la durée / le taux de chaque dette.</div>'
+        : '<div style="font-size:15px;font-weight:700;color:#2C4432;margin-top:4px">Libérée en ' + prDateFr(prAddMonths(base.months)) + '</div><div style="font-size:12px;color:#66735F">dans ' + prDuree(base.months) + ' · intérêts restants ≈ ' + prEur(base.interest) + '</div>') + '</div>';
+      out += '<div style="background:#EAF3EA;border-radius:10px;padding:11px 13px"><div style="font-size:11px;font-weight:700;color:#3F5D46;text-transform:uppercase">Avec mon plan</div>'
+        + (plan.never ? '<div style="font-size:13px;color:#B5442F;margin-top:4px">Pas de fin prévue avec ces chiffres : ajoute un montant en plus ou complète les dettes.</div>'
+        : '<div style="font-size:15px;font-weight:700;color:#2C4432;margin-top:4px">Libérée en ' + prDateFr(prAddMonths(plan.months)) + '</div><div style="font-size:12px;color:#66735F">dans ' + prDuree(plan.months) + ' · intérêts ≈ ' + prEur(plan.interest)
+          + (!base.never && base.months > plan.months ? '<br><b style="color:#2F7A3E">' + (base.months - plan.months) + ' mois gagnés · ' + prEur(Math.max(0, base.interest - plan.interest)) + ' d\'intérêts économisés</b>' : '') + '</div>') + '</div>';
+      out += '</div>';
+      if (!okMens) out += '<p style="margin:10px 0 0;font-size:12px;color:#8C9686">Certaines dettes n\'ont pas de mensualité calculée (durée manquante) : elles ne sont remboursées que par la somme « en plus ».</p>';
+      // Objectif de date
+      out += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid #F1ECDD"><div style="font-size:13px;font-weight:700;color:#2C4432;margin-bottom:6px">🎯 Je veux être libérée de mes dettes pour…</div>'
+        + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="month" value="' + esc(p.cible || '') + '" style="' + inp + '" onchange="prSet(\'cible\',this.value)">';
+      var nM = prMonthsUntil(p.cible);
+      if (p.cible && nM >= 1) {
+        var need = prExtraFor(ordered, nM);
+        out += '<span style="font-size:13px;color:#2C4432">→ il faut mettre <b>' + prEur(need) + ' en plus par mois</b>' + (need === 0 ? ' (ou rien : tu y arrives déjà)' : '')
+          + (need > 0 && S.marge < need ? ' <span style="color:#B5442F">— c\'est plus que ton reste libre actuel (' + prEur(S.marge) + ').</span>' : (need > 0 ? ' <span style="color:#2F7A3E">— dans ton reste libre.</span>' : '')) + '</span>';
+      } else if (p.cible) out += '<span style="font-size:12.5px;color:#B5442F">Choisis une date à venir.</span>';
+      out += '</div></div>';
+    }
+    out += '</div>';
+
+    // 4. Objectifs avec échéances
+    var margeApres = S.marge - prNum(p.extra), totalBesoin = 0;
+    out += '<div style="' + card + '"><h4 style="' + h4 + '">4 · Mes objectifs avec échéance</h4><p style="' + sub + '">Matelas de sécurité, projet, grosse dépense à venir… Indique le montant visé, ce que tu as déjà et la date : je calcule ce qu\'il faut mettre de côté chaque mois.</p>';
+    if (!p.objectifs.length) out += '<p style="font-size:13px;color:#66735F;margin:0 0 10px">Aucun objectif pour l\'instant. Idée de premier objectif : un petit matelas de sécurité.</p>';
+    p.objectifs.forEach(function(o) {
+      var reste = Math.max(0, prNum(o.montant) - prNum(o.deja)), n = o.echeance ? Math.max(1, Math.ceil((new Date(o.echeance + 'T12:00:00') - new Date()) / (30.44 * 86400000))) : 0;
+      var par = (n && reste) ? reste / n : 0; totalBesoin += par;
+      var pct = prNum(o.montant) > 0 ? Math.min(100, Math.round(100 * prNum(o.deja) / prNum(o.montant))) : 0;
+      out += '<div style="border:1px solid #EAE4D2;border-radius:10px;padding:10px 12px;margin-bottom:8px">'
+        + '<div style="display:grid;grid-template-columns:1.6fr 0.8fr 0.8fr 1fr auto;gap:8px;align-items:center">'
+        + '<input type="text" value="' + esc(o.nom) + '" placeholder="Ex : Matelas de sécurité" style="' + inp + '" onchange="prSetObj(' + jsAttr(o.id) + ',\'nom\',this.value)">'
+        + '<input type="text" inputmode="decimal" value="' + esc(o.montant) + '" placeholder="Visé €" style="' + inp + '" onchange="prSetObj(' + jsAttr(o.id) + ',\'montant\',this.value)">'
+        + '<input type="text" inputmode="decimal" value="' + esc(o.deja) + '" placeholder="Déjà €" style="' + inp + '" onchange="prSetObj(' + jsAttr(o.id) + ',\'deja\',this.value)">'
+        + '<input type="date" value="' + esc(o.echeance) + '" style="' + inp + '" onchange="prSetObj(' + jsAttr(o.id) + ',\'echeance\',this.value)">'
+        + '<button onclick="prDelObj(' + jsAttr(o.id) + ')" title="Supprimer" style="padding:7px 9px;background:#fff5f5;border:1px solid #fed7d7;color:#c53030;border-radius:8px;cursor:pointer">🗑️</button></div>'
+        + '<div style="height:6px;background:#EEE9D8;border-radius:4px;margin:9px 0 5px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:#6C9A74"></div></div>'
+        + '<div style="font-size:12px;color:#66735F">' + pct + ' % atteint'
+        + (n && reste ? ' · il reste ' + prEur(reste) + ' sur ' + n + ' mois → <b>' + prEur(par) + ' / mois</b>' : (prNum(o.montant) > 0 && !reste ? ' · 🎉 objectif atteint' : (reste ? ' · ajoute une date pour voir la somme mensuelle' : ''))) + '</div></div>';
+    });
+    out += '<button onclick="prAddObj()" style="padding:9px 14px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">➕ Ajouter un objectif</button>';
+    if (totalBesoin > 0) out += '<p style="margin:12px 0 0;font-size:13px;color:#2C4432">Total à mettre de côté : <b>' + prEur(totalBesoin) + ' / mois</b>. '
+      + (margeApres >= totalBesoin ? '<span style="color:#2F7A3E">Après ta somme « en plus » pour les dettes, il te reste ' + prEur(margeApres) + ' / mois : c\'est tenable.</span>'
+      : '<span style="color:#B5442F">Après ta somme « en plus » pour les dettes, il te reste ' + prEur(margeApres) + ' / mois : c\'est trop juste. Allonge les échéances ou réduis la somme en plus.</span>') + '</p>';
+    out += '</div>';
+
+    // 5. Étapes
+    var fait = p.etapes.filter(function(e) { return e.fait; }).length, pctE = p.etapes.length ? Math.round(100 * fait / p.etapes.length) : 0;
+    out += '<div style="' + card + '"><h4 style="' + h4 + '">5 · Mon plan par étapes</h4><p style="' + sub + '">Coche au fur et à mesure, ajoute une date et des notes. Modifie, supprime ou ajoute les étapes comme tu veux.</p>'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div style="flex:1;height:8px;background:#EEE9D8;border-radius:5px;overflow:hidden"><div style="height:100%;width:' + pctE + '%;background:#3F5D46"></div></div><div style="font-size:12.5px;font-weight:700;color:#2C4432">' + fait + ' / ' + p.etapes.length + '</div></div>';
+    p.etapes.forEach(function(e, i) {
+      out += '<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 0;border-top:' + (i ? '1px solid #F1ECDD' : 'none') + '">'
+        + '<input type="checkbox" ' + (e.fait ? 'checked ' : '') + 'onchange="prSetEtape(' + jsAttr(e.id) + ',\'fait\',this.checked)" style="width:20px;height:20px;margin-top:6px;flex:0 0 auto;cursor:pointer">'
+        + '<div style="flex:1;min-width:0"><input type="text" value="' + esc(e.titre) + '" placeholder="Étape…" style="' + inp + 'width:100%;' + (e.fait ? 'text-decoration:line-through;color:#8C9686;' : 'font-weight:600;') + '" onchange="prSetEtape(' + jsAttr(e.id) + ',\'titre\',this.value)">'
+        + '<div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap"><input type="date" value="' + esc(e.echeance) + '" style="' + inp + 'font-size:12px" onchange="prSetEtape(' + jsAttr(e.id) + ',\'echeance\',this.value)">'
+        + '<input type="text" value="' + esc(e.notes) + '" placeholder="Notes" style="' + inp + 'flex:1;min-width:140px;font-size:12px" onchange="prSetEtape(' + jsAttr(e.id) + ',\'notes\',this.value)"></div></div>'
+        + '<button onclick="prDelEtape(' + jsAttr(e.id) + ')" title="Supprimer" style="padding:6px 9px;background:#fff5f5;border:1px solid #fed7d7;color:#c53030;border-radius:8px;cursor:pointer">🗑️</button></div>';
+    });
+    out += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button onclick="prAddEtape()" style="padding:9px 14px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">➕ Ajouter une étape</button><button onclick="prResetEtapes()" style="padding:9px 14px;background:#fff;color:#66735F;border:1.5px solid #E2DCC8;border-radius:10px;font-size:12.5px;cursor:pointer">↺ Remettre les étapes proposées</button></div></div>';
+
+    // 6. Aide extérieure
+    out += '<div style="padding:12px 14px;background:#F7F3E8;border-radius:12px;font-size:12.5px;color:#4B5A47;line-height:1.5">💡 <b>Un regard extérieur peut aider.</b> En France, les <b>Points Conseil Budget</b> accompagnent gratuitement et en confidentialité pour faire un budget ou négocier avec des créanciers. Cet outil sert à y voir clair ; il ne remplace pas un conseil personnalisé (je ne suis pas conseillère financière).</div>';
+    el.innerHTML = out;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 🔁 VIE QUOTIDIENNE PERSO : échéances récurrentes · abonnements · check-lists de démarches ·
+  // menu & courses de la semaine. Chaque outil a sa propre clé localStorage (donc synchronisée
+  // automatiquement avec le reste du tableau de bord) et ne touche à aucune autre donnée.
+  // ═══════════════════════════════════════════════════════════════════════════
+  var VP_REC_KEY = 'sfm_perso_rec_v1', VP_ABO_KEY = 'sfm_perso_abos_v1', VP_DEM_KEY = 'sfm_perso_demarches_v1', VP_MENU_KEY = 'sfm_perso_menu_v1';
+  var VP_CARD = 'background:#fff;border:1.5px solid #E2DCC8;border-radius:12px;padding:14px 16px;margin-bottom:14px';
+  var VP_INP = 'padding:7px 9px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-family:inherit;box-sizing:border-box;';
+  var VP_BTN = 'padding:9px 14px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer';
+  var VP_DEL = 'padding:6px 9px;background:#fff5f5;border:1px solid #fed7d7;color:#c53030;border-radius:8px;cursor:pointer';
+  function vpUid(p) { return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  function vpLoad(key, def) { try { var v = JSON.parse(localStorage.getItem(key) || 'null'); return (v === null || v === undefined) ? def : v; } catch (e) { return def; } }
+  function vpSave(key, v) { localStorage.setItem(key, JSON.stringify(v)); }
+  function vpNum(v) { var n = parseFloat(String(v === undefined || v === null ? '' : v).replace(/\s/g, '').replace(',', '.')); return isFinite(n) ? n : 0; }
+  function vpEur(n, dec) { return (isFinite(n) ? n : 0).toLocaleString('fr-FR', { minimumFractionDigits: dec ? 2 : 0, maximumFractionDigits: dec ? 2 : 0 }) + ' €'; }
+  function vpISO(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function vpParse(s) { var q = String(s || '').split('-'); return q.length === 3 ? new Date(+q[0], +q[1] - 1, +q[2]) : null; }
+  function vpToday() { var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function vpDaysTo(s) { var d = vpParse(s); return d ? Math.round((d - vpToday()) / 86400000) : null; }
+  function vpDateFr(s) { var d = vpParse(s); return d ? d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; }
+  function vpAddFreq(s, freq) {
+    var d = vpParse(s) || vpToday(), months = { mensuel: 1, trimestriel: 3, semestriel: 6, annuel: 12 }[freq];
+    if (freq === 'hebdo') { d.setDate(d.getDate() + 7); return vpISO(d); }
+    if (!months) return vpISO(d);
+    var day = d.getDate(), t = new Date(d.getFullYear(), d.getMonth() + months, 1);
+    t.setDate(Math.min(day, new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate())); return vpISO(t);
+  }
+  function vpField(label, html) { return '<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:10px;font-weight:700;color:#8C9686;text-transform:uppercase">' + label + '</span>' + html + '</div>'; }
+  function vpSelect(opts, cur, onchange) {
+    return '<select onchange="' + onchange + '" style="' + VP_INP + '">' + opts.map(function(o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>';
+  }
+  var VP_FREQ = [['hebdo', 'Chaque semaine'], ['mensuel', 'Chaque mois'], ['trimestriel', 'Chaque trimestre'], ['semestriel', 'Chaque semestre'], ['annuel', 'Chaque année']];
+  function vpBadge(s) {
+    var n = vpDaysTo(s); if (n === null) return '<span style="font-size:11.5px;color:#8C9686">pas de date</span>';
+    if (n < 0) return '<span style="font-size:11.5px;font-weight:700;color:#fff;background:#B5442F;border-radius:10px;padding:2px 9px">en retard de ' + (-n) + ' j</span>';
+    if (n === 0) return '<span style="font-size:11.5px;font-weight:700;color:#fff;background:#C9722B;border-radius:10px;padding:2px 9px">aujourd\'hui</span>';
+    if (n <= 14) return '<span style="font-size:11.5px;font-weight:700;color:#7A4A10;background:#FCE8C8;border-radius:10px;padding:2px 9px">dans ' + n + ' j</span>';
+    return '<span style="font-size:11.5px;color:#66735F;background:#EEF2EA;border-radius:10px;padding:2px 9px">dans ' + n + ' j</span>';
+  }
+
+  // ───────── 🔁 Échéances récurrentes ─────────
+  var VP_REC_MODELES = ['Impôt sur le revenu', 'Taxe foncière / d\'habitation', 'Assurance habitation', 'Assurance auto', 'Contrôle technique', 'Mutuelle', 'Cotisation / adhésion', 'Déclaration CAF', 'Rendez-vous médical annuel', 'Renouvellement d\'un document'];
+  function vpRecAdd(nom) { var l = vpLoad(VP_REC_KEY, []); l.push({ id: vpUid('re'), nom: nom || '', montant: '', freq: 'annuel', next: '', notes: '' }); vpSave(VP_REC_KEY, l); renderPersoRec(); }
+  function vpRecSet(id, f, v) { var l = vpLoad(VP_REC_KEY, []), x = l.find(function(e) { return e.id === id; }); if (!x) return; x[f] = v; vpSave(VP_REC_KEY, l); renderPersoRec(); }
+  function vpRecDone(id) { var l = vpLoad(VP_REC_KEY, []), x = l.find(function(e) { return e.id === id; }); if (!x) return; x.last = vpISO(vpToday()); x.next = x.next ? vpAddFreq(x.next, x.freq) : ''; vpSave(VP_REC_KEY, l); renderPersoRec(); }
+  function vpRecDel(id) { if (!window.confirm('Supprimer cette échéance ?')) return; vpSave(VP_REC_KEY, vpLoad(VP_REC_KEY, []).filter(function(e) { return e.id !== id; })); renderPersoRec(); }
+  // ───────── 💳 Abonnements ─────────
+  function vpAboAdd() { var l = vpLoad(VP_ABO_KEY, []); l.push({ id: vpUid('ab'), nom: '', montant: '', freq: 'mensuel', next: '', garder: 'oui', notes: '' }); vpSave(VP_ABO_KEY, l); renderPersoRec(); }
+  function vpAboSet(id, f, v) { var l = vpLoad(VP_ABO_KEY, []), x = l.find(function(e) { return e.id === id; }); if (!x) return; x[f] = v; vpSave(VP_ABO_KEY, l); renderPersoRec(); }
+  function vpAboDel(id) { if (!window.confirm('Supprimer cet abonnement de la liste ?')) return; vpSave(VP_ABO_KEY, vpLoad(VP_ABO_KEY, []).filter(function(e) { return e.id !== id; })); renderPersoRec(); }
+  function vpAboMois(a) { var m = vpNum(a.montant); return a.freq === 'annuel' ? m / 12 : m; }
+  function renderPersoRec() {
+    var el = document.getElementById('persoRecContent'); if (!el) return;
+    var rec = vpLoad(VP_REC_KEY, []).slice().sort(function(a, b) { return (a.next || '9999') < (b.next || '9999') ? -1 : 1; });
+    var abos = vpLoad(VP_ABO_KEY, []).slice().sort(function(a, b) { return vpAboMois(b) - vpAboMois(a); });
+    var out = '';
+    // Échéances
+    var proches = rec.filter(function(r) { var n = vpDaysTo(r.next); return n !== null && n <= 30; });
+    out += '<div style="' + VP_CARD + '"><h4 style="margin:0 0 4px;font-size:15px;color:#2C4432">🔁 Mes échéances qui reviennent</h4><p style="margin:0 0 12px;font-size:12.5px;color:#66735F">Impôts, assurances, contrôles… Indique la prochaine date et la fréquence : quand tu cliques « Fait », la date suivante se calcule toute seule.</p>';
+    if (proches.length) out += '<div style="padding:9px 12px;background:#FFF3E0;border-radius:10px;font-size:13px;color:#7A4A10;margin-bottom:12px"><b>À surveiller (30 jours) :</b> ' + proches.map(function(r) { return esc(r.nom || 'Sans nom') + ' (' + (vpDaysTo(r.next) < 0 ? 'en retard' : vpDateFr(r.next)) + ')'; }).join(' · ') + '</div>';
+    if (!rec.length) out += '<p style="font-size:13px;color:#66735F;margin:0 0 10px">Rien pour l\'instant. Ajoute une échéance ou pars d\'un modèle ci-dessous.</p>';
+    rec.forEach(function(r) {
+      out += '<div style="border:1px solid #EAE4D2;border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
+        + vpField('Quoi', '<input type="text" value="' + esc(r.nom) + '" placeholder="Ex : Assurance auto" style="' + VP_INP + 'min-width:170px" onchange="vpRecSet(' + jsAttr(r.id) + ',\'nom\',this.value)">')
+        + vpField('Prochaine date', '<input type="date" value="' + esc(r.next) + '" style="' + VP_INP + '" onchange="vpRecSet(' + jsAttr(r.id) + ',\'next\',this.value)">')
+        + vpField('Fréquence', vpSelect(VP_FREQ, r.freq, 'vpRecSet(' + jsAttr(r.id) + ',\'freq\',this.value)'))
+        + vpField('Montant €', '<input type="text" inputmode="decimal" value="' + esc(r.montant) + '" placeholder="facultatif" style="' + VP_INP + 'width:90px" onchange="vpRecSet(' + jsAttr(r.id) + ',\'montant\',this.value)">')
+        + '<div style="padding-bottom:4px">' + vpBadge(r.next) + '</div>'
+        + '<button onclick="vpRecDone(' + jsAttr(r.id) + ')" style="padding:7px 12px;background:#EAF3EA;color:#2F5A38;border:1.5px solid #B9D6BE;border-radius:8px;font-weight:700;font-size:12.5px;cursor:pointer">✔ Fait</button>'
+        + '<button onclick="vpRecDel(' + jsAttr(r.id) + ')" title="Supprimer" style="' + VP_DEL + '">🗑️</button></div>'
+        + '<input type="text" value="' + esc(r.notes) + '" placeholder="Notes (n° de contrat, site, à qui écrire…)" style="' + VP_INP + 'width:100%;margin-top:7px;font-size:12px" onchange="vpRecSet(' + jsAttr(r.id) + ',\'notes\',this.value)">'
+        + (r.last ? '<div style="font-size:11px;color:#8C9686;margin-top:5px">Dernière fois fait : ' + vpDateFr(r.last) + '</div>' : '') + '</div>';
+    });
+    out += '<button onclick="vpRecAdd(\'\')" style="' + VP_BTN + '">➕ Ajouter une échéance</button>'
+      + '<div style="margin-top:12px;font-size:12px;color:#8C9686;margin-bottom:6px">Modèles rapides (clique pour ajouter, puis mets la date) :</div><div style="display:flex;flex-wrap:wrap;gap:6px">'
+      + VP_REC_MODELES.map(function(m) { return '<button onclick="vpRecAdd(' + jsAttr(m) + ')" style="padding:5px 10px;background:#F7F3E8;border:1px solid #E2DCC8;border-radius:14px;font-size:12px;cursor:pointer;color:#4B5A47">+ ' + esc(m) + '</button>'; }).join('') + '</div></div>';
+    // Abonnements
+    var totMois = abos.reduce(function(s, a) { return s + vpAboMois(a); }, 0);
+    var aCouper = abos.filter(function(a) { return a.garder === 'non' || a.garder === 'doute'; }), gainMois = aCouper.reduce(function(s, a) { return s + vpAboMois(a); }, 0);
+    out += '<div style="' + VP_CARD + '"><h4 style="margin:0 0 4px;font-size:15px;color:#2C4432">💳 Mes abonnements</h4><p style="margin:0 0 12px;font-size:12.5px;color:#66735F">Streaming, téléphone, salle de sport, logiciels… Vois ce que ça coûte vraiment et marque ceux dont tu peux te passer.</p>';
+    if (abos.length) out += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">'
+      + '<div style="background:#F7F3E8;border-radius:10px;padding:10px 12px"><div style="font-size:10.5px;font-weight:700;color:#8C9686;text-transform:uppercase">Par mois</div><div style="font-size:19px;font-weight:700;color:#2C4432">' + vpEur(totMois, 2) + '</div></div>'
+      + '<div style="background:#F7F3E8;border-radius:10px;padding:10px 12px"><div style="font-size:10.5px;font-weight:700;color:#8C9686;text-transform:uppercase">Par an</div><div style="font-size:19px;font-weight:700;color:#2C4432">' + vpEur(totMois * 12) + '</div></div>'
+      + '<div style="background:' + (gainMois > 0 ? '#EAF3EA' : '#F7F3E8') + ';border-radius:10px;padding:10px 12px"><div style="font-size:10.5px;font-weight:700;color:#8C9686;text-transform:uppercase">Économie possible</div><div style="font-size:19px;font-weight:700;color:' + (gainMois > 0 ? '#2F7A3E' : '#2C4432') + '">' + vpEur(gainMois * 12) + ' / an</div></div></div>';
+    if (!abos.length) out += '<p style="font-size:13px;color:#66735F;margin:0 0 10px">Aucun abonnement listé. Astuce : parcours ton relevé de banque et note chaque prélèvement régulier.</p>';
+    abos.forEach(function(a) {
+      var bg = a.garder === 'non' ? '#FFF1EE' : (a.garder === 'doute' ? '#FFF8E6' : '#fff');
+      out += '<div style="border:1px solid #EAE4D2;background:' + bg + ';border-radius:10px;padding:10px 12px;margin-bottom:8px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
+        + vpField('Abonnement', '<input type="text" value="' + esc(a.nom) + '" placeholder="Ex : Netflix" style="' + VP_INP + 'min-width:150px" onchange="vpAboSet(' + jsAttr(a.id) + ',\'nom\',this.value)">')
+        + vpField('Montant €', '<input type="text" inputmode="decimal" value="' + esc(a.montant) + '" style="' + VP_INP + 'width:80px" onchange="vpAboSet(' + jsAttr(a.id) + ',\'montant\',this.value)">')
+        + vpField('Rythme', vpSelect([['mensuel', 'Par mois'], ['annuel', 'Par an']], a.freq, 'vpAboSet(' + jsAttr(a.id) + ',\'freq\',this.value)'))
+        + vpField('Prochain prélèvement', '<input type="date" value="' + esc(a.next) + '" style="' + VP_INP + '" onchange="vpAboSet(' + jsAttr(a.id) + ',\'next\',this.value)">')
+        + vpField('Je le garde ?', vpSelect([['oui', '✅ Oui'], ['doute', '🤔 J\'hésite'], ['non', '✂️ À résilier']], a.garder, 'vpAboSet(' + jsAttr(a.id) + ',\'garder\',this.value)'))
+        + '<div style="padding-bottom:6px;font-size:12px;color:#66735F">≈ ' + vpEur(vpAboMois(a), 2) + ' / mois</div>'
+        + '<button onclick="vpAboDel(' + jsAttr(a.id) + ')" title="Supprimer" style="' + VP_DEL + '">🗑️</button></div>'
+        + (a.next ? '<div style="margin-top:6px;font-size:12px">' + vpBadge(a.next) + ' <span style="color:#8C9686">prochain prélèvement' + (a.garder === 'non' ? ' — pense à résilier avant cette date' : '') + '</span></div>' : '')
+        + '<input type="text" value="' + esc(a.notes) + '" placeholder="Notes (préavis, comment résilier, engagement jusqu\'au…)" style="' + VP_INP + 'width:100%;margin-top:7px;font-size:12px" onchange="vpAboSet(' + jsAttr(a.id) + ',\'notes\',this.value)"></div>';
+    });
+    out += '<button onclick="vpAboAdd()" style="' + VP_BTN + '">➕ Ajouter un abonnement</button></div>';
+    el.innerHTML = out;
+  }
+
+  // ───────── 📋 Démarches (check-lists) ─────────
+  var VP_DEM_MODELES = {
+    'Déclaration d\'impôts': ['Rassembler les justificatifs de revenus', 'Vérifier la déclaration pré-remplie (revenus, adresse)', 'Contrôler la situation de famille et les enfants à charge', 'Ajouter les frais ou charges déductibles éventuels', 'Déclarer en ligne avant la date limite', 'Garder l\'accusé de réception', 'Vérifier le taux de prélèvement à la source'],
+    'Rentrée scolaire': ['Inscriptions ou réinscriptions faites', 'Assurance scolaire / extra-scolaire', 'Attestation de responsabilité civile', 'Fournitures achetées', 'Cantine et périscolaire réservés', 'Activités : dossiers et certificats médicaux', 'Vérifier les aides possibles (allocation de rentrée, bourses)'],
+    'Déménagement': ['Envoyer le préavis du logement actuel', 'Réserver le déménagement', 'Faire suivre le courrier', 'Prévenir : impôts, CAF, banque, assurances, mutuelle, employeur', 'Électricité, gaz, eau, internet : arrêt et ouverture', 'État des lieux de sortie et d\'entrée', 'Changer l\'adresse sur la carte grise', 'Inscrire les enfants à l\'école', 'Assurance habitation du nouveau logement'],
+    'Perte ou vol de papiers': ['Déclarer la perte ou le vol (commissariat ou en ligne)', 'Faire opposition à la carte bancaire si concernée', 'Demander le renouvellement (carte d\'identité, passeport, permis…)', 'Prévenir la banque et les organismes concernés', 'Garder le récépissé de déclaration'],
+    'CAF — déclaration de ressources': ['Mettre à jour la situation (adresse, enfants, couple)', 'Déclarer les ressources de la période', 'Vérifier les prestations reçues', 'Garder les justificatifs envoyés'],
+    'Résilier un contrat': ['Vérifier la durée d\'engagement et le préavis', 'Résilier (en ligne ou par courrier recommandé)', 'Garder la confirmation de résiliation', 'Vérifier le dernier prélèvement', 'Contester un prélèvement après la fin si besoin']
+  };
+  function vpDemAddModel(name) { var l = vpLoad(VP_DEM_KEY, []); l.push({ id: vpUid('dm'), nom: name, open: true, items: VP_DEM_MODELES[name].map(function(t) { return { id: vpUid('di'), t: t, done: false }; }) }); vpSave(VP_DEM_KEY, l); renderPersoDemarches(); }
+  function vpDemAddBlank() { var l = vpLoad(VP_DEM_KEY, []); l.push({ id: vpUid('dm'), nom: 'Ma liste', open: true, items: [] }); vpSave(VP_DEM_KEY, l); renderPersoDemarches(); }
+  function vpDemFind(l, id) { return l.find(function(x) { return x.id === id; }); }
+  function vpDemRename(id, v) { var l = vpLoad(VP_DEM_KEY, []), d = vpDemFind(l, id); if (d) { d.nom = v; vpSave(VP_DEM_KEY, l); } }
+  function vpDemToggleOpen(id) { var l = vpLoad(VP_DEM_KEY, []), d = vpDemFind(l, id); if (d) { d.open = !d.open; vpSave(VP_DEM_KEY, l); renderPersoDemarches(); } }
+  function vpDemDel(id) { if (!window.confirm('Supprimer toute cette liste ?')) return; vpSave(VP_DEM_KEY, vpLoad(VP_DEM_KEY, []).filter(function(x) { return x.id !== id; })); renderPersoDemarches(); }
+  function vpDemCheck(id, iid, v) { var l = vpLoad(VP_DEM_KEY, []), d = vpDemFind(l, id); if (!d) return; var it = d.items.find(function(x) { return x.id === iid; }); if (it) { it.done = !!v; vpSave(VP_DEM_KEY, l); renderPersoDemarches(); } }
+  function vpDemText(id, iid, v) { var l = vpLoad(VP_DEM_KEY, []), d = vpDemFind(l, id); if (!d) return; var it = d.items.find(function(x) { return x.id === iid; }); if (it) { it.t = v; vpSave(VP_DEM_KEY, l); } }
+  function vpDemItemDel(id, iid) { var l = vpLoad(VP_DEM_KEY, []), d = vpDemFind(l, id); if (!d) return; d.items = d.items.filter(function(x) { return x.id !== iid; }); vpSave(VP_DEM_KEY, l); renderPersoDemarches(); }
+  function vpDemItemAdd(id) { var inp = document.getElementById('vpDemNew-' + id), v = inp ? inp.value.trim() : ''; if (!v) return; var l = vpLoad(VP_DEM_KEY, []), d = vpDemFind(l, id); if (!d) return; d.items.push({ id: vpUid('di'), t: v, done: false }); vpSave(VP_DEM_KEY, l); renderPersoDemarches(); var again = document.getElementById('vpDemNew-' + id); if (again) again.focus(); }
+  function vpDemReset(id) { if (!window.confirm('Décocher toutes les cases de cette liste (pour la refaire l\'année prochaine) ?')) return; var l = vpLoad(VP_DEM_KEY, []), d = vpDemFind(l, id); if (!d) return; d.items.forEach(function(x) { x.done = false; }); vpSave(VP_DEM_KEY, l); renderPersoDemarches(); }
+  function renderPersoDemarches() {
+    var el = document.getElementById('persoDemarchesContent'); if (!el) return;
+    var l = vpLoad(VP_DEM_KEY, []), out = '';
+    out += '<div style="' + VP_CARD + '"><h4 style="margin:0 0 4px;font-size:15px;color:#2C4432">📋 Mes check-lists de démarches</h4><p style="margin:0 0 10px;font-size:12.5px;color:#66735F">Choisis un modèle, il apparaît avec toutes les étapes à cocher. Tu peux les modifier, en ajouter ou en supprimer.</p><div style="display:flex;flex-wrap:wrap;gap:6px">'
+      + Object.keys(VP_DEM_MODELES).map(function(n) { return '<button onclick="vpDemAddModel(' + jsAttr(n) + ')" style="padding:7px 12px;background:#F7F3E8;border:1px solid #E2DCC8;border-radius:14px;font-size:12.5px;cursor:pointer;color:#2C4432;font-weight:600">+ ' + esc(n) + '</button>'; }).join('')
+      + '<button onclick="vpDemAddBlank()" style="padding:7px 12px;background:#fff;border:1.5px dashed #B9B39B;border-radius:14px;font-size:12.5px;cursor:pointer;color:#66735F">+ Liste vide</button></div></div>';
+    if (!l.length) out += '<div class="empty-state"><div class="icon">📋</div><h3>Aucune liste pour l\'instant</h3><p>Clique sur un modèle ci-dessus pour commencer.</p></div>';
+    l.forEach(function(d) {
+      var done = d.items.filter(function(x) { return x.done; }).length, pct = d.items.length ? Math.round(100 * done / d.items.length) : 0;
+      out += '<div style="' + VP_CARD + '"><div style="display:flex;gap:8px;align-items:center"><button onclick="vpDemToggleOpen(' + jsAttr(d.id) + ')" style="border:none;background:none;font-size:15px;cursor:pointer;padding:2px 6px">' + (d.open ? '▾' : '▸') + '</button>'
+        + '<input type="text" value="' + esc(d.nom) + '" style="' + VP_INP + 'flex:1;font-weight:700;font-size:14px;border-color:transparent" onchange="vpDemRename(' + jsAttr(d.id) + ',this.value)">'
+        + '<span style="font-size:12.5px;font-weight:700;color:' + (pct === 100 ? '#2F7A3E' : '#66735F') + ';white-space:nowrap">' + (pct === 100 ? '🎉 ' : '') + done + ' / ' + d.items.length + '</span>'
+        + '<button onclick="vpDemDel(' + jsAttr(d.id) + ')" title="Supprimer la liste" style="' + VP_DEL + '">🗑️</button></div>'
+        + '<div style="height:6px;background:#EEE9D8;border-radius:4px;margin:8px 0 4px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:#6C9A74"></div></div>';
+      if (d.open) {
+        d.items.forEach(function(it) {
+          out += '<div style="display:flex;gap:9px;align-items:center;padding:5px 0"><input type="checkbox" ' + (it.done ? 'checked ' : '') + 'onchange="vpDemCheck(' + jsAttr(d.id) + ',' + jsAttr(it.id) + ',this.checked)" style="width:19px;height:19px;flex:0 0 auto;cursor:pointer">'
+            + '<input type="text" value="' + esc(it.t) + '" style="' + VP_INP + 'flex:1;border-color:transparent;' + (it.done ? 'text-decoration:line-through;color:#8C9686;' : '') + '" onchange="vpDemText(' + jsAttr(d.id) + ',' + jsAttr(it.id) + ',this.value)">'
+            + '<button onclick="vpDemItemDel(' + jsAttr(d.id) + ',' + jsAttr(it.id) + ')" title="Retirer" style="border:none;background:none;color:#B5442F;cursor:pointer;font-size:14px">✕</button></div>';
+        });
+        out += '<div style="display:flex;gap:6px;margin-top:8px"><input type="text" id="vpDemNew-' + esc(d.id) + '" placeholder="Ajouter une étape…" style="' + VP_INP + 'flex:1" onkeydown="if(event.key===\'Enter\'){vpDemItemAdd(' + jsAttr(d.id) + ')}">'
+          + '<button onclick="vpDemItemAdd(' + jsAttr(d.id) + ')" style="' + VP_BTN + '">Ajouter</button>' + (done ? '<button onclick="vpDemReset(' + jsAttr(d.id) + ')" style="padding:9px 12px;background:#fff;color:#66735F;border:1.5px solid #E2DCC8;border-radius:10px;font-size:12.5px;cursor:pointer">↺ Tout décocher</button>' : '') + '</div>';
+      }
+      out += '</div>';
+    });
+    el.innerHTML = out;
+  }
+
+  // ───────── 🍽️ Menu & courses de la semaine ─────────
+  var VP_MENU_OFFSET = 0, VP_JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+  function vpMonday(offset) { var d = vpToday(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) + 7 * (offset || 0)); return vpISO(d); }
+  function vpMenuAll() { var m = vpLoad(VP_MENU_KEY, null); if (!m || typeof m !== 'object') m = {}; if (!m.weeks) m.weeks = {}; if (!Array.isArray(m.basics)) m.basics = []; return m; }
+  function vpMenuWeek(m, wk) { if (!m.weeks[wk]) m.weeks[wk] = { days: {}, courses: [] }; var w = m.weeks[wk]; if (!w.days) w.days = {}; if (!Array.isArray(w.courses)) w.courses = []; return w; }
+  function vpMenuGo(delta) { VP_MENU_OFFSET += delta; renderPersoMenu(); }
+  function vpMenuToday() { VP_MENU_OFFSET = 0; renderPersoMenu(); }
+  function vpMenuSetDay(dow, slot, v) { var m = vpMenuAll(), w = vpMenuWeek(m, vpMonday(VP_MENU_OFFSET)); if (!w.days[dow]) w.days[dow] = {}; w.days[dow][slot] = v; vpSave(VP_MENU_KEY, m); }
+  function vpMenuCourseAdd() { var inp = document.getElementById('vpCourseNew'), v = inp ? inp.value.trim() : ''; if (!v) return; var m = vpMenuAll(), w = vpMenuWeek(m, vpMonday(VP_MENU_OFFSET)); v.split(/[,;\n]+/).forEach(function(t) { t = t.trim(); if (t) w.courses.push({ id: vpUid('co'), t: t, done: false }); }); vpSave(VP_MENU_KEY, m); renderPersoMenu(); var a = document.getElementById('vpCourseNew'); if (a) a.focus(); }
+  function vpMenuCourseCheck(id, v) { var m = vpMenuAll(), w = vpMenuWeek(m, vpMonday(VP_MENU_OFFSET)), c = w.courses.find(function(x) { return x.id === id; }); if (c) { c.done = !!v; vpSave(VP_MENU_KEY, m); renderPersoMenu(); } }
+  function vpMenuCourseDel(id) { var m = vpMenuAll(), w = vpMenuWeek(m, vpMonday(VP_MENU_OFFSET)); w.courses = w.courses.filter(function(x) { return x.id !== id; }); vpSave(VP_MENU_KEY, m); renderPersoMenu(); }
+  function vpMenuClearDone() { var m = vpMenuAll(), w = vpMenuWeek(m, vpMonday(VP_MENU_OFFSET)); w.courses = w.courses.filter(function(x) { return !x.done; }); vpSave(VP_MENU_KEY, m); renderPersoMenu(); }
+  function vpMenuBasicsSave(v) { var m = vpMenuAll(); m.basics = v.split(/[,;\n]+/).map(function(t) { return t.trim(); }).filter(Boolean); vpSave(VP_MENU_KEY, m); renderPersoMenu(); }
+  function vpMenuBasicsAdd() { var m = vpMenuAll(), w = vpMenuWeek(m, vpMonday(VP_MENU_OFFSET)); m.basics.forEach(function(b) { if (!w.courses.some(function(c) { return c.t.toLowerCase() === b.toLowerCase(); })) w.courses.push({ id: vpUid('co'), t: b, done: false }); }); vpSave(VP_MENU_KEY, m); renderPersoMenu(); }
+  function vpMenuCopyPrev() { var m = vpMenuAll(), prev = m.weeks[vpMonday(VP_MENU_OFFSET - 1)]; if (!prev) { window.alert('Pas de menu la semaine précédente.'); return; } var w = vpMenuWeek(m, vpMonday(VP_MENU_OFFSET)); w.days = JSON.parse(JSON.stringify(prev.days || {})); vpSave(VP_MENU_KEY, m); renderPersoMenu(); }
+  function vpMenuCopyText() {
+    var m = vpMenuAll(), w = vpMenuWeek(m, vpMonday(VP_MENU_OFFSET)), t = 'Courses de la semaine :\n' + w.courses.filter(function(c) { return !c.done; }).map(function(c) { return '- ' + c.t; }).join('\n');
+    try { navigator.clipboard.writeText(t).then(function() { window.alert('Liste copiée : tu peux la coller dans un message.'); }); } catch (e) { window.prompt('Copie la liste :', t); }
+  }
+  function renderPersoMenu() {
+    var el = document.getElementById('persoMenuContent'); if (!el) return;
+    var m = vpMenuAll(), wk = vpMonday(VP_MENU_OFFSET), w = vpMenuWeek(m, wk), mon = vpParse(wk), sun = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 6), todayISO_ = vpISO(vpToday());
+    var out = '<div style="' + VP_CARD + '"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button onclick="vpMenuGo(-1)" style="' + VP_INP + 'cursor:pointer;background:#fff">‹</button>'
+      + '<div style="font-weight:700;color:#2C4432;font-size:14px">Semaine du ' + mon.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) + ' au ' + sun.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) + '</div>'
+      + '<button onclick="vpMenuGo(1)" style="' + VP_INP + 'cursor:pointer;background:#fff">›</button>'
+      + (VP_MENU_OFFSET ? '<button onclick="vpMenuToday()" style="' + VP_INP + 'cursor:pointer;background:#fff;font-size:12px">Cette semaine</button>' : '')
+      + '<button onclick="vpMenuCopyPrev()" style="' + VP_INP + 'cursor:pointer;background:#fff;font-size:12px;margin-left:auto">Recopier le menu de la semaine d\'avant</button></div></div>';
+    out += '<div style="' + VP_CARD + '"><h4 style="margin:0 0 10px;font-size:15px;color:#2C4432">🍽️ Menu</h4><div style="display:grid;grid-template-columns:90px 1fr 1fr;gap:6px 8px;align-items:center"><div></div><div style="font-size:11px;font-weight:700;color:#8C9686;text-transform:uppercase">Midi</div><div style="font-size:11px;font-weight:700;color:#8C9686;text-transform:uppercase">Soir</div>';
+    for (var i = 1; i <= 7; i++) {
+      var dd = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i - 1), isT = vpISO(dd) === todayISO_, day = w.days[i] || {};
+      out += '<div style="font-size:13px;font-weight:700;color:' + (isT ? '#3F5D46' : '#4B5A47') + '">' + VP_JOURS[i - 1] + (isT ? ' •' : '') + '<div style="font-size:10.5px;font-weight:400;color:#8C9686">' + dd.getDate() + '/' + (dd.getMonth() + 1) + '</div></div>'
+        + '<input type="text" value="' + esc(day.m || '') + '" placeholder="—" style="' + VP_INP + 'width:100%' + (isT ? ';border-color:#6C9A74' : '') + '" onchange="vpMenuSetDay(' + i + ',\'m\',this.value)">'
+        + '<input type="text" value="' + esc(day.s || '') + '" placeholder="—" style="' + VP_INP + 'width:100%' + (isT ? ';border-color:#6C9A74' : '') + '" onchange="vpMenuSetDay(' + i + ',\'s\',this.value)">';
+    }
+    out += '</div></div>';
+    var restant = w.courses.filter(function(c) { return !c.done; }).length;
+    out += '<div style="' + VP_CARD + '"><h4 style="margin:0 0 4px;font-size:15px;color:#2C4432">🛒 Liste de courses <span style="font-size:12px;font-weight:400;color:#8C9686">' + restant + ' à acheter</span></h4><p style="margin:0 0 10px;font-size:12.5px;color:#66735F">Tape un article (ou plusieurs séparés par des virgules) puis Entrée. Coche au fur et à mesure en magasin.</p>'
+      + '<div style="display:flex;gap:6px;margin-bottom:10px"><input type="text" id="vpCourseNew" placeholder="Ex : lait, pâtes, pommes" style="' + VP_INP + 'flex:1" onkeydown="if(event.key===\'Enter\'){vpMenuCourseAdd()}"><button onclick="vpMenuCourseAdd()" style="' + VP_BTN + '">Ajouter</button></div>';
+    w.courses.forEach(function(c) {
+      out += '<div style="display:flex;gap:9px;align-items:center;padding:5px 0;border-top:1px solid #F5F0E2"><input type="checkbox" ' + (c.done ? 'checked ' : '') + 'onchange="vpMenuCourseCheck(' + jsAttr(c.id) + ',this.checked)" style="width:19px;height:19px;cursor:pointer"><span style="flex:1;font-size:13.5px;' + (c.done ? 'text-decoration:line-through;color:#A5AD9F' : 'color:#2C4432') + '">' + esc(c.t) + '</span><button onclick="vpMenuCourseDel(' + jsAttr(c.id) + ')" style="border:none;background:none;color:#B5442F;cursor:pointer;font-size:14px">✕</button></div>';
+    });
+    out += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">' + (m.basics.length ? '<button onclick="vpMenuBasicsAdd()" style="padding:7px 12px;background:#EAF3EA;color:#2F5A38;border:1.5px solid #B9D6BE;border-radius:8px;font-weight:700;font-size:12.5px;cursor:pointer">+ Mes indispensables</button>' : '')
+      + (w.courses.length ? '<button onclick="vpMenuCopyText()" style="padding:7px 12px;background:#fff;border:1.5px solid #E2DCC8;border-radius:8px;font-size:12.5px;cursor:pointer">📋 Copier la liste</button>' : '')
+      + (w.courses.some(function(c) { return c.done; }) ? '<button onclick="vpMenuClearDone()" style="padding:7px 12px;background:#fff;border:1.5px solid #E2DCC8;border-radius:8px;font-size:12.5px;cursor:pointer">Retirer les articles cochés</button>' : '') + '</div>'
+      + '<details style="margin-top:12px"><summary style="font-size:12.5px;color:#66735F;cursor:pointer">Mes indispensables (ce que j\'achète presque toutes les semaines)</summary><textarea rows="3" placeholder="lait, pain, fruits, légumes, œufs…" style="' + VP_INP + 'width:100%;margin-top:6px" onchange="vpMenuBasicsSave(this.value)">' + esc(m.basics.join(', ')) + '</textarea></details></div>';
+    el.innerHTML = out;
+  }
+
   // ── 💳 Mes dettes — crédits/emprunts perso avec calcul automatique de la mensualité (formule
   // d'amortissement standard, taux fixe), tableau d'amortissement complet téléchargeable en CSV, et
   // un graphique d'évolution de l'endettement total (toutes dettes cumulées) dans le temps. Même
@@ -11192,7 +11638,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var sk = dashSafeLinkKey(key);
     l[sk] = Object.assign({}, l[sk], { sexe: sexe });
     saveClientLinks(l);
-    renderArchives();
+    renderArchives(); refreshOpenClientFiche();
   }
   // Ouvre l'espace co-NAÎTRE d'une cliente en mode aperçu (?preview=CODE) : la coach voit exactement
   // ce qu'elle voit, sans connaître son code personnel à 4 chiffres et sans jamais rien lui écraser —
@@ -11240,7 +11686,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     dashFbDB.ref(app.registryPath + '/' + code).update({ name: clientName || null, revoked: false, createdAt: createdAt }).then(function() {
       if (appKey === 'menage') { var l = getMenageLinks(); l[dashSafeLinkKey(key)] = { code: code, createdAt: createdAt }; saveMenageLinks(l); }
       else { setClientLinkCode(key, code); }
-      renderArchives();
+      renderArchives(); refreshOpenClientFiche();
       dashCopyLinkText(link, '🔗 Lien créé et copié — envoie-le à ' + (clientName || 'ta cliente') + '.');
     }).catch(function(err) {
       alert('Erreur lors de la création du lien : ' + (err && err.message ? err.message : 'inconnue'));
@@ -11269,7 +11715,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     dashFbDB.ref(app.registryPath + '/' + newCode).update({ name: clientName || null, revoked: false, createdAt: createdAt }).then(function() {
       if (appKey === 'menage') { var l = getMenageLinks(); l[dashSafeLinkKey(key)] = { code: newCode, createdAt: createdAt }; saveMenageLinks(l); }
       else { setClientLinkCode(key, newCode); }
-      renderArchives();
+      renderArchives(); refreshOpenClientFiche();
       dashCopyLinkText(link, '🔗 Nouveau lien créé et copié — l\'ancien ne fonctionne plus. Envoie-le à ' + (clientName || 'ta cliente') + '.');
     }).catch(function(err) {
       alert('Erreur lors de la création du nouveau lien : ' + (err && err.message ? err.message : 'inconnue'));
@@ -15575,7 +16021,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var sk = dashSafeLinkKey(key);
     if (!code) { delete l[sk]; } else { l[sk] = Object.assign({}, l[sk], { code: code }); }
     saveClientLinks(l);
-    renderArchives();
+    renderArchives(); refreshOpenClientFiche();
   }
   // Migration UNE SEULE FOIS des associations fiche↔code créées AVANT ce passage à Firebase : elles
   // dormaient jusqu'ici dans le localStorage de CE navigateur précis (SFM_CLIENT_LINK_KEY), invisible
@@ -19777,7 +20223,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function accListen() {
     if (ACCODE_LISTENING || !dashFbDB) return;
     ACCODE_LISTENING = true;
-    dashFbDB.ref('dash_access_codes').on('value', function(sn) { ACC_CODES = sn.val() || {}; try { renderArchives(); renderAccesTab(); renderDailyAcq(); } catch (e) {} });
+    dashFbDB.ref('dash_access_codes').on('value', function(sn) {
+      var oSk = window._openFicheKey ? dashSafeLinkKey(window._openFicheKey) : null, before = oSk ? JSON.stringify(ACC_CODES[oSk] || null) : null;
+      ACC_CODES = sn.val() || {};
+      try { renderArchives(); renderAccesTab(); renderDailyAcq(); } catch (e) {}
+      // Si le code de la cliente dont la fiche est ouverte vient d'être créé / changé : on met la fiche à jour tout de suite
+      try { if (oSk && JSON.stringify(ACC_CODES[oSk] || null) !== before) refreshOpenClientFiche(); } catch (e) {}
+    });
     dashFbDB.ref('epanouissement_global/access_policy').on('value', function(sn) { ACC_POLICY = sn.val() || { exiger: false }; try { renderArchives(); renderAccesTab(); } catch (e) {} });
   }
   // Crée (ou remplace) le code d'une fiche. Ne touche jamais au registre ni aux liens d'une cliente qui en a déjà un.
@@ -19800,7 +20252,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       return dashFbDB.ref('epanouissement_global/access_index/' + accHash(code)).set(idx).then(function() {
         if (old && old.code && old.active !== false) return dashFbDB.ref('epanouissement_global/access_index/' + accHash(old.code) + '/active').set(false);
       }).then(function() {
-        return dashFbDB.ref('dash_access_codes/' + sk).set({ code: code, clientCode: clientCode, name: name || '', email: email || '', key: key, createdAt: now, active: true });
+        var recNew = { code: code, clientCode: clientCode, name: name || '', email: email || '', key: key, createdAt: now, active: true };
+        ACC_CODES[sk] = recNew; // visible tout de suite dans la fiche, sans attendre le retour du cloud
+        return dashFbDB.ref('dash_access_codes/' + sk).set(recNew);
       }).then(function() { return { code: code, clientCode: clientCode }; });
     });
   }
@@ -19823,7 +20277,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var cl = buildByClient()[key] || {}, rec = accRec(key);
     if (rec && !window.confirm('Créer un NOUVEAU code pour ' + (name || 'cette cliente') + ' ? L\'ancien cessera de fonctionner.')) return;
     accCreate(key, name || cl.name, cl.email || (key.indexOf('@') > 0 ? key : ''), {}).then(function(r) {
-      showToast('🔑 Code créé : ' + r.code);
+      showToast('🔑 Code créé : ' + r.code); try { refreshOpenClientFiche(); } catch (e) {}
     }).catch(function(err) { alert('Erreur : ' + (err && err.message ? err.message : 'inconnue')); });
   }
   function accFicheCopy(key, name) { var r = accRec(key); if (r) accCopy(accMessage(key, name, r.code), '📋 Message copié — colle-le dans WhatsApp ou un e-mail'); }
@@ -20130,6 +20584,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
           if (document.getElementById('acqO-engagement-' + oid)) {
             o.engagement = g('acqO-engagement-' + oid); var tv = g('acqO-tarif-' + oid), ev = g('acqO-essai-' + oid);
             o.tarif = tv === '' ? null : +tv; o.essaiJours = ev === '' ? null : Math.max(0, parseInt(ev, 10) || 0); o.grille = document.getElementById('acqO-grille-' + oid).checked;
+            if (document.getElementById('acqO-fctr-' + oid)) o.formuleContrat = g('acqO-fctr-' + oid);
           }
           if (document.getElementById('acqO-formule-' + oid)) { o.formule = g('acqO-formule-' + oid); var sv = g('acqO-seances-' + oid), cv = g('acqO-cot-' + oid); o.seances = sv === '' ? null : +sv; o.cotisation = cv === '' ? null : +cv; }
         }
@@ -20149,6 +20604,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var ids = Object.keys(f.offres).sort(function(a, b) { return (f.offres[a].ordre || 0) - (f.offres[b].ordre || 0); });
     var i = ids.indexOf(oid), j = i + dir; if (j < 0 || j >= ids.length) return;
     var t = ids[i]; ids[i] = ids[j]; ids[j] = t; ids.forEach(function(k, n) { f.offres[k].ordre = n + 1; }); acqRender();
+  }
+  function acqDupReduite(oid) {
+    acqHarvest(); var f = acqCurrent(ACQ_FSEL), o = f.offres[oid]; if (!o) return;
+    var c = JSON.parse(JSON.stringify(o)), id = 'o' + Date.now().toString(36);
+    c.label = (o.label || 'Offre') + ' — formule réduite'; c.detail = 'Tout compris · 1 bilan par mois'; c.formuleContrat = 'bilanmensuel'; c.grille = true; c.tarif = null; c.prix = ''; c.lien = ''; c.ordre = Object.keys(f.offres).length + 1;
+    f.offres[id] = c; acqRender();
+    showToast('➕ Offre « formule réduite » créée : ajoute ton lien de paiement, remplis son prix dans 💶 Grille tarifaire, puis enregistre le tunnel.');
   }
   function acqAddOffer() {
     acqHarvest(); var f = acqCurrent(ACQ_FSEL); f.offres = f.offres || {};
@@ -20230,7 +20692,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         + (f.type === 'vente' ? '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;align-items:end"><div><label style="font-size:11px;font-weight:700;color:#66735F">Engagement</label><select id="acqO-engagement-' + oid + '" style="' + inp + '"><option value="4mois"' + (o.engagement !== '12mois' ? ' selected' : '') + '>4 mois</option><option value="12mois"' + (o.engagement === '12mois' ? ' selected' : '') + '>12 mois</option></select></div>'
           + '<div><label style="font-size:11px;font-weight:700;color:#66735F">Tarif mensuel du contrat (€)</label><input type="number" id="acqO-tarif-' + oid + '" value="' + esc(o.tarif == null ? '' : o.tarif) + '" placeholder="vide = prix affiché" style="' + inp + '"></div>'
           + '<div><label style="font-size:11px;font-weight:700;color:#66735F">Essai (jours, vide = réglage général)</label><input type="number" min="0" id="acqO-essai-' + oid + '" value="' + esc(o.essaiJours == null ? '' : o.essaiJours) + '" style="' + inp + '"></div></div>'
-          + '<label style="font-size:12.5px;display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="acqO-grille-' + oid + '" ' + (o.grille ? 'checked' : '') + '> 📊 Prendre le tarif dans ma grille tarifaire (« nouveau tarif conseillé » de la durée choisie) — le prix affiché suit la grille</label>' : '')
+          + '<div style="margin-top:8px"><label style="font-size:11px;font-weight:700;color:#66735F">Formule du contrat</label><select id="acqO-fctr-' + oid + '" style="' + inp + '"><option value="complete"' + (!o.formuleContrat || o.formuleContrat === 'complete' ? ' selected' : '') + '>Formule complète</option><option value="bilanmensuel"' + (o.formuleContrat === 'bilanmensuel' ? ' selected' : '') + '>Formule réduite (tout compris, 1 bilan par mois)</option><option value="reduite"' + (o.formuleContrat === 'reduite' ? ' selected' : '') + '>Sans masterclass ni plateforme (coaching seul)</option></select></div>'
+          + '<label style="font-size:12.5px;display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="acqO-grille-' + oid + '" ' + (o.grille ? 'checked' : '') + '> 📊 Prendre le tarif dans ma grille tarifaire (« nouveau tarif conseillé » de la durée choisie, ou le prix « formule réduite » si tu as choisi la formule réduite) — le prix affiché suit la grille</label>'
+          + '<button onclick="acqDupReduite(\'' + oid + '\')" style="margin-top:8px;padding:6px 12px;border:1.5px solid #6F8F6C;background:#fff;color:#3F5D46;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">➕ Créer la même offre en formule réduite (1 bilan par mois)</button>' : '')
         + acqOfferMapHtml(id, oid, o, inp)
         + '<div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap"><label style="font-size:12.5px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="acqO-actif-' + oid + '" ' + (o.actif !== false ? 'checked' : '') + '> Visible</label>'
         + '<button onclick="acqMove(\'' + oid + '\',-1)" style="padding:4px 10px;border:1px solid #E2DCC8;background:#fff;border-radius:8px;cursor:pointer">↑</button><button onclick="acqMove(\'' + oid + '\',1)" style="padding:4px 10px;border:1px solid #E2DCC8;background:#fff;border-radius:8px;cursor:pointer">↓</button>'
@@ -20808,14 +21272,14 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   // ── Fabrique l'enregistrement du contrat du Pôle Vente (contrats/<code>) à partir d'une formule ──
   function acqPrixNum(txt) { var m = String(txt || '').replace(/\s/g, '').match(/\d+(?:[.,]\d+)?/); return m ? m[0].replace(',', '.') : ''; }
   function acqTarifFormule(o) {
-    if (o.grille) { var d = getGtData(), n = o.engagement === '12mois' ? '12' : '4'; return d.abo['conseille' + n]; }
+    if (o.grille) { var d = getGtData(), n = o.engagement === '12mois' ? '12' : '4'; return o.formuleContrat === 'bilanmensuel' ? (d.abo['reduite' + n] || '') : d.abo['conseille' + n]; }
     if (o.tarif != null && o.tarif !== '') return o.tarif;
     return acqPrixNum(o.prix);
   }
   function acqContratRecord(f, o, ident, tarifOverride, essaiOverride) {
     var parts = String(ident.nom || '').trim().split(/\s+/), prenom = parts.shift() || '', nom = parts.join(' ') || prenom;
     var ej = essaiOverride != null ? essaiOverride : (o.essaiJours != null ? o.essaiJours : (f.essaiJours || 0));
-    return { nom: nom, prenom: prenom, adresse: ident.adresse || '', sexe: 'f', formule: 'complete', offer: o.engagement === '12mois' ? '12mois' : '4mois',
+    return { nom: nom, prenom: prenom, adresse: ident.adresse || '', sexe: 'f', formule: (o.formuleContrat === 'bilanmensuel' || o.formuleContrat === 'reduite') ? o.formuleContrat : 'complete', offer: o.engagement === '12mois' ? '12mois' : '4mois',
       tarifBase: String(tarifOverride !== '' && tarifOverride != null ? tarifOverride : acqTarifFormule(o)), tarifRemise: '', montantAici: '', resteCharge: '',
       essaiJours: Math.max(0, parseInt(ej, 10) || 0), essaiTexte: ident.essaiTexte != null ? ident.essaiTexte : (f.essaiTexte || ''),
       status: 'attente', source: 'tunnel', createdAt: new Date().toISOString() };
@@ -22051,7 +22515,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
 
   function contratSetFormule(val) {
     CONTRAT_FORM_FORMULE = val;
-    document.querySelectorAll('#ctrFormuleBtn-complete, #ctrFormuleBtn-reduite').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('#ctrFormuleBtn-complete, #ctrFormuleBtn-bilanmensuel, #ctrFormuleBtn-reduite').forEach(function(b) { b.classList.remove('active'); });
     var btn = document.getElementById('ctrFormuleBtn-' + val);
     if (btn) btn.classList.add('active');
   }
@@ -22130,8 +22594,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
 
   function contratPrefillFromGrille() {
     var d = getGtData(), n = CONTRAT_FORM_OFFER === '12mois' ? '12' : '4', set = function(id, v) { var e = document.getElementById(id); if (e) e.value = (v === '' || v == null) ? '' : v; };
+    if (CONTRAT_FORM_FORMULE === 'bilanmensuel') {
+      set('ctrTarifBase', d.abo['reduite' + n]); set('ctrTarifRemise', ''); set('ctrMontantAici', '');
+      if (d.abo['reduite' + n] === '' || d.abo['reduite' + n] == null) { showToast('⚠️ Le prix de la formule réduite (' + n + ' mois) est vide dans ta grille tarifaire : renseigne-le dans 💶 Grille tarifaire.'); return; }
+    } else {
     set('ctrTarifBase', d.abo['conseille' + n]); set('ctrTarifRemise', d.abo['avantAici' + n] ? d.abo['conseille' + n] : '');
     set('ctrMontantAici', d.abo['aici' + n]);
+    }
     showToast('📊 Tarifs repris de ta grille (durée ' + n + ' mois). Tu peux les modifier avant de générer le lien.');
   }
 
@@ -22163,7 +22632,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   // ── GRILLE TARIFAIRE ──
   var GT_KEY = 'sfm_grille_tarifaire_v1';
   var GT_DEFAULTS = {
-    abo: { actuel4: 348, actuel12: 298, conseille4: 385, avantAici4: '', aici4: '', conseille12: 330, avantAici12: '', aici12: '', montantDu4: '', acompte4: '', premierMois4: '', moisSuivant4: '', montantDu12: '', acompte12: '', premierMois12: '', moisSuivant12: '' },
+    abo: { actuel4: 348, actuel12: 298, reduite4: '', reduite12: '', conseille4: 385, avantAici4: '', aici4: '', conseille12: 330, avantAici12: '', aici12: '', montantDu4: '', acompte4: '', premierMois4: '', moisSuivant4: '', montantDu12: '', acompte12: '', premierMois12: '', moisSuivant12: '' },
     comptant: { avantRemise4: '', prix4: 1232, avantAici4: '', aici4: '', avantRemiseAvantAici4: '', avantRemiseApresAici4: '', avantRemise12: '', prix12: 3168, avantAici12: '', aici12: '', avantRemiseAvantAici12: '', avantRemiseApresAici12: '' },
     paliers: [
       { label: 'Base (inclus)', minutes: 20, t4: 385, aici4: '', t12: 330, aici12: '' },
@@ -22241,6 +22710,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       '<td style="padding:8px 10px">' + gtInput('abo.conseille12', d.abo.conseille12, { suffix: '€/mois' }) +
       ' <span style="font-size:11px;color:#8C9686;margin-left:8px">avant AICI</span> ' + gtInput('abo.avantAici12', d.abo.avantAici12, { suffix: '€', placeholder: '—', width: '75px' }) +
       ' <span style="font-size:11px;color:#8C9686;margin-left:8px">après AICI</span> ' + gtInput('abo.aici12', d.abo.aici12, { suffix: '€', placeholder: '—', width: '75px' }) + '</td></tr>';
+    out += '<tr><td style="padding:8px 10px;font-size:13px;color:#3E4A3A;font-weight:700">Formule réduite<br><span style="font-weight:400;font-size:11px;color:#8C9686">tout compris · 1 bilan par mois</span></td>' +
+      '<td style="padding:8px 10px">' + gtInput('abo.reduite4', d.abo.reduite4, { suffix: '€/mois', placeholder: 'à remplir' }) + '</td>' +
+      '<td style="padding:8px 10px">' + gtInput('abo.reduite12', d.abo.reduite12, { suffix: '€/mois', placeholder: 'à remplir' }) + '</td></tr>';
     out += '<tr><td style="padding:8px 10px;font-size:13px;color:#3E4A3A">Montant dû</td>' +
       '<td style="padding:8px 10px">' + gtInput('abo.montantDu4', d.abo.montantDu4, { suffix: '€', placeholder: '—' }) +
       ' <span style="font-size:11px;color:#8C9686;margin-left:8px">après acompte de</span> ' + gtInput('abo.acompte4', d.abo.acompte4, { suffix: '€', placeholder: '—', width: '75px' }) + '</td>' +
@@ -22318,7 +22790,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       var signed = c.status === 'signe';
       var offerLabel = c.offer === '12mois' ? 'Mensuel 12 mois' : 'Mensuel 4 mois';
       var civilite = c.sexe === 'm' ? 'M.' : 'Mme';
-      var formuleLabel = c.formule === 'reduite' ? 'Sans masterclass' : 'Formule complète';
+      var formuleLabel = c.formule === 'reduite' ? 'Sans masterclass' : (c.formule === 'bilanmensuel' ? 'Formule réduite' : 'Formule complète');
       var link = contratLinkFor(code);
       var initial = (c.prenom || '?').charAt(0).toUpperCase();
       out += '<div class="client-card">';
@@ -22409,7 +22881,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       var c = CONTRATS_ALL[link.code];
       var signed = c.status === 'signe';
       var offerLabel = c.offer === '12mois' ? 'Mensuel 12 mois' : 'Mensuel 4 mois';
-      var formuleLabel = c.formule === 'reduite' ? 'Sans masterclass' : 'Formule complète';
+      var formuleLabel = c.formule === 'reduite' ? 'Sans masterclass' : (c.formule === 'bilanmensuel' ? 'Formule réduite' : 'Formule complète');
       html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">';
       html += '<span style="font-size:12.5px;color:#3E4A3A">' + (signed ? '✅ Signé' : '⏳ En attente de signature') + ' — ' + esc(offerLabel) + ' · ' + esc(formuleLabel) + (c.createdAt ? ' · ' + dashAccessRelativeDate(c.createdAt) : '') + '</span>';
       html += '<div style="display:flex;gap:6px">';
