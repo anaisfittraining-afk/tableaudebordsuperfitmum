@@ -310,6 +310,7 @@ canvas#sigPad {
           <button type="button" class="offer-btn" data-j="14" onclick="setEssaiJours(14)"><div class="ob-title">14 jours</div></button>
           <button type="button" class="offer-btn" data-j="30" onclick="setEssaiJours(30)"><div class="ob-title">30 jours</div></button>
         </div>
+        <div id="essaiInfo" style="font-size:12.5px;color:#66735F;margin-top:8px">Aucune ligne « période d'essai » dans le contrat.</div>
         <div class="tarif-row" style="margin-top:10px">
           <div class="tarif-field"><label>Autre durée (jours)</label><input type="number" min="0" id="essaiJoursInput" placeholder="0" oninput="setEssaiJours(this.value)"></div>
           <div class="tarif-field" style="flex:2"><label>Conditions de l'essai (vide = texte par défaut)</label><input type="text" id="essaiTexteInput" placeholder="ex : remboursement intégral si elle arrête avant le 14e jour" oninput="setEssaiTexte(this.value)"></div>
@@ -509,12 +510,26 @@ function setEssaiJours(v) {
   var inp = document.getElementById('essaiJoursInput'); if (inp && document.activeElement !== inp) inp.value = j || '';
   document.querySelectorAll('#essaiBtns .offer-btn').forEach(function(b) { b.classList.toggle('active', parseInt(b.getAttribute('data-j'), 10) === j); });
   liveUpdate();
+  essaiShowInfo(j, true);
+}
+// Le contrat s'affiche dans un cadre à défilement : on y descend jusqu'à la ligne 5.1 et on la surligne, pour qu'on voie qu'elle s'est ajoutée
+function essaiShowInfo(j, scroll) {
+  var info = document.getElementById('essaiInfo');
+  if (info) info.textContent = j > 0 ? '✅ Ligne ajoutée au contrat : article 5.1 « Période d\'essai de ' + j + ' jour' + (j > 1 ? 's' : '') + ' » (dans le cadre du contrat ci-dessous).' : 'Aucune ligne « période d\'essai » dans le contrat.';
+  var pe = document.getElementById('pEssai'), box = document.querySelector('.contract-scroll');
+  if (!scroll || !pe || !box || j <= 0) return;
+  setTimeout(function() {
+    box.scrollTop += pe.getBoundingClientRect().top - box.getBoundingClientRect().top - 60;
+    pe.style.transition = 'background .4s'; pe.style.background = '#FFF3C4';
+    setTimeout(function() { pe.style.background = ''; }, 2500);
+  }, 60);
 }
 function setEssaiTexte(t) { ctrEssai = { jours: ctrEssai.jours || 0, texte: t || '' }; liveUpdate(); }
 function syncEssaiBox() {
   var inp = document.getElementById('essaiJoursInput'), tx = document.getElementById('essaiTexteInput');
   if (inp) inp.value = ctrEssai.jours || ''; if (tx) tx.value = ctrEssai.texte || '';
   document.querySelectorAll('#essaiBtns .offer-btn').forEach(function(b) { b.classList.toggle('active', parseInt(b.getAttribute('data-j'), 10) === (ctrEssai.jours || 0)); });
+  essaiShowInfo(ctrEssai.jours || 0, false);
 }
 
 // ── FORMULE ──────────────────────────────────
