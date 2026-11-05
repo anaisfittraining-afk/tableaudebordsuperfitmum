@@ -315,6 +315,12 @@ canvas#sigPad {
           <div class="tarif-field"><label>Autre durée (jours)</label><input type="number" min="0" id="essaiJoursInput" placeholder="0" oninput="setEssaiJours(this.value)"></div>
           <div class="tarif-field" style="flex:2"><label>Conditions de l'essai (vide = texte par défaut)</label><input type="text" id="essaiTexteInput" placeholder="ex : remboursement intégral si elle arrête avant le 14e jour" oninput="setEssaiTexte(this.value)"></div>
         </div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8C9686;margin:16px 0 8px">Modalité de paiement</div>
+        <div class="offer-row" id="paiementBtns">
+          <button type="button" class="offer-btn active" data-p="" onclick="setPaiement('')"><div class="ob-title">Mensuel (par défaut)</div></button>
+          <button type="button" class="offer-btn" data-p="echu" onclick="setPaiement('echu')"><div class="ob-title">À mois échu</div></button>
+        </div>
+        <div id="paiementInfo" style="font-size:12.5px;color:#66735F;margin-top:8px">Paiement mensuel classique.</div>
       </div>
     </div>
   </div>
@@ -381,6 +387,7 @@ canvas#sigPad {
       <div class="c-section">
         <h3>8. Tarifs et modalités de paiement</h3>
         <p id="pv-tarif">Offre et tarif à renseigner ci-dessus.</p>
+        <p id="pEchu" style="display:none"></p>
       </div>
 
       <div class="c-section">
@@ -455,6 +462,7 @@ canvas#sigPad {
 let offer = '4mois';
 let sexe = 'f';
 let formule = 'complete';
+let ctrPaiement = ''; // '' = paiement mensuel (par défaut) ; 'echu' = paiement à mois échu (décidé par la coach)
 let ctrEssai = { jours: 0, texte: '' }; // période d'essai décidée par la coach (0 = aucune)
 const CTR_EMBED = new URLSearchParams(window.location.search).get('embed') === '1'; // affiché dans la page de vente
 const canvas = document.getElementById('sigPad');
@@ -524,12 +532,24 @@ function essaiShowInfo(j, scroll) {
     setTimeout(function() { pe.style.background = ''; }, 2500);
   }, 60);
 }
+function setPaiement(p) {
+  ctrPaiement = (p === 'echu') ? 'echu' : '';
+  syncPaiementBox(); liveUpdate();
+  if (ctrPaiement === 'echu') { var pv = document.getElementById('pEchu'), box = document.querySelector('.contract-scroll');
+    if (pv && box) setTimeout(function() { box.scrollTop += pv.getBoundingClientRect().top - box.getBoundingClientRect().top - 60; pv.style.transition = 'background .4s'; pv.style.background = '#FFF3C4'; setTimeout(function() { pv.style.background = ''; }, 2500); }, 60); }
+}
+function syncPaiementBox() {
+  document.querySelectorAll('#paiementBtns .offer-btn').forEach(function(b) { b.classList.toggle('active', (b.getAttribute('data-p') || '') === ctrPaiement); });
+  var i = document.getElementById('paiementInfo');
+  if (i) i.textContent = ctrPaiement === 'echu' ? '✅ Ligne ajoutée au contrat : article 8.1 « Paiement à mois échu » (dans le cadre du contrat ci-dessous).' : 'Paiement mensuel classique.';
+}
 function setEssaiTexte(t) { ctrEssai = { jours: ctrEssai.jours || 0, texte: t || '' }; liveUpdate(); }
 function syncEssaiBox() {
   var inp = document.getElementById('essaiJoursInput'), tx = document.getElementById('essaiTexteInput');
   if (inp) inp.value = ctrEssai.jours || ''; if (tx) tx.value = ctrEssai.texte || '';
   document.querySelectorAll('#essaiBtns .offer-btn').forEach(function(b) { b.classList.toggle('active', parseInt(b.getAttribute('data-j'), 10) === (ctrEssai.jours || 0)); });
   essaiShowInfo(ctrEssai.jours || 0, false);
+  syncPaiementBox();
 }
 
 // ── FORMULE ──────────────────────────────────
@@ -600,6 +620,7 @@ function buildContractTexts(ctx) {
   t.p63 = '<strong>6.3</strong> Résiliation à l\'initiative ' + deClient + ' avec un préavis de 30 jours après la fin de la période d\'engagement.';
 
   var nEssai = parseInt(ctx.essaiJours, 10) || 0;
+  t.pEchu = ctx.paiement === 'echu' ? '<strong>8.1 Paiement à mois échu —</strong> Le paiement s\'effectue mensuellement à mois échu : chaque mensualité est due à la fin du mois de prestation, une fois le mois écoulé, et non à l\'avance. ' + roleLabel + ' règle ainsi chaque mois les prestations déjà réalisées.' : '';
   t.pEssai = nEssai > 0 ? '<strong>5.1 Période d\'essai —</strong> Le contrat est assorti d\'une période d\'essai de ' + nEssai + ' jour' + (nEssai > 1 ? 's' : '') + ' à compter de la date de signature. ' + ((ctx.essaiTexte || '').trim() || ('Pendant cette période, ' + roleLabelLower + ' peut mettre fin au contrat sans frais, en prévenant le Prestataire par écrit (e-mail ou message). À défaut, le contrat se poursuit pour la durée d\'engagement choisie.')) + ' Les frais prévus à l\'article 6.2 ne s\'appliquent pas en cas de fin du contrat pendant la période d\'essai.' : '';
 
   t.p7 = 'Si après 30 jours ' + roleLabelLower + ' estime que les services ne répondent pas à ses attentes, ' + pronoun + ' peut demander un remboursement par écrit avant la fin du premier mois du programme.';
@@ -614,7 +635,7 @@ function buildContractTexts(ctx) {
 }
 
 function currentCtx() {
-  return { sexe: sexe, formuleComplete: (formule === 'complete' || formule === 'bilanmensuel'), bilanMensuel: (formule === 'bilanmensuel'), essaiJours: ctrEssai.jours, essaiTexte: ctrEssai.texte };
+  return { sexe: sexe, formuleComplete: (formule === 'complete' || formule === 'bilanmensuel'), bilanMensuel: (formule === 'bilanmensuel'), essaiJours: ctrEssai.jours, essaiTexte: ctrEssai.texte, paiement: ctrPaiement };
 }
 
 function applyContractTexts() {
@@ -637,6 +658,7 @@ function applyContractTexts() {
   setHtml('p62', t.p62);
   setHtml('p63', t.p63);
   setText('p7', t.p7);
+  var pc = document.getElementById('pEchu'); if (pc) { pc.innerHTML = t.pEchu || ''; pc.style.display = t.pEchu ? '' : 'none'; }
   var pe = document.getElementById('pEssai'); if (pe) { pe.innerHTML = t.pEssai || ''; pe.style.display = t.pEssai ? '' : 'none'; }
   setText('p8cond', t.p8cond);
 }
@@ -678,12 +700,12 @@ function liveUpdate() {
       t = `Abonnement mensuel avec engagement ${m} mois : ${base} € remisé à ${rem} €/mois`;
       if(aici) t += `, éligible AICI : ${aici} €`;
       if(charge) t += `, reste à charge ${G(currentCtx(),'de la cliente','du client')} : ${charge} €`;
-      t += '. Paiement mensuel.';
+      t += '. ' + (ctrPaiement === 'echu' ? 'Paiement mensuel à mois échu.' : 'Paiement mensuel.');
     } else if(base) {
       t = `Abonnement mensuel avec engagement ${m} mois : ${base} €/mois`;
       if(aici) t += `, éligible AICI : ${aici} €`;
       if(charge) t += `, reste à charge ${G(currentCtx(),'de la cliente','du client')} : ${charge} €`;
-      t += '. Paiement mensuel.';
+      t += '. ' + (ctrPaiement === 'echu' ? 'Paiement mensuel à mois échu.' : 'Paiement mensuel.');
     } else {
       t = 'Tarif à renseigner ci-dessus.';
     }
@@ -794,6 +816,7 @@ function buildPDF(skipSave, apercu) {
     if(aici) tarifStr+=`, éligible AICI : ${aici} €`;
     if(charge) tarifStr+=`, reste à charge : ${charge} €`;
     tarifStr+='.';
+    if(ctrPaiement==='echu') tarifStr+=' Paiement mensuel à mois échu.';
   }
 
   // ── PAGE 1 ──
@@ -834,6 +857,7 @@ function buildPDF(skipSave, apercu) {
 
   secTitle('8. Tarifs et modalités de paiement');
   para(tarifStr);
+  if (t.pEchu) para(stripTags(t.pEchu));
 
   secTitle('9. Confidentialité');
   para('Toutes les informations échangées sont strictement confidentielles.');
@@ -989,6 +1013,7 @@ function ctrApplyData(data) {
   setVal('tarifBase', data.tarifBase); setVal('tarifRemise', data.tarifRemise);
   setVal('montantAici', data.montantAici); setVal('resteCharge', data.resteCharge);
   ctrEssai = { jours: parseInt(data.essaiJours, 10) || 0, texte: data.essaiTexte || '' };
+  ctrPaiement = data.paiement === 'echu' ? 'echu' : '';
   var wantedOffer = data.offer === '12mois' ? '12mois' : '4mois';
   document.querySelectorAll('.offer-btn:not(.formule-btn)').forEach(function(b) {
     var onclickAttr = b.getAttribute('onclick') || '';
