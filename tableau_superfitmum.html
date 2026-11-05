@@ -2323,6 +2323,12 @@ window.EXERCISE_LIBRARY = [
         <div class="form-group"><label>Montant AICI (€)</label><input type="number" id="ctrMontantAici" placeholder="150"></div>
         <div class="form-group"><label>Reste à charge (€)</label><input type="number" id="ctrResteCharge" placeholder="50"></div>
       </div>
+      <button type="button" class="btn-add" style="background:#E7EEE1;color:#2C4432;margin-top:0" onclick="contratPrefillFromGrille()">📊 Pré-remplir les tarifs depuis ma grille tarifaire</button>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#8C9686;margin:16px 0 8px">Période d'essai (facultatif)</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Durée de l'essai (jours, 0 = aucun)</label><input type="number" min="0" id="ctrEssaiJours" placeholder="0"></div>
+        <div class="form-group"><label>Conditions de l'essai (vide = texte par défaut)</label><input type="text" id="ctrEssaiTexte" placeholder="ex : remboursement intégral si elle arrête avant le 14e jour"></div>
+      </div>
 
       <button class="btn-add" onclick="contratGenerateLink()" style="margin-top:6px">🔗 Générer le lien de signature</button>
       <div id="ctrFormError" style="display:none;margin-top:10px;color:#e53e3e;font-size:13px;font-weight:600"></div>
@@ -2562,7 +2568,7 @@ window.EXERCISE_LIBRARY = [
     <div class="sub-nav-bar" style="display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid #E2DCC8;overflow-x:auto">
       <div class="sub-tab active" onclick="showSubView('task_video', this)">🎬 Création vidéos</div>
       <div class="sub-tab" onclick="showSubView('calendrier', this)">🗓️ Assistant marketing</div>
-      <div class="sub-tab" onclick="showSubView('logos', this)">🖼️ Logos</div>
+      <div class="sub-tab" onclick="showSubView('logos', this)">🖼️ Logo/visuel</div>
       <div class="sub-tab" onclick="showSubView('acquisition_espace', this)">🎯 Acquisition</div>
       <div class="sub-tab" onclick="showSubView('process_marketing', this)">📚 Process</div>
     </div>
@@ -2645,7 +2651,7 @@ window.EXERCISE_LIBRARY = [
 
   <div class="view-sub" id="subview-logos">
     <div class="section-title" style="margin-bottom:6px">
-      <h2>🖼️ Logos & identité visuelle — co-NAÎTRE</h2>
+      <h2>🖼️ Logo/visuel — identité visuelle co-NAÎTRE</h2>
     </div>
     <p style="color:#66735F;font-size:14px;margin-bottom:18px">Tes 3 logos co-NAÎTRE, prêts à réutiliser — clique sur « Télécharger » sous chaque logo pour l'enregistrer.</p>
     <div style="display:flex;gap:20px;flex-wrap:wrap">
@@ -7407,7 +7413,11 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var nextBtn = document.getElementById('dailyNavNext'); if (nextBtn) nextBtn.style.visibility = dailyOffset >= 6 ? 'hidden' : 'visible';
 
     var data = window.AGENDA_DATA;
+    var extraRdv = [];
+    try { extraRdv = acqAgendaEvents(k); } catch (e) {}
+    if (extraRdv.length && (!data || !data.days)) data = { days: {}, generatedAt: new Date().toISOString() };
     var dayData = data && data.days ? data.days[k] : null;
+    if (extraRdv.length && !dayData) dayData = { events: [] };
 
     // La liste des suggestions détectées dans les mails est une source indépendante
     // du calendrier jour par jour : elle doit s'afficher dès qu'elle existe, même si
@@ -7438,7 +7448,14 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       urgentEl.innerHTML = '<div style="font-size:12px;color:#8C9686">Les urgences ne sont vérifiées que pour aujourd\'hui.</div>';
     }
 
-    var events = (dayData.events || []).slice().sort(function (a, b) { return (a.start || '').localeCompare(b.start || ''); });
+    var events = (dayData.events || []).slice();
+    // Rendez-vous réservés via les tunnels (guidance, bilan…) : ajoutés sauf s'ils sont déjà dans Google Agenda
+    extraRdv.forEach(function (x) {
+      var nm = String(x.nom || '').toLowerCase().split(' ')[0];
+      var dup = events.some(function (e) { return (e.start || '') === x.start && nm && String(e.title || '').toLowerCase().indexOf(nm) >= 0; });
+      if (!dup) events.push(x);
+    });
+    events.sort(function (a, b) { return (a.start || '').localeCompare(b.start || ''); });
     if (events.length === 0) {
       agendaEl.innerHTML = '<div class="empty-state"><div class="icon">🗓️</div><h3>Aucun événement</h3><p>Rien de prévu à ton calendrier ce jour-là.</p></div>';
       return;
@@ -7455,6 +7472,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         '<span style="font-size:12.5px;font-weight:700;color:#3F5D46;min-width:90px">' + esc(e.start || '') + (e.end ? '–' + esc(e.end) : '') + '</span>' +
         '<span style="font-size:13.5px;color:#26312A' + (isDone ? ';text-decoration:line-through' : '') + '">' + esc(e.title || '') + '</span>' +
         '</label>' +
+        (e.gcal ? '<a href="' + esc(e.gcal) + '" target="_blank" rel="noopener" style="flex-shrink:0;padding:5px 10px;background:#E7EEE1;color:#2C4432;border-radius:14px;font-size:12px;font-weight:700;text-decoration:none">📅 + Google Agenda</a>' : '') +
       '</div>';
     });
     out += '</div>';
@@ -17600,6 +17618,14 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     out += '<div class="client-name">' + esc(d.nom || 'Sans nom') + ' — ' + lieuLabel + '</div>';
     out += '<div class="client-meta"><span>' + esc(d.email || '') + (d.telephone ? (' · ' + esc(d.telephone)) : '') + '</span></div>';
     out += '<div class="client-email">Créneau choisi : ' + esc(dashPendingResaSlotLabel(item)) + '</div>';
+    // Badge paiement : la demande n'arrive ici qu'après un retour de paiement (tunnel Stripe ou CRM).
+    // Le tunnel ne peut pas interroger Stripe : la référence permet de retrouver le paiement dans Stripe.
+    if (d.paiement === 'paye' || d.source === 'tunnel') {
+      out += '<div style="margin-top:6px"><span style="display:inline-block;background:#E3F3E6;color:#1F6B37;border:1px solid #BFE0C7;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700">💳 Payé' + (d.montant ? ' · ' + esc(d.montant) : '') + (d.paidAt ? ' · ' + esc(new Date(d.paidAt).toLocaleDateString('fr-FR')) : '') + '</span></div>';
+      if (d.leadId) out += '<div class="client-email" style="font-size:11px;color:#8a8577">Référence Stripe (client_reference_id) : ' + esc(d.leadId) + ' — à retrouver dans Stripe avant de valider</div>';
+    } else {
+      out += '<div style="margin-top:6px"><span style="display:inline-block;background:#FFF6E5;color:#7A5A12;border:1px solid #F0D9A8;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700">💳 Arrivée après paiement (CRM)</span></div>';
+    }
     out += '<div class="client-email">Reçue ' + dashAccessRelativeDate(d.createdAt) + '</div>';
     out += '</div>';
     out += '</div>';
@@ -19423,7 +19449,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   // synchro du tableau de bord) : funnels/<id>, leads/<id>, stats/<id>/<date>, media/<id>/flyer, config.
   var ACQ_DEFAULT_FUNNELS = {"desvres": {"titre": "Bouger, respirer, se sentir bien", "intro": "Un moment pour vous, pour bouger, respirer et cultiver votre bien-être au quotidien.", "avantages": "Mobilité & flexibilité\nRenforcement en douceur\nPosture & équilibre\nRespiration & bien-être", "bandeau": "Deux cours par semaine dispensés par une coach diplômée", "note": "Attention, les cartes ne sont bien prélevées qu'une seule fois, pas tous les mois ;)", "merciTexte": "Ton paiement est bien reçu. Anaïs valide ta place et te confirme tout par message très vite.", "active": true, "nom": "Pilates Desvres (hybride)", "lieu": "desvres", "offres": {"unite_pres": {"label": "Séance en présentiel à l'unité", "detail": "20 € de frais de configuration et 8 € par mois", "prix": "28 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 1}, "carte10_pres": {"label": "Carte 10 séances en présentiel", "detail": "20 € de frais de configuration et 70 € par mois", "prix": "90 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 2}, "abo_pres": {"label": "Abonnement présentiel", "detail": "20 € de frais de configuration et 25 € par mois", "prix": "45 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 3}, "abo_complet": {"label": "Abonnement complet", "detail": "32 € par mois", "prix": "32 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 4}, "carte10_visio": {"label": "Carte 10 séances en visio", "detail": "20 € de frais de configuration et 50 € par mois", "prix": "70 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 5}, "unite_visio": {"label": "Séance en visio à l'unité", "detail": "20 € de frais de configuration et 6 € par mois", "prix": "26 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 6}, "passage": {"label": "Passage de la carte à l'abonnement", "detail": "Essai de 45 jours puis 32 € par mois", "prix": "0 €", "format": "aucun", "lien": "", "actif": true, "ordre": 7}}}, "fitness_park": {"titre": "Bouger, respirer, se sentir bien", "intro": "Un moment pour vous, pour bouger, respirer et cultiver votre bien-être au quotidien.", "avantages": "Mobilité & flexibilité\nRenforcement en douceur\nPosture & équilibre\nRespiration & bien-être", "bandeau": "Deux cours par semaine dispensés par une coach diplômée · Au Fitness Park Boulogne ou en direct de ton salon", "note": "Attention, les cartes ne sont bien prélevées qu'une seule fois, pas tous les mois ;)", "merciTexte": "Ton paiement est bien reçu. Anaïs valide ta place et te confirme tout par message très vite.", "active": true, "nom": "Pilates Fitness Park", "lieu": "fitness_park", "offres": {"unite_pres": {"label": "Séance en présentiel à l'unité", "detail": "Au Fitness Park Boulogne", "prix": "8 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 1}, "abo_pres": {"label": "Abonnement présentiel", "detail": "1 séance par semaine · 25 € par mois", "prix": "25 €/mois", "format": "presentiel", "lien": "", "actif": true, "ordre": 2}, "abo_global": {"label": "Abonnement global", "detail": "Présentiel et visio : 2 séances par semaine · 32 € par mois", "prix": "32 €/mois", "format": "presentiel", "lien": "", "actif": true, "ordre": 3}, "unite_visio": {"label": "Séance en visio à l'unité", "detail": "En direct de ton salon", "prix": "6 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 4}, "carte10_pres": {"label": "Carte 10 séances en présentiel", "detail": "Au Fitness Park Boulogne", "prix": "70 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 5}, "carte10_visio": {"label": "Carte 10 séances en visio", "detail": "En direct de ton salon", "prix": "50 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 6}}}, "en_ligne": {"titre": "Bouger, respirer, se sentir bien", "intro": "Un moment pour vous, pour bouger, respirer et cultiver votre bien-être au quotidien.", "avantages": "Mobilité & flexibilité\nRenforcement en douceur\nPosture & équilibre\nRespiration & bien-être", "bandeau": "1 cours par semaine en ligne dispensé par une coach diplômée · en direct de ton salon", "note": "", "merciTexte": "Ton paiement est bien reçu. Anaïs valide ta place et te confirme tout par message très vite.", "active": true, "nom": "Pilates 100 % en ligne", "lieu": "en_ligne", "offres": {"carte10_visio": {"label": "Carte 10 séances en visio", "detail": "20 € de frais de configuration et 50 € par mois", "prix": "70 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 1}, "unite_visio": {"label": "Séance en visio à l'unité", "detail": "20 € de frais de configuration et 6 € par mois", "prix": "26 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 2}, "abo_visio": {"label": "Abonnement visio", "detail": "20 € de frais de configuration et 16 € par mois", "prix": "36 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 3}}}};
   (function() { var E = {"bilan": {"scope": "espace", "type": "appel", "nom": "Bilan Forme Santé (appel offert)", "lieu": "en_ligne", "active": true, "titre": "Ton Bilan Forme Santé", "bandeau": "Il te reste une dernière étape", "intro": "Un appel de 30 minutes avec Anaïs pour faire le point sur ta situation, poser ton objectif et repartir avec un plan clair.", "avantages": "Faire le point — Où tu en es aujourd'hui, ce qui te freine et ce qui fonctionne déjà.\nPoser ton objectif — Énergie, poids, confiance, rythme de vie : on choisit ce qui compte pour toi.\nRepartir avec un plan — Des pistes concrètes, adaptées à ton quotidien de maman.", "note": "Gratuit, sans engagement. Les créneaux de la semaine partent vite : réserve le tien dès maintenant.", "faq": "Le Bilan est-il vraiment gratuit ?|Oui. Il est 100 % offert, sans carte bancaire et sans engagement.\nÀ quoi sert cet appel ?|À faire le point ensemble et à repartir avec un aperçu personnalisé et des conseils pratiques.\nCombien de temps dure-t-il ?|Environ 30 minutes, par téléphone ou en visio, au moment que tu as choisi.\nDois-je acheter quelque chose ?|Non. À la fin de l'appel, tu décides librement : continuer avec co-NAÎTRE ou repartir avec tes conseils.", "apropos": "Je m'appelle Anaïs. Je suis coach, athlète et maman de trois enfants… et femme avant tout.\nAprès la naissance de mes aînés, je me suis donnée sans compter, jusqu'au burn-out parental. Aujourd'hui, j'accompagne les mamans à redevenir des femmes épanouies : parce qu'une maman épanouie, c'est une famille qui rayonne.", "merciTexte": "C'est noté, ton appel est réservé ! Ajoute-le à ton agenda et prépare tes questions : Anaïs t'appelle à l'heure choisie.", "agenda": {"duree": 30, "horizon": 14, "preavis": 24, "pas": 30, "modalite": "Appel téléphonique ou visio", "calendarId": "", "apiKey": "", "lien": "", "dispo": {"lun": "09:30-12:00,14:00-16:30", "mar": "09:30-12:00,14:00-16:30", "mer": "", "jeu": "09:30-12:00,14:00-16:30", "ven": "09:30-12:00", "sam": "", "dim": ""}}}, "accompagnement": {"scope": "espace", "type": "vente", "nom": "Page de vente — Accompagnement co-NAÎTRE", "lieu": "en_ligne", "active": false, "titre": "Ton accompagnement co-NAÎTRE", "bandeau": "Pour toutes les mamans débordées", "intro": "Se réconcilier avec son corps, retrouver son énergie et sa confiance en soi, sans s'oublier en tant que maman.", "avantages": "Un plan alimentaire personnalisé — pour toute la famille\nUn programme sportif — adapté au rythme d'une maman\nUn programme de développement personnel — pour reprendre confiance en toi\nUn suivi par ta coach — et des outils d'accompagnement\nDe nouvelles habitudes — qui tiennent dans ton quotidien\nLe soutien de la communauté — des mamans qui avancent comme toi", "note": "Ton inscription se fait en 3 temps : tes coordonnées, la signature de ton contrat, puis le paiement sécurisé.", "faq": "", "apropos": "Je m'appelle Anaïs. Je suis coach, athlète et maman de trois enfants… et femme avant tout.\nJ'ai créé co-NAÎTRE pour aider les mamans à redevenir des femmes épanouies : parce qu'une maman épanouie, c'est une famille qui rayonne.", "merciTexte": "Ton paiement est bien reçu et ton contrat est signé. Bienvenue dans co-NAÎTRE ! Anaïs te contacte très vite pour démarrer.", "prestataire": "[À COMPLÉTER : nom, forme juridique, SIRET, adresse et e-mail de la Coach]", "mediateur": "[À COMPLÉTER : nom et coordonnées du médiateur de la consommation]", "contrat": "CONTRAT D'ACCOMPAGNEMENT co-NAÎTRE\n\nEntre les soussignés :\n{{prestataire}}\nci-après « la Coach »,\net {{nom}}, adresse e-mail {{email}}{{adresse}}, ci-après « la Cliente ».\n\nArticle 1 — Objet\nLe présent contrat a pour objet l'accompagnement de la Cliente par la Coach dans le cadre du programme « {{offre}} » : plan alimentaire personnalisé, programme sportif, programme de développement personnel, suivi par la Coach et outils d'accompagnement, tels que présentés sur la page de vente.\n\nArticle 2 — Durée\nL'accompagnement débute à la date de signature du présent contrat, sous réserve du paiement, pour la durée de la formule choisie.\n{{essai}}\n\nArticle 3 — Prix et paiement\nLe prix de la formule « {{offre}} » est de {{prix}} TTC. Le paiement s'effectue en ligne, de façon sécurisée, par l'intermédiaire de la plateforme Stripe, selon les modalités affichées avant la signature.\n\nArticle 4 — Droit de rétractation\nLa Cliente, consommatrice, dispose d'un délai de quatorze (14) jours à compter de la signature du contrat pour se rétracter, sans avoir à justifier de motif, en adressant sa décision à la Coach par e-mail. Si la Cliente demande expressément que l'accompagnement commence avant la fin de ce délai, elle devra payer un montant proportionnel à ce qui lui a été fourni jusqu'à la communication de sa décision de se rétracter.\n\nArticle 5 — Engagements de la Coach\nLa Coach s'engage à mettre en œuvre tous les moyens nécessaires à la bonne réalisation de l'accompagnement, avec sérieux et bienveillance. Il s'agit d'une obligation de moyens : aucun résultat chiffré n'est garanti, les résultats dépendant notamment de l'implication de la Cliente.\n\nArticle 6 — Engagements de la Cliente\nLa Cliente s'engage à fournir des informations exactes, à suivre les conseils dans la mesure de ses possibilités, et à prévenir la Coach de tout changement de sa situation.\n\nArticle 7 — Santé\nLa Cliente déclare ne connaître aucune contre-indication à la pratique d'une activité physique adaptée et s'engage à consulter son médecin en cas de doute, de grossesse, de pathologie ou de suites de grossesse. L'accompagnement ne remplace pas un avis médical.\n\nArticle 8 — Données personnelles\nLes données de la Cliente sont utilisées uniquement pour la gestion et le suivi de l'accompagnement. Elle peut exercer ses droits d'accès, de rectification et de suppression en écrivant à la Coach.\n\nArticle 9 — Propriété intellectuelle\nLes contenus (programmes, plans, supports) sont strictement personnels à la Cliente et ne peuvent être revendus ni diffusés.\n\nArticle 10 — Médiation de la consommation\nEn cas de litige, la Cliente peut recourir gratuitement à un médiateur de la consommation : {{mediateur}}\n\nArticle 11 — Droit applicable\nLe présent contrat est soumis au droit français.\n\nFait en ligne, le {{date}}.", "offres": {"n1": {"label": "Accompagnement — niveau 1", "detail": "", "prix": "249 €", "format": "aucun", "lien": "", "actif": true, "ordre": 1}, "n2_mensuel": {"label": "Accompagnement — niveau 2 (en mensualités)", "detail": "", "prix": "229 €/mois", "format": "aucun", "lien": "", "actif": true, "ordre": 2}, "n2_comptant": {"label": "Accompagnement — niveau 2 (comptant)", "detail": "", "prix": "2 257 €", "format": "aucun", "lien": "", "actif": true, "ordre": 3}}}}; Object.keys(E).forEach(function(k) { ACQ_DEFAULT_FUNNELS[k] = E[k]; }); })();
-  ACQ_DEFAULT_FUNNELS.guidance = {"scope": "espace", "type": "appel", "nom": "Guidance (séance avec Anaïs)", "lieu": "en_ligne", "active": true, "titre": "Réserve ta guidance", "bandeau": "Réservé aux clientes co-NAÎTRE", "badge": "Un moment rien que pour toi", "intro": "Un temps individuel avec Anaïs pour faire le point sur ton parcours, lever ce qui te freine et ajuster la suite de ton accompagnement.", "avantages": "Faire le point — Ce qui avance, ce qui coince, ce qui t'a fait du bien depuis la dernière fois.\nAjuster ton programme — Alimentation, sport, développement personnel : on adapte à ta réalité du moment.\nRepartir motivée — Des priorités simples et claires pour les prochaines semaines.", "note": "Choisis le créneau qui t'arrange : seuls les moments où Anaïs est disponible te sont proposés.", "faq": "Combien de temps dure la guidance ?|Environ 45 minutes, en visio ou par téléphone, au moment que tu as choisi.\nPuis-je déplacer mon rendez-vous ?|Oui : écris à Anaïs au moins 24 h avant pour trouver un autre créneau.\nComment me préparer ?|Note simplement tes réussites, tes difficultés du moment et les questions que tu veux aborder.", "apropos": "", "cta": "Réserver ma guidance", "confirmLabel": "Confirmer ma guidance", "rdvNom": "Guidance co-NAÎTRE", "merciTitre": "Ta guidance est réservée", "merciTexte": "C'est noté ! Ajoute-la à ton agenda et prépare les points que tu veux aborder avec Anaïs.", "objMode": "texte", "objLabel": "Le sujet que tu veux aborder (facultatif)", "consentTxt": "J'accepte que mes données soient utilisées pour organiser et réaliser cette guidance.", "fermeMsg": "Les réservations de guidance ne sont pas ouvertes pour le moment", "agenda": {"duree": 45, "horizon": 21, "preavis": 24, "pas": 45, "modalite": "Visio ou téléphone", "calendarId": "", "apiKey": "", "lien": "", "dispo": {"lun": "", "mar": "14:00-17:00", "mer": "", "jeu": "14:00-17:00", "ven": "", "sam": "", "dim": ""}}};
+  ACQ_DEFAULT_FUNNELS.guidance = {"scope": "espace", "type": "appel", "nom": "Guidance par les cartes (séance avec Anaïs)", "lieu": "en_ligne", "active": true, "titre": "Réserve ta guidance par les cartes", "bandeau": "Réservé aux clientes co-NAÎTRE", "badge": "Un moment rien que pour toi", "intro": "Un temps individuel avec Anaïs, en visio ou par téléphone, autour d'un tirage de cartes. Les cartes servent de point de départ : elles font émerger ce que tu ressens, éclairent ta situation du moment et t'aident à y voir plus clair pour la suite.", "avantages": "Un tirage rien que pour toi — Tu poses ton sujet ou ta question, Anaïs tire les cartes et les interprète avec toi, dans un cadre bienveillant et sans jugement.\nY voir plus clair — Les cartes aident à mettre des mots sur ce que tu traverses : ce qui te freine, ce qui te porte, ce qui demande ton attention.\nRepartir avec des pistes concrètes — Quelques messages clés et des idées simples à mettre en pratique dans les semaines qui viennent.", "note": "Choisis le créneau qui t'arrange : seuls les moments où Anaïs est disponible te sont proposés. La guidance par les cartes est un temps d'écoute et de réflexion : elle ne remplace ni un avis médical, ni un suivi psychologique, et ne prédit pas l'avenir.", "faq": "En quoi consiste une guidance par les cartes ?|Anaïs tire des cartes en lien avec ton sujet ou ta situation du moment et les interprète avec toi. C'est un temps d'échange pour mettre des mots sur ce que tu ressens et trouver des pistes.\nCombien de temps dure la séance ?|Environ 45 minutes, en visio ou par téléphone, au moment que tu as choisi.\nDois-je avoir une question précise ?|Pas obligatoirement, mais un sujet t'aide à en tirer le meilleur : une situation, une décision à prendre, un blocage. Tu l'indiques au moment de la réservation.\nPuis-je déplacer mon rendez-vous ?|Oui : écris à Anaïs au moins 24 h avant pour trouver un autre créneau.\nLa guidance remplace-t-elle un avis médical ?|Non. C'est un temps de réflexion et d'écoute, ni un diagnostic, ni une prédiction de l'avenir.", "apropos": "", "cta": "Réserver ma guidance", "confirmLabel": "Confirmer ma guidance", "rdvNom": "Guidance par les cartes", "merciTitre": "Ta guidance est réservée", "merciTexte": "C'est noté ! Ajoute-la à ton agenda. Avant la séance, installe-toi au calme et pense au sujet ou à la question que tu souhaites poser aux cartes.", "objMode": "texte", "objLabel": "Le sujet ou la question que tu veux poser aux cartes", "consentTxt": "J'accepte que mes données soient utilisées pour organiser et réaliser cette guidance.", "fermeMsg": "Les réservations de guidance ne sont pas ouvertes pour le moment", "agenda": {"duree": 45, "horizon": 21, "preavis": 24, "pas": 45, "modalite": "Visio ou téléphone", "calendarId": "", "apiKey": "", "lien": "", "dispo": {"lun": "", "mar": "14:00-17:00", "mer": "", "jeu": "14:00-17:00", "ven": "", "sam": "", "dim": ""}}};
   var ACQ_DEFAULT_BASE = 'https://anaisfittraining-afk.github.io/co-naitre-en-mouvement/tunnel.html';
   var ACQ_STATUTS = {
     nouveau: '🆕 Nouvelle', rdv: '📞 Appel réservé', paiement_ouvert: '💳 Paiement ouvert', paye: '✅ Payé (retour Stripe)', converti: '🌟 Inscrite / cliente', perdu: '❌ Perdue'
@@ -19713,7 +19739,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function acqBase() { return (ACQ_CFG.baseUrl || ACQ_DEFAULT_BASE).replace(/\s+/g, ''); }
   function acqFunnelUrl(id, extra) { var b = acqBase(); return b + (b.indexOf('?') < 0 ? '?' : '&') + 'f=' + encodeURIComponent(id) + (extra || ''); }
   function acqSetTab(t) { ACQ_TAB = t; acqRender(); }
+  var ACQ_GRILLE_PUB = false;
   function acqRender() {
+    if (!ACQ_GRILLE_PUB && dashFbDB) { ACQ_GRILLE_PUB = true; gtPublish(); }
     var nav = acqEl('Nav'), body = acqEl('Body');
     if (!nav || !body) return;
     var tabs = [['prospects', '👥 Prospects'], ['tunnels', '🧩 Mes tunnels'], ['chiffres', '📊 Chiffres']]; if (ACQ_SCOPE !== 'espace') tabs.push(['guide', '📘 Guide Stripe']); else tabs.splice(2, 0, ['contrats', '✍️ Contrats']); tabs.push(['emails', '✉️ E-mails automatiques']); if (ACQ_TAB === 'guide' && ACQ_SCOPE === 'espace') ACQ_TAB = 'prospects';
@@ -19827,11 +19855,16 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         if (document.getElementById('acqO-label-' + oid)) {
           o.label = g('acqO-label-' + oid); o.detail = g('acqO-detail-' + oid); o.prix = g('acqO-prix-' + oid); o.format = g('acqO-format-' + oid);
           o.lien = (g('acqO-lien-' + oid) || '').trim(); o.actif = document.getElementById('acqO-actif-' + oid).checked;
+          if (document.getElementById('acqO-engagement-' + oid)) {
+            o.engagement = g('acqO-engagement-' + oid); var tv = g('acqO-tarif-' + oid), ev = g('acqO-essai-' + oid);
+            o.tarif = tv === '' ? null : +tv; o.essaiJours = ev === '' ? null : Math.max(0, parseInt(ev, 10) || 0); o.grille = document.getElementById('acqO-grille-' + oid).checked;
+          }
           if (document.getElementById('acqO-formule-' + oid)) { o.formule = g('acqO-formule-' + oid); var sv = g('acqO-seances-' + oid), cv = g('acqO-cot-' + oid); o.seances = sv === '' ? null : +sv; o.cotisation = cv === '' ? null : +cv; }
         }
       });
-      if (f.type === 'appel' || f.type === 'vente') ['faq', 'apropos', 'contrat', 'prestataire', 'mediateur'].forEach(function(k) { var v = g('acqF-' + k); if (v !== null) f[k] = v; });
-      if (f.type === 'appel') ['badge', 'cta', 'confirmLabel', 'merciTitre', 'rdvNom', 'objLabel'].forEach(function(k) { var v = g('acqF-' + k); if (v !== null) f[k] = v; });
+      if (f.type === 'appel' || f.type === 'vente') ['faq', 'apropos', 'essaiTexte'].forEach(function(k) { var v = g('acqF-' + k); if (v !== null) f[k] = v; });
+      if (f.type === 'vente' && document.getElementById('acqF-essaiJours')) f.essaiJours = Math.max(0, parseInt(g('acqF-essaiJours'), 10) || 0);
+      if (f.type === 'appel') ['badge', 'cta', 'confirmLabel', 'merciTitre', 'rdvNom', 'objLabel', 'paiementPrix', 'paiementLien'].forEach(function(k) { var v = g('acqF-' + k); if (v !== null) f[k] = v; });
       if (f.type === 'appel' && document.getElementById('acqA-duree')) {
         var ag0 = f.agenda || {};
         f.agenda = { duree: +g('acqA-duree') || 30, pas: +g('acqA-pas') || 30, horizon: +g('acqA-horizon') || 14, preavis: +g('acqA-preavis') || 0, modalite: g('acqA-modalite') || '', calendarId: (g('acqA-cal') || '').trim(), apiKey: (g('acqA-key') || '').trim(), lien: (g('acqA-lien') || '').trim(), dispo: ag0.dispo || {}, exceptions: ag0.exceptions || {} };
@@ -19922,6 +19955,10 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         + '<label style="font-size:11px;font-weight:700;color:#66735F;display:block;margin-top:8px">Détail</label><input type="text" id="acqO-detail-' + oid + '" value="' + esc(o.detail || '') + '" style="' + inp + '">'
         + '<div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-top:8px"><div><label style="font-size:11px;font-weight:700;color:#66735F">Cours</label><select id="acqO-format-' + oid + '" style="' + inp + '"><option value="presentiel"' + (o.format === 'presentiel' ? ' selected' : '') + '>Présentiel</option><option value="en_ligne"' + (o.format === 'en_ligne' ? ' selected' : '') + '>Visio</option><option value="aucun"' + (o.format === 'aucun' ? ' selected' : '') + '>Sans créneau</option></select></div>'
         + '<div><label style="font-size:11px;font-weight:700;color:#66735F">Lien de paiement Stripe</label><input type="text" id="acqO-lien-' + oid + '" placeholder="https://buy.stripe.com/…" value="' + esc(o.lien || '') + '" style="' + inp + '"></div></div>'
+        + (f.type === 'vente' ? '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;align-items:end"><div><label style="font-size:11px;font-weight:700;color:#66735F">Engagement</label><select id="acqO-engagement-' + oid + '" style="' + inp + '"><option value="4mois"' + (o.engagement !== '12mois' ? ' selected' : '') + '>4 mois</option><option value="12mois"' + (o.engagement === '12mois' ? ' selected' : '') + '>12 mois</option></select></div>'
+          + '<div><label style="font-size:11px;font-weight:700;color:#66735F">Tarif mensuel du contrat (€)</label><input type="number" id="acqO-tarif-' + oid + '" value="' + esc(o.tarif == null ? '' : o.tarif) + '" placeholder="vide = prix affiché" style="' + inp + '"></div>'
+          + '<div><label style="font-size:11px;font-weight:700;color:#66735F">Essai (jours, vide = réglage général)</label><input type="number" min="0" id="acqO-essai-' + oid + '" value="' + esc(o.essaiJours == null ? '' : o.essaiJours) + '" style="' + inp + '"></div></div>'
+          + '<label style="font-size:12.5px;display:flex;gap:6px;align-items:center;margin-top:6px"><input type="checkbox" id="acqO-grille-' + oid + '" ' + (o.grille ? 'checked' : '') + '> 📊 Prendre le tarif dans ma grille tarifaire (« nouveau tarif conseillé » de la durée choisie) — le prix affiché suit la grille</label>' : '')
         + acqOfferMapHtml(id, oid, o, inp)
         + '<div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap"><label style="font-size:12.5px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="acqO-actif-' + oid + '" ' + (o.actif !== false ? 'checked' : '') + '> Visible</label>'
         + '<button onclick="acqMove(\'' + oid + '\',-1)" style="padding:4px 10px;border:1px solid #E2DCC8;background:#fff;border-radius:8px;cursor:pointer">↑</button><button onclick="acqMove(\'' + oid + '\',1)" style="padding:4px 10px;border:1px solid #E2DCC8;background:#fff;border-radius:8px;cursor:pointer">↓</button>'
@@ -19957,6 +19994,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       Object.keys(ACQ_LEADS).forEach(function(id) { ACQ_KNOWN[id] = true; });
       ACQ_SEEN_BOOT = true;
       renderDailyAcq();
+      clearTimeout(window.__acqAgT); window.__acqAgT = setTimeout(function () { try { renderDailyOverview(); } catch (e) {} }, 500);
       try { acqRefresh(); } catch (e) {}
     });
   }
@@ -20137,6 +20175,27 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     el.innerHTML = out;
   }
   function acqSetStatusDaily(id) { if (window.confirm('Marquer cette prospecte comme perdue ?')) dashFbDB.ref('acquisition/leads/' + id).update({ status: 'perdu', updatedAt: new Date().toISOString() }); }
+  // ── Rendez-vous réservés via les tunnels (appels / guidances) pour un jour donné (AAAA-MM-JJ) ──
+  function acqRdvGcalUrl(d) {
+    if (!d.rdvDate || !d.rdvHeure) return '';
+    var fn = (ACQ_FUNNELS[d.funnel] || ACQ_DEFAULT_FUNNELS[d.funnel] || {});
+    var t0 = d.rdvDate.replace(/-/g, '') + 'T' + d.rdvHeure.replace(':', '') + '00', dur = d.rdvDuree || 30, p = d.rdvHeure.split(':'), m = (+p[0]) * 60 + (+p[1]) + dur, e = ('0' + Math.floor(m / 60)).slice(-2) + ('0' + (m % 60)).slice(-2) + '00';
+    return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('📞 ' + (fn.rdvNom || 'Bilan Forme Santé') + ' — ' + (d.nom || '')) + '&dates=' + t0 + '/' + d.rdvDate.replace(/-/g, '') + 'T' + e + '&ctz=Europe/Paris&details=' + encodeURIComponent('Tél : ' + (d.telephone || '—') + '\nE-mail : ' + (d.email || '—') + (d.objectif ? '\nSujet : ' + d.objectif : ''));
+  }
+  function acqAgendaEvents(dayKey) {
+    var out = [];
+    Object.keys(ACQ_LEADS || {}).forEach(function (id) {
+      var d = ACQ_LEADS[id]; if (!d || d.rdvDate !== dayKey || !d.rdvHeure) return;
+      if (d.status === 'perdu' || d.status === 'annule') return;
+      var fn = (ACQ_FUNNELS[d.funnel] || ACQ_DEFAULT_FUNNELS[d.funnel] || {});
+      if (fn.type && fn.type !== 'appel') return;
+      var p = d.rdvHeure.split(':'), m = (+p[0]) * 60 + (+p[1]) + (d.rdvDuree || 30), end = ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2);
+      var pay = fn.paiementLien ? (d.paiement === 'paye' ? ' · 💳 payé' : ' · ⏳ paiement non confirmé') : '';
+      out.push({ start: d.rdvHeure, end: end, nom: d.nom || '', gcal: acqRdvGcalUrl(d),
+        title: '📞 ' + (fn.rdvNom || 'Bilan Forme Santé') + ' — ' + (d.nom || '') + (d.objectif ? ' · ' + d.objectif : '') + pay });
+    });
+    return out;
+  }
   // ── Bouton « ajouter à mon agenda » pour les appels réservés ──
   function acqRdvButtons(d) {
     if (!d.rdvDate || !d.rdvHeure) return '';
@@ -20227,6 +20286,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       + '<p style="font-size:12px;color:#8a8577;margin:8px 0 0">Pour que le tunnel puisse lire tes occupations, l\'agenda doit être partagé « au public » dans Google Agenda (Paramètres de l\'agenda → Autorisations). Sans cela, seuls tes horaires et les appels déjà réservés sont pris en compte.</p>'
       + lab('Lien visio (facultatif, envoyé après la réservation)') + '<input type="text" id="acqA-lien" value="' + esc(ag.lien || '') + '" placeholder="https://…" style="' + inp + '"></div>';
     var dv = function(k, d) { return f[k] === undefined ? d : f[k]; }, txt = function(id, lbl, v, ph) { return lab(lbl) + '<input type="text" id="' + id + '" value="' + esc(v) + '" placeholder="' + esc(ph || '') + '" style="' + inp + '">'; };
+    var retourUrl = acqFunnelUrl(ACQ_FSEL, '&merci=1');
+    out += '<div style="background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:4px">💳 Paiement de la séance (facultatif)</div>'
+      + '<p style="font-size:12.5px;color:#66735F;margin:0 0 8px">Si tu remplis le lien Stripe, la cliente est envoyée sur la page de paiement <b>juste après avoir choisi son créneau</b>, puis revient ici avec sa confirmation. Laisse vide pour une séance sans paiement.</p>'
+      + txt('acqF-paiementPrix', 'Prix de la séance (information enregistrée avec la demande)', dv('paiementPrix', ''), 'ex : 60 €')
+      + txt('acqF-paiementLien', 'Lien de paiement Stripe (Payment Link)', dv('paiementLien', ''), 'https://buy.stripe.com/…')
+      + '<p style="font-size:12px;color:#8a8577;margin:8px 0 4px">Dans Stripe, quand tu crées ce lien : section « Après le paiement » → « Rediriger les clients vers votre site » → colle cette adresse :</p>'
+      + '<input type="text" readonly onclick="this.select()" value="' + esc(retourUrl) + '" style="' + inp + ';background:#F6F3E8"></div>';
     out += '<div style="background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:4px">✏️ Libellés de la page</div>'
       + txt('acqF-badge', 'Pastille sous le titre (vide = aucune)', dv('badge', '100 % offert · sans engagement'))
       + txt('acqF-cta', 'Texte du bouton « réserver »', dv('cta', 'Réserver mon appel'))
@@ -20240,20 +20306,18 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     return out;
   }
   function acqVenteHtml(f, inp, lab) {
-    var warn = ((f.contrat || '') + (f.prestataire || '') + (f.mediateur || '')).indexOf('[À COMPLÉTER') >= 0;
     return '<div style="background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px;margin-bottom:16px">'
-      + '<div style="font-weight:700;margin-bottom:4px">✍️ Contrat signé en ligne avant le paiement</div>'
-      + (warn ? '<div style="background:#FFF6E5;border:1px solid #F0D9A8;color:#7A5A12;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:600;margin:6px 0">⚠️ Il reste des champs « [À COMPLÉTER] » : la page de vente reste fermée au public tant qu\'ils ne sont pas remplis. Ce modèle de contrat est une base : fais-le relire avant de l\'utiliser.</div>' : '')
-      + '<p style="font-size:12.5px;color:#66735F;margin:0 0 6px">La cliente lit le contrat, coche l\'acceptation, tape son nom et signe au doigt. Le contrat signé est conservé avec la date et l\'heure, et tu peux le rouvrir / l\'imprimer depuis sa fiche prospecte. Les prix « formules » repris de l\'ancienne page sont à vérifier ci-dessous.</p>'
-      + '<p style="font-size:12.5px;color:#66735F;margin:6px 0">💳 Dans Stripe, chaque lien de paiement doit rediriger après paiement vers : <b>\' + esc(acqFunnelUrl(ACQ_FSEL, \'&merci=1\')) + \'</b> (page de bienvenue). La page de bienvenue et la confirmation sont celles du tunnel.</p>'
-      + lab('Qui est la coach (remplace {{prestataire}})') + '<textarea id="acqF-prestataire" style="' + inp + ';min-height:60px">' + esc(f.prestataire || '') + '</textarea>'
-      + lab('Médiateur de la consommation (remplace {{mediateur}})') + '<textarea id="acqF-mediateur" style="' + inp + ';min-height:50px">' + esc(f.mediateur || '') + '</textarea>'
-      + lab('Texte du contrat (champs automatiques : {{nom}} {{email}} {{adresse}} {{offre}} {{prix}} {{date}} {{prestataire}} {{mediateur}})') + '<textarea id="acqF-contrat" style="' + inp + ';min-height:340px;font-size:12.5px">' + esc(f.contrat || '') + '</textarea></div>'
+      + '<div style="font-weight:700;margin-bottom:4px">✍️ Contrat : le même que dans ton Pôle Vente</div>'
+      + '<p style="font-size:12.5px;color:#66735F;margin:0 0 6px">Dans cette page de vente, la cliente lit et signe <b>exactement le contrat de ton Pôle Vente</b> (même texte, même signature, même PDF). Chaque signature apparaît aussi dans ta liste de contrats du Pôle Vente. Rien à recopier ici : tu règles seulement les formules ci-dessous (durée d\'engagement, tarif, essai).</p>'
+      + '<div style="display:grid;grid-template-columns:140px 1fr;gap:8px"><div>' + lab('Période d\'essai (jours)') + '<input type="number" min="0" id="acqF-essaiJours" value="' + esc(f.essaiJours || 0) + '" style="' + inp + '"></div><div>' + lab('Conditions de l\'essai (vide = texte par défaut)') + '<input type="text" id="acqF-essaiTexte" value="' + esc(f.essaiTexte || '') + '" placeholder="ex : remboursement intégral si elle arrête avant le 14e jour" style="' + inp + '"></div></div>'
+      + '<p style="font-size:12.5px;color:#66735F;margin:10px 0 0">💳 Dans Stripe, chaque lien de paiement doit rediriger après paiement vers : <b style="word-break:break-all">' + esc(acqFunnelUrl(ACQ_FSEL, '&merci=1')) + '</b> (page de bienvenue).</p></div>'
       + '<div style="background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px;margin-bottom:16px">'
       + lab('Questions fréquentes (une par ligne : Question|Réponse)') + '<textarea id="acqF-faq" style="' + inp + ';min-height:90px">' + esc(f.faq || '') + '</textarea>'
       + lab('À propos d\'Anaïs') + '<textarea id="acqF-apropos" style="' + inp + ';min-height:100px">' + esc(f.apropos || '') + '</textarea></div>';
   }
   function acqOpenContrat(leadId) {
+    var cc = (ACQ_CTS[leadId] || {}).contratCode || ((ACQ_LEADS && ACQ_LEADS[leadId]) || {}).contratCode;
+    if (cc) { window.open(contratLinkFor(cc), '_blank'); return; }
     dashFbDB.ref('acquisition/contrats/' + leadId).once('value').then(function(s) {
       var c = s.val(); if (!c) { showToast('Contrat introuvable'); return; }
       var w = window.open('', '_blank'); if (!w) { showToast('Autorise les fenêtres pop-up pour ouvrir le contrat'); return; }
@@ -20265,42 +20329,45 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     }).catch(function(err) { showToast('❌ ' + ((err && err.message) || 'erreur')); });
   }
   // ── Contrats sur mesure : Anaïs adapte le texte, puis envoie un lien (accueil + contrat + signature + paiement Stripe) ──
-  var ACQ_CTS = {}, ACQ_CT = { nom: '', email: '', tel: '', offre: '', essaiJours: 0, essaiTexte: '', texte: '' }, ACQ_CT_LISTENING = false;
+  var ACQ_CTS = {}, ACQ_CT = { nom: '', email: '', tel: '', offre: '', essaiJours: 0, essaiTexte: '', tarif: '', texte: '' }, ACQ_CT_LISTENING = false;
   function acqCtListen() {
     if (ACQ_CT_LISTENING || !dashFbDB) return; ACQ_CT_LISTENING = true;
     dashFbDB.ref('acquisition/contratsEnvoyes').on('value', function(sn) { ACQ_CTS = sn.val() || {}; acqRefresh(); });
   }
   function acqCtHarvest() {
     var g = function(k) { var e = document.getElementById('acqCt-' + k); return e ? e.value : null; };
-    ['nom', 'email', 'tel', 'offre', 'essaiTexte', 'texte'].forEach(function(k) { var v = g(k); if (v !== null) ACQ_CT[k] = v; });
+    ['nom', 'email', 'tel', 'offre', 'essaiTexte', 'tarif'].forEach(function(k) { var v = g(k); if (v !== null) ACQ_CT[k] = v; });
     var j = g('essaiJours'); if (j !== null) ACQ_CT.essaiJours = Math.max(0, parseInt(j, 10) || 0);
   }
-  function acqCtEssaiText() {
-    var n = ACQ_CT.essaiJours || 0;
-    if (!n) return 'Aucune période d\'essai n\'est prévue.';
-    return 'Une période d\'essai de ' + n + ' jours à compter de la signature est prévue. ' + ((ACQ_CT.essaiTexte || '').trim() || 'Pendant cette période, la Cliente peut mettre fin à l\'accompagnement sans frais, en prévenant la Coach par écrit (e-mail ou message).');
+  // ── Fabrique l'enregistrement du contrat du Pôle Vente (contrats/<code>) à partir d'une formule ──
+  function acqPrixNum(txt) { var m = String(txt || '').replace(/\s/g, '').match(/\d+(?:[.,]\d+)?/); return m ? m[0].replace(',', '.') : ''; }
+  function acqTarifFormule(o) {
+    if (o.grille) { var d = getGtData(), n = o.engagement === '12mois' ? '12' : '4'; return d.abo['conseille' + n]; }
+    if (o.tarif != null && o.tarif !== '') return o.tarif;
+    return acqPrixNum(o.prix);
   }
-  function acqCtPrepare() {
-    acqCtHarvest();
-    var f = acqCurrent('accompagnement'), o = (f.offres || {})[ACQ_CT.offre];
-    if (!o) { showToast('⚠️ Choisis d\'abord la formule.'); return; }
-    var t = f.contrat || '';
-    var sub = { '{{prestataire}}': f.prestataire || '', '{{mediateur}}': f.mediateur || '', '{{nom}}': ACQ_CT.nom || '{{nom}}', '{{email}}': ACQ_CT.email || '{{email}}', '{{offre}}': o.label || '', '{{prix}}': o.prix || '', '{{essai}}': acqCtEssaiText() };
-    Object.keys(sub).forEach(function(k) { t = t.split(k).join(sub[k]); });
-    ACQ_CT.texte = t; acqRender();
-    showToast('📝 Contrat préparé : modifie les lignes que tu veux, puis crée le lien');
+  function acqContratRecord(f, o, ident, tarifOverride, essaiOverride) {
+    var parts = String(ident.nom || '').trim().split(/\s+/), prenom = parts.shift() || '', nom = parts.join(' ') || prenom;
+    var ej = essaiOverride != null ? essaiOverride : (o.essaiJours != null ? o.essaiJours : (f.essaiJours || 0));
+    return { nom: nom, prenom: prenom, adresse: ident.adresse || '', sexe: 'f', formule: 'complete', offer: o.engagement === '12mois' ? '12mois' : '4mois',
+      tarifBase: String(tarifOverride !== '' && tarifOverride != null ? tarifOverride : acqTarifFormule(o)), tarifRemise: '', montantAici: '', resteCharge: '',
+      essaiJours: Math.max(0, parseInt(ej, 10) || 0), essaiTexte: ident.essaiTexte != null ? ident.essaiTexte : (f.essaiTexte || ''),
+      status: 'attente', source: 'tunnel', createdAt: new Date().toISOString() };
   }
+  function acqCtPrepare() { acqCtCreate(); }
   function acqCtCreate() {
     acqCtHarvest();
     var f = acqCurrent('accompagnement'), o = (f.offres || {})[ACQ_CT.offre];
     if (!ACQ_CT.nom.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(ACQ_CT.email.trim())) { showToast('⚠️ Nom et e-mail valides obligatoires.'); return; }
     if (!o) { showToast('⚠️ Choisis la formule.'); return; }
-    if (!ACQ_CT.texte.trim()) { showToast('⚠️ Clique d\'abord sur « Préparer le contrat ».'); return; }
     var id = dashFbDB.ref('acquisition/contratsEnvoyes').push().key, now = new Date().toISOString();
-    var rec = { nom: ACQ_CT.nom.trim(), email: ACQ_CT.email.trim(), telephone: ACQ_CT.tel.trim(), offreId: ACQ_CT.offre, offreLabel: o.label || '', offrePrix: o.prix || '', lien: o.lien || '', texte: ACQ_CT.texte, essaiJours: ACQ_CT.essaiJours || 0, status: 'envoye', createdAt: now, funnel: 'accompagnement' };
+    var code = contratGenerateCode(ACQ_CT.nom.trim().split(/\s+/)[0], ACQ_CT.nom.trim().split(/\s+/).slice(1).join(' '));
+    var tarif = acqTarifFormule(o); if (ACQ_CT.tarif !== '' && ACQ_CT.tarif != null) tarif = ACQ_CT.tarif;
+    var ctr = acqContratRecord(f, o, { nom: ACQ_CT.nom, essaiTexte: ACQ_CT.essaiTexte }, tarif, ACQ_CT.essaiJours || 0);
+    var rec = { nom: ACQ_CT.nom.trim(), email: ACQ_CT.email.trim(), telephone: ACQ_CT.tel.trim(), offreId: ACQ_CT.offre, offreLabel: o.label || '', offrePrix: ctr.tarifBase ? ctr.tarifBase + ' €/mois' : (o.prix || ''), lien: o.lien || '', contratCode: code, essaiJours: ctr.essaiJours, status: 'envoye', createdAt: now, funnel: 'accompagnement' };
     var lead = { funnel: 'accompagnement', lieu: 'en_ligne', nom: rec.nom, email: rec.email, telephone: rec.telephone, offreId: rec.offreId, offreLabel: rec.offreLabel, offrePrix: rec.offrePrix, status: 'nouveau', source: 'contrat envoyé', createdAt: now, updatedAt: now, contratEnvoye: true, vu: true };
-    dashFbDB.ref('acquisition/contratsEnvoyes/' + id).set(rec).then(function() { return dashFbDB.ref('acquisition/leads/' + id).set(lead); }).then(function() {
-      ACQ_CT = { nom: '', email: '', tel: '', offre: '', essaiJours: 0, essaiTexte: '', texte: '' };
+    dashFbDB.ref('contrats/' + code).set(ctr).then(function() { return dashFbDB.ref('acquisition/contratsEnvoyes/' + id).set(rec); }).then(function() { return dashFbDB.ref('acquisition/leads/' + id).set(lead); }).then(function() {
+      ACQ_CT = { nom: '', email: '', tel: '', offre: '', essaiJours: 0, essaiTexte: '', tarif: '', texte: '' };
       showToast('🔗 Lien créé : copie-le ou envoie-le depuis la liste'); acqRender();
     }).catch(function(err) { alert('Erreur : ' + ((err && err.message) || 'inconnue')); });
   }
@@ -20315,13 +20382,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var offs = Object.keys(f.offres || {}).sort(function(a, b) { return (f.offres[a].ordre || 0) - (f.offres[b].ordre || 0); });
     var o = (f.offres || {})[ACQ_CT.offre];
     var out = '<div style="max-width:880px"><div style="background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:4px">✍️ Préparer un contrat pour une future cliente</div>'
-      + '<p style="font-size:12.5px;color:#66735F;margin:0 0 6px">1. Renseigne la cliente et la formule · 2. Ajuste la période d\'essai · 3. « Préparer le contrat » puis modifie les lignes que tu veux · 4. « Créer le lien » : tu l\'envoies, elle découvre son espace, signe, puis règle le lien Stripe de la formule choisie.</p>'
+      + '<p style="font-size:12.5px;color:#66735F;margin:0 0 6px">1. Renseigne la cliente et la formule · 2. Ajuste la période d\'essai · 3. « Créer le lien » (le contrat est celui de ton Pôle Vente) · 4. Envoie le lien : tu l\'envoies, elle découvre son espace, signe, puis règle le lien Stripe de la formule choisie.</p>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label style="' + lb + '">Nom et prénom</label><input id="acqCt-nom" value="' + esc(ACQ_CT.nom) + '" style="' + inp + '"></div><div><label style="' + lb + '">E-mail</label><input id="acqCt-email" value="' + esc(ACQ_CT.email) + '" style="' + inp + '"></div><div><label style="' + lb + '">Téléphone</label><input id="acqCt-tel" value="' + esc(ACQ_CT.tel) + '" style="' + inp + '"></div>'
       + '<div><label style="' + lb + '">Formule (et son lien Stripe)</label><select id="acqCt-offre" style="' + inp + '"><option value="">— choisir —</option>' + offs.map(function(k) { var x = f.offres[k]; return '<option value="' + k + '"' + (k === ACQ_CT.offre ? ' selected' : '') + '>' + esc(x.label + ' · ' + (x.prix || '')) + '</option>'; }).join('') + '</select></div></div>'
       + (o && !o.lien ? '<div style="font-size:12px;color:#B96A46;margin-top:6px">⚠️ Cette formule n\'a pas encore de lien Stripe (onglet Mes tunnels) : la cliente signera, mais ne pourra pas payer en ligne.</div>' : '')
       + '<div style="display:grid;grid-template-columns:140px 1fr;gap:8px"><div><label style="' + lb + '">Période d\'essai (jours)</label><input type="number" min="0" id="acqCt-essaiJours" value="' + esc(ACQ_CT.essaiJours || 0) + '" style="' + inp + '"></div><div><label style="' + lb + '">Conditions de l\'essai (facultatif — sinon texte par défaut)</label><input id="acqCt-essaiTexte" value="' + esc(ACQ_CT.essaiTexte) + '" placeholder="ex : remboursement intégral si elle arrête avant le 14e jour" style="' + inp + '"></div></div>'
-      + '<button onclick="acqCtPrepare()" style="margin-top:12px;padding:9px 16px;background:#E7EEE1;color:#2C4432;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">📝 Préparer le contrat</button>'
-      + (ACQ_CT.texte ? '<label style="' + lb + '">Contrat de cette cliente (tu peux modifier n\'importe quelle ligne)</label><textarea id="acqCt-texte" style="' + inp + ';min-height:380px;font-size:12.5px">' + esc(ACQ_CT.texte) + '</textarea><p style="font-size:12px;color:#8a8577;margin:4px 0 0">{{adresse}} et {{date}} se complètent automatiquement au moment de la signature.</p><button onclick="acqCtCreate()" style="margin-top:12px;padding:11px 20px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">🔗 Créer le lien à envoyer</button>' : '')
+      + '<div style="margin-top:4px"><label style="' + lb + '">Tarif mensuel de CE contrat (€) — vide = celui de la formule / de ta grille tarifaire' + (o ? ' (actuellement ' + esc(acqTarifFormule(o)) + ' €)' : '') + '</label><input type="number" id="acqCt-tarif" value="' + esc(ACQ_CT.tarif || '') + '" style="' + inp + ';max-width:220px"></div>'
+      + '<button onclick="acqCtCreate()" style="margin-top:14px;padding:11px 20px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">🔗 Créer le lien à envoyer</button>'
       + '</div><div style="font-weight:700;margin:6px 0 8px">Contrats envoyés</div>';
     var ids = Object.keys(ACQ_CTS).sort(function(a, b) { return (ACQ_CTS[b].createdAt || '').localeCompare(ACQ_CTS[a].createdAt || ''); });
     if (!ids.length) out += '<p style="font-size:13px;color:#66735F">Aucun contrat envoyé pour le moment.</p>';
@@ -20364,7 +20431,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   var ACQ_MAIL_DEF_F = {
     guidance: {
       lead: { on: false, sujet: 'Ta guidance, {{prenom}} ?', corps: 'Bonjour {{prenom}},\n\nIl te reste à choisir ton créneau pour que ta guidance soit confirmée : {{lien_tunnel}}\n\nAnaïs — co-NAÎTRE' },
-      rdv: { on: true, sujet: 'Ta guidance est réservée 🌿', corps: 'Bonjour {{prenom}},\n\nTa guidance avec Anaïs est confirmée : {{date_rdv}} à {{heure_rdv}} ({{modalite}}).\n\nPrépare simplement tes réussites, tes difficultés du moment et les questions que tu veux aborder. À très vite !\n\nAnaïs — co-NAÎTRE' },
+      rdv: { on: true, sujet: 'Ta guidance est réservée 🌿', corps: 'Bonjour {{prenom}},\n\nTa guidance avec Anaïs est confirmée : {{date_rdv}} à {{heure_rdv}} ({{modalite}}).\n\nInstalle-toi dans un endroit au calme, avec de quoi noter, et pense au sujet ou à la question que tu souhaites poser aux cartes. À très vite !\n\nAnaïs — co-NAÎTRE' },
       relance: { on: false, sujet: '{{prenom}}, ta guidance n\'est pas encore réservée', corps: 'Bonjour {{prenom}},\n\nTu peux choisir ton créneau de guidance ici : {{lien_tunnel}}\n\nAnaïs — co-NAÎTRE' }
     }
   };
@@ -21578,6 +21645,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       tarifRemise: (document.getElementById('ctrTarifRemise').value || '').trim(),
       montantAici: (document.getElementById('ctrMontantAici').value || '').trim(),
       resteCharge: (document.getElementById('ctrResteCharge').value || '').trim(),
+      essaiJours: Math.max(0, parseInt(document.getElementById('ctrEssaiJours').value, 10) || 0),
+      essaiTexte: (document.getElementById('ctrEssaiTexte').value || '').trim(),
       status: 'attente',
       createdAt: existingCreatedAt || new Date().toISOString()
     };
@@ -21591,6 +21660,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     }).catch(function(err) {
       if (errEl) { errEl.textContent = 'Erreur : ' + (err && err.message ? err.message : 'impossible de générer le lien.'); errEl.style.display = 'block'; }
     });
+  }
+
+  function contratPrefillFromGrille() {
+    var d = getGtData(), n = CONTRAT_FORM_OFFER === '12mois' ? '12' : '4', set = function(id, v) { var e = document.getElementById(id); if (e) e.value = (v === '' || v == null) ? '' : v; };
+    set('ctrTarifBase', d.abo['conseille' + n]); set('ctrTarifRemise', d.abo['avantAici' + n] ? d.abo['conseille' + n] : '');
+    set('ctrMontantAici', d.abo['aici' + n]);
+    showToast('📊 Tarifs repris de ta grille (durée ' + n + ' mois). Tu peux les modifier avant de générer le lien.');
   }
 
   function contratCopyToClipboard(text) {
@@ -21638,7 +21714,17 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       return saved || JSON.parse(JSON.stringify(GT_DEFAULTS));
     } catch (e) { return JSON.parse(JSON.stringify(GT_DEFAULTS)); }
   }
-  function saveGtData(d) { localStorage.setItem(GT_KEY, JSON.stringify(d)); }
+  function saveGtData(d) { localStorage.setItem(GT_KEY, JSON.stringify(d)); gtPublish(); }
+  // La page de vente (en ligne) ne peut pas lire ton navigateur : on lui publie une copie de la grille.
+  // Chemin NEUF acquisition/grille : aucune donnée de clientes n'est touchée.
+  function gtPublish() {
+    try {
+      if (!window.dashFbDB && typeof dashFbDB === 'undefined') return;
+      if (!dashFbDB) return;
+      var d = getGtData();
+      dashFbDB.ref('acquisition/grille').set({ abo: d.abo, comptant: d.comptant, paliers: d.paliers, majAt: new Date().toISOString() }).catch(function() {});
+    } catch (e) {}
+  }
   function gtResetDefaults() {
     localStorage.removeItem(GT_KEY);
     renderGrilleTarifaire();
