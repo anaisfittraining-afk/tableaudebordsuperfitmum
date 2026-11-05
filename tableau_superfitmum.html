@@ -5075,6 +5075,15 @@ window.EXERCISE_LIBRARY = [
     document.body.removeChild(a);
   }
 
+  function downloadCustomLogo(id) {
+    var l = getCustomLogos().filter(function(x) { return x.id === id; })[0];
+    if (!l || !l.dataUrl) { alert('Logo introuvable.'); return; }
+    var m = /^data:image\/([a-zA-Z0-9+]+)/.exec(l.dataUrl);
+    var ext = m ? m[1].toLowerCase().replace('jpeg','jpg').replace('svg+xml','svg') : 'jpg';
+    var base = (l.label || 'logo').replace(/[^a-zA-Z0-9À-ÿ\-_]+/g, '_') || 'logo';
+    downloadDataUri(l.dataUrl, base + '.' + ext);
+  }
+
   function deleteCustomLogo(id) {
     if (!confirm('Supprimer ce logo ?')) return;
     saveCustomLogos(getCustomLogos().filter(function(l) { return l.id !== id; }));
@@ -5092,7 +5101,7 @@ window.EXERCISE_LIBRARY = [
       return '<div style="background:#fff;border:1.5px solid #E2DCC8;border-radius:14px;padding:18px;width:180px;text-align:center;position:relative">' +
         '<img src="' + l.dataUrl + '" style="max-width:100%;max-height:90px;object-fit:contain;margin-bottom:10px">' +
         '<p style="margin:0;font-size:13px;font-weight:700;color:#26312A;word-break:break-word">' + safeLabel + '</p>' +
-        '<button onclick="downloadDataUri(' + JSON.stringify(l.dataUrl) + ', ' + JSON.stringify(safeFilename) + ')" style="margin-top:10px;width:100%;background:#3F5D46;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">⬇️ Télécharger</button>' +
+        '<button onclick="downloadCustomLogo(\'' + l.id + '\')" style="margin-top:10px;width:100%;background:#3F5D46;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">⬇️ Télécharger</button>' +
         '<button onclick="deleteCustomLogo(\'' + l.id + '\')" style="margin-top:8px;width:100%;background:#F4E9E4;color:#A6503A;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">🗑️ Supprimer</button>' +
         '</div>';
     }).join('') + '</div>';
@@ -5181,6 +5190,7 @@ window.EXERCISE_LIBRARY = [
     var data = getArchive();
     var doc = data.docs.find(function(d) { return d.id === id; });
     if (!doc) return;
+    if (doc.url && !doc.dataUrl) { window.open(doc.url, '_blank', 'noopener'); return; }
     downloadDataUri(doc.dataUrl, doc.fileName || (doc.name + ''));
   }
 
@@ -5256,7 +5266,7 @@ window.EXERCISE_LIBRARY = [
           '<p style="margin:0;font-size:13.5px;font-weight:700;color:#26312A;word-break:break-word">' + safe + '</p>' +
           '<p style="margin:2px 0 0;font-size:11px;color:#8C9686">Ajouté le ' + dateStr + (d.sizeBytes ? ' · ' + archiveFormatSize(d.sizeBytes) : '') + '</p>' +
           '</div>' +
-          '<button onclick="archiveDownloadDoc(\'' + d.id + '\')" style="background:#3F5D46;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer">⬇️ Télécharger</button>' +
+          '<button onclick="archiveDownloadDoc(\'' + d.id + '\')" style="background:#3F5D46;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer">' + (d.url && !d.dataUrl ? '🔗 Ouvrir' : '⬇️ Télécharger') + '</button>' +
           '<button onclick="archiveDeleteDoc(\'' + d.id + '\')" style="background:#F4E9E4;color:#A6503A;border:none;border-radius:8px;padding:7px 14px;font-size:12.5px;font-weight:700;cursor:pointer">🗑️ Supprimer</button>' +
           '</div>';
       }).join('');
@@ -6908,6 +6918,248 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     el.innerHTML = out;
   }
 
+  // ── 📁 Dossier de documents associé à une formation ──────────────────────────────────────────
+  // Chaque formation peut avoir son dossier (rangé dans 🗄️ Archives › 🎓 Formations › <nom de la formation>),
+  // où l'on dépose des fichiers (légers) ou des liens (Drive, Dropbox… pour les fichiers lourds).
+  // Réutilise le stockage des archives : aucune donnée existante n'est modifiée ou supprimée.
+  var FORM_DOCS_OPEN = null;
+  var FORM_TREE_KEY = 'sfm2_form_tree_open';
+  var FORM_TREE_OPEN = (function() { try { return JSON.parse(localStorage.getItem(FORM_TREE_KEY) || '{}') || {}; } catch (e) { return {}; } })();
+  function formTreeSave() { try { localStorage.setItem(FORM_TREE_KEY, JSON.stringify(FORM_TREE_OPEN)); } catch (e) {} }
+  var FORM_DOCS_CUR = null; // sous-dossier actuellement ouvert (null = dossier principal de la formation)
+  var FORM_DOC_MAX = 3 * 1024 * 1024; // le stockage local du navigateur est limité (~5 Mo au total)
+  function formationFolderOf(f, data) {
+    if (!f || !f.folderId) return null;
+    return data.folders.filter(function(x) { return x.id === f.folderId; })[0] || null;
+  }
+  function formationDocsCount(f) {
+    var data = getArchive();
+    var folder = formationFolderOf(f, data);
+    if (!folder) return 'créer le dossier';
+    var ids = archiveFolderDescendantIds(data, folder.id);
+    var n = data.docs.filter(function(d) { return ids.indexOf(d.folderId) !== -1; }).length;
+    return n + ' document' + (n > 1 ? 's' : '');
+  }
+  function formationEnsureFolder(fid) {
+    var list = getFormations();
+    var f = list.filter(function(x) { return x.id === fid; })[0];
+    if (!f) return null;
+    var data = getArchive();
+    var folder = formationFolderOf(f, data);
+    if (folder) return folder;
+    var root = data.folders.filter(function(x) { return x.formationsRoot; })[0];
+    if (!root) {
+      root = { id: 'fold_formations_' + Date.now(), name: '🎓 Formations', parentId: null, createdAt: Date.now(), formationsRoot: true };
+      data.folders.push(root);
+    }
+    folder = { id: 'fold_' + Date.now(), name: f.nom, parentId: root.id, createdAt: Date.now(), formationId: f.id };
+    data.folders.push(folder);
+    if (!saveArchive(data)) return null;
+    f.folderId = folder.id;
+    saveFormations(list);
+    return folder;
+  }
+  function formationCurFolderId(root, data) {
+    if (FORM_DOCS_CUR && archiveFolderDescendantIds(data, root.id).indexOf(FORM_DOCS_CUR) !== -1) return FORM_DOCS_CUR;
+    FORM_DOCS_CUR = null;
+    return root.id;
+  }
+  function formationSubOpen(id) { FORM_DOCS_CUR = id; if (id) { FORM_TREE_OPEN[id] = true; formTreeSave(); } renderFormationDocs(); }
+  function formationSubToggle(id) {
+    if (FORM_TREE_OPEN[id]) delete FORM_TREE_OPEN[id]; else FORM_TREE_OPEN[id] = true;
+    formTreeSave();
+    FORM_DOCS_CUR = id;
+    renderFormationDocs();
+  }
+  function formationTreeAll(open) {
+    var data = getArchive();
+    var f = getFormations().filter(function(x) { return x.id === FORM_DOCS_OPEN; })[0];
+    var root = f && formationFolderOf(f, data);
+    if (!root) return;
+    archiveFolderDescendantIds(data, root.id).forEach(function(id) { if (id === root.id) return; if (open) FORM_TREE_OPEN[id] = true; else delete FORM_TREE_OPEN[id]; });
+    formTreeSave();
+    renderFormationDocs();
+  }
+  function formationSubCreate() {
+    var folder = formationEnsureFolder(FORM_DOCS_OPEN);
+    if (!folder) return;
+    var el = document.getElementById('formSubName');
+    var name = el && el.value.trim();
+    if (!name) { alert('Donne un nom à ton sous-dossier.'); return; }
+    var data = getArchive();
+    var parentId = formationCurFolderId(folder, data);
+    data.folders.push({ id: 'fold_' + Date.now(), name: name, parentId: parentId, createdAt: Date.now() });
+    if (!saveArchive(data)) return;
+    if (parentId !== folder.id) { FORM_TREE_OPEN[parentId] = true; formTreeSave(); }
+    renderFormationDocs(); renderFormations(); renderArchive();
+  }
+  function formationSubRename(id) {
+    var data = getArchive();
+    var sub = data.folders.filter(function(x) { return x.id === id; })[0];
+    if (!sub) return;
+    var name = prompt('Nouveau nom du sous-dossier :', sub.name);
+    if (!name || !name.trim()) return;
+    sub.name = name.trim();
+    if (!saveArchive(data)) return;
+    renderFormationDocs(); renderArchive();
+  }
+  function formationSubDelete(id) {
+    var data = getArchive();
+    var sub = data.folders.filter(function(x) { return x.id === id; })[0];
+    if (!sub) return;
+    var ids = archiveFolderDescendantIds(data, id);
+    var n = data.docs.filter(function(d) { return ids.indexOf(d.folderId) !== -1; }).length;
+    if (!confirm('Supprimer le sous-dossier « ' + sub.name + ' » et tout son contenu (' + n + ' document' + (n > 1 ? 's' : '') + ') ?')) return;
+    data.folders = data.folders.filter(function(x) { return ids.indexOf(x.id) === -1; });
+    data.docs = data.docs.filter(function(d) { return ids.indexOf(d.folderId) === -1; });
+    if (!saveArchive(data)) return;
+    if (ids.indexOf(FORM_DOCS_CUR) !== -1) FORM_DOCS_CUR = sub.parentId;
+    renderFormationDocs(); renderFormations(); renderArchive();
+  }
+  function formationDocsOpen(fid) {
+    var folder = formationEnsureFolder(fid);
+    if (!folder) return;
+    FORM_DOCS_OPEN = fid;
+    FORM_DOCS_CUR = null;
+    renderFormationDocs();
+    renderFormations();
+    renderArchive();
+  }
+  function formationDocsClose() {
+    FORM_DOCS_OPEN = null;
+    FORM_DOCS_CUR = null;
+    var o = document.getElementById('formDocsOverlay');
+    if (o) o.remove();
+  }
+  // Ajout de fichiers (un ou plusieurs) dans un dossier précis : tid = id d'un sous-dossier, sinon le dossier de destination courant.
+  function formationDocAddFile(input, tid) {
+    if (!input || !input.files || !input.files.length) { alert('Choisis d\'abord un fichier.'); return; }
+    var folder = formationEnsureFolder(FORM_DOCS_OPEN);
+    if (!folder) return;
+    var files = Array.prototype.slice.call(input.files);
+    var ok = [], refused = [];
+    files.forEach(function(f) { (f.size > FORM_DOC_MAX ? refused : ok).push(f); });
+    if (refused.length) {
+      alert((refused.length > 1 ? refused.length + ' fichiers sont trop lourds' : '« ' + refused[0].name + ' » fait ' + archiveFormatSize(refused[0].size) + ' : trop lourd') + ' pour être gardé ici (limite ' + archiveFormatSize(FORM_DOC_MAX) + '). Mets-le plutôt sur Google Drive et ajoute son lien avec « 🔗 Ajouter un lien ».' + (ok.length ? '\nLes autres fichiers vont être ajoutés.' : ''));
+    }
+    if (!ok.length) { input.value = ''; return; }
+    var nameEl = document.getElementById(tid ? 'fsName_' + tid : 'formDocName');
+    var customName = ok.length === 1 && nameEl && nameEl.value.trim();
+    var done = [], pending = ok.length;
+    ok.forEach(function(file, i) {
+      readAsDataURL(file, function(dataUrl) {
+        done[i] = { id: 'doc_' + Date.now() + '_' + i, name: customName || file.name || 'Document sans nom', fileName: file.name, dataUrl: dataUrl, sizeBytes: file.size, addedAt: Date.now() };
+        if (--pending) return;
+        var data = getArchive();
+        var target = tid || formationCurFolderId(folder, data);
+        done.forEach(function(d) { d.folderId = target; data.docs.push(d); });
+        if (!saveArchive(data)) return;
+        if (target !== folder.id) { FORM_TREE_OPEN[target] = true; formTreeSave(); }
+        input.value = '';
+        renderFormationDocs(); renderFormations(); renderArchive();
+      });
+    });
+  }
+  function formationDocAddLink(tid) {
+    var folder = formationEnsureFolder(FORM_DOCS_OPEN);
+    if (!folder) return;
+    var nameEl = document.getElementById(tid ? 'fsName_' + tid : 'formDocName');
+    var urlEl = document.getElementById(tid ? 'fsUrl_' + tid : 'formDocUrl');
+    var url = (urlEl && urlEl.value.trim()) || '';
+    var name = (nameEl && nameEl.value.trim()) || '';
+    if (!url) { alert('Colle le lien du document.'); return; }
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    var data = getArchive();
+    var target = tid || formationCurFolderId(folder, data);
+    data.docs.push({ id: 'doc_' + Date.now(), folderId: target, name: name || url, url: url, addedAt: Date.now() });
+    if (!saveArchive(data)) return;
+    if (target !== folder.id) { FORM_TREE_OPEN[target] = true; formTreeSave(); }
+    renderFormationDocs(); renderFormations(); renderArchive();
+  }
+  function formationDocDelete(id) { archiveDeleteDoc(id); renderFormationDocs(); renderFormations(); }
+  function renderFormationDocs() {
+    var f = getFormations().filter(function(x) { return x.id === FORM_DOCS_OPEN; })[0];
+    if (!f) return;
+    var data = getArchive();
+    var folder = formationFolderOf(f, data);
+    var curId = folder ? formationCurFolderId(folder, data) : null;
+    var docs = folder ? data.docs.filter(function(d) { return d.folderId === curId; }) : [];
+    var subs = folder ? data.folders.filter(function(x) { return x.parentId === curId; }) : [];
+    var crumbs = [];
+    if (folder && curId !== folder.id) {
+      var cur = data.folders.filter(function(x) { return x.id === curId; })[0];
+      while (cur && cur.id !== folder.id) { crumbs.unshift(cur); cur = data.folders.filter(function(x) { return x.id === cur.parentId; })[0]; }
+    }
+    var o = document.getElementById('formDocsOverlay');
+    if (!o) {
+      o = document.createElement('div');
+      o.id = 'formDocsOverlay';
+      o.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(38,49,42,0.55);display:flex;align-items:center;justify-content:center;padding:16px';
+      o.onclick = function(e) { if (e.target === o) formationDocsClose(); };
+      document.body.appendChild(o);
+    }
+    var h = '<div style="background:#FDFBF2;border-radius:18px;max-width:560px;width:100%;max-height:90vh;overflow:auto;padding:22px;box-shadow:0 12px 40px rgba(0,0,0,0.25)">';
+    h += '<div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px"><div style="flex:1"><div style="font-size:12px;color:#8C9686;font-weight:700;text-transform:uppercase;letter-spacing:.5px">📁 Dossier de la formation</div><div style="font-family:\'Fraunces\',serif;font-size:19px;font-weight:600;color:#26312A">' + esc(f.icon || '🎓') + ' ' + esc(f.nom) + '</div></div><button onclick="formationDocsClose()" style="background:none;border:none;font-size:20px;color:#8C9686;cursor:pointer">✕</button></div>';
+    h += '<a href="' + esc(f.lien) + '" target="_blank" rel="noopener" style="display:inline-block;margin-bottom:14px;font-size:13px;font-weight:700;color:#3F5D46">🔗 Ouvrir la formation →</a>';
+    // arborescence repliable : un clic sur un dossier le déplie/replie et en fait la destination des ajouts
+    var btnS = 'background:none;border:1px solid #D9D3BC;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;color:#3F5D46;cursor:pointer';
+    var curName = crumbs.length ? crumbs[crumbs.length - 1].name : null;
+    var hasSubs = folder && data.folders.some(function(x) { return x.parentId === folder.id; });
+    h += '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px">' +
+      '<span style="flex:1;min-width:180px;font-size:12.5px;color:#66735F">📍 Les ajouts vont dans : <b style="color:#26312A">' + esc(curName || f.nom) + '</b></span>' +
+      (curName ? '<button onclick="formationSubOpen(null)" style="' + btnS + '">↩︎ Dossier principal</button>' : '') +
+      (hasSubs ? '<button onclick="formationTreeAll(false)" style="' + btnS + '">▸ Tout replier</button><button onclick="formationTreeAll(true)" style="' + btnS + '">▾ Tout déplier</button>' : '') + '</div>';
+    function docRow(d, depth) {
+      var isLink = !!d.url;
+      return '<div style="margin-left:' + (depth * 18) + 'px;background:#fff;border:1.5px solid #E2DCC8;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">' +
+        '<div style="font-size:20px">' + (isLink ? '🔗' : '📄') + '</div>' +
+        '<div style="flex:1;min-width:140px"><p style="margin:0;font-size:13.5px;font-weight:700;color:#26312A;word-break:break-word">' + esc(d.name) + '</p><p style="margin:2px 0 0;font-size:11px;color:#8C9686">Ajouté le ' + new Date(d.addedAt).toLocaleDateString('fr-FR') + (d.sizeBytes ? ' · ' + archiveFormatSize(d.sizeBytes) : '') + '</p></div>' +
+        (isLink ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener" style="background:#3F5D46;color:#fff;border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:700;text-decoration:none">Ouvrir</a>'
+                : '<button onclick="archiveDownloadDoc(' + jsAttr(d.id) + ')" style="background:#3F5D46;color:#fff;border:none;border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer">⬇️ Télécharger</button>') +
+        '<button onclick="formationDocDelete(' + jsAttr(d.id) + ')" style="background:#F4E9E4;color:#A6503A;border:none;border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer">🗑️</button></div>';
+    }
+    function treeHtml(parentId, depth) {
+      var out = '';
+      data.folders.filter(function(x) { return x.parentId === parentId; }).forEach(function(sf) {
+        var ids = archiveFolderDescendantIds(data, sf.id);
+        var cnt = data.docs.filter(function(d) { return ids.indexOf(d.folderId) !== -1; }).length;
+        var open = !!FORM_TREE_OPEN[sf.id];
+        var isCur = sf.id === curId;
+        out += '<div style="margin-left:' + (depth * 18) + 'px;background:#F3F0E1;border:1.5px solid ' + (isCur ? '#3F5D46' : '#E2DCC8') + ';border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;margin-bottom:8px">' +
+          '<button onclick="formationSubToggle(' + jsAttr(sf.id) + ')" style="flex:1;display:flex;align-items:center;gap:10px;background:none;border:none;text-align:left;cursor:pointer;padding:0"><span style="font-size:13px;color:#66735F;width:14px">' + (open ? '▾' : '▸') + '</span><span style="font-size:20px">' + (open ? '📂' : '📁') + '</span><span><span style="display:block;font-size:13.5px;font-weight:700;color:#26312A;word-break:break-word">' + esc(sf.name) + '</span><span style="display:block;font-size:11px;color:#8C9686">' + cnt + ' document' + (cnt > 1 ? 's' : '') + '</span></span></button>' +
+          '<button onclick="formationSubRename(' + jsAttr(sf.id) + ')" title="Renommer" style="background:#fff;color:#66735F;border:1px solid #E2DCC8;border-radius:8px;padding:6px 10px;font-size:12.5px;cursor:pointer">✏️</button>' +
+          '<button onclick="formationSubDelete(' + jsAttr(sf.id) + ')" title="Supprimer" style="background:#F4E9E4;color:#A6503A;border:none;border-radius:8px;padding:7px 12px;font-size:12.5px;font-weight:700;cursor:pointer">🗑️</button></div>';
+        if (open) {
+          var inner = treeHtml(sf.id, depth + 1);
+          data.docs.filter(function(d) { return d.folderId === sf.id; }).forEach(function(d) { inner += docRow(d, depth + 1); });
+          if (!inner) inner = '<p style="margin:0 0 8px ' + ((depth + 1) * 18) + 'px;font-size:12px;color:#8C9686">Dossier vide.</p>';
+          var sid = jsAttr(sf.id), rawId = esc(sf.id);
+          inner += '<div style="margin:0 0 10px ' + ((depth + 1) * 18) + 'px;background:#FAF8EE;border:1.5px dashed #CFC8AE;border-radius:12px;padding:10px 12px">' +
+            '<div style="font-size:12px;font-weight:700;color:#66735F;margin-bottom:6px">➕ Ajouter dans « ' + esc(sf.name) + ' »</div>' +
+            '<input type="text" id="fsName_' + rawId + '" placeholder="Nom du document (facultatif)" style="width:100%;margin-bottom:6px">' +
+            '<input type="file" multiple onchange="formationDocAddFile(this,' + sid + ')" style="width:100%;margin-bottom:6px">' +
+            '<div style="display:flex;gap:8px"><input type="text" id="fsUrl_' + rawId + '" placeholder="🔗 ou colle un lien https://..." style="flex:1" onkeydown="if(event.key===\'Enter\')formationDocAddLink(' + sid + ')"><button onclick="formationDocAddLink(' + sid + ')" style="background:#3F5D46;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer">Ajouter</button></div></div>';
+          out += inner;
+        }
+      });
+      return out;
+    }
+    if (folder) {
+      var treeOut = treeHtml(folder.id, 0);
+      data.docs.filter(function(d) { return d.folderId === folder.id; }).forEach(function(d) { treeOut += docRow(d, 0); });
+      h += treeOut || '<p style="color:#8C9686;font-size:13px;margin:0 0 14px">Aucun document pour l\'instant.</p>';
+    }
+    h += '<div style="border-top:1px solid #E2DCC8;margin-top:14px;padding-top:14px">';
+    h += '<label style="font-size:12px;font-weight:700;color:#66735F">📁 Créer un sous-dossier' + (crumbs.length ? ' dans « ' + esc(crumbs[crumbs.length - 1].name) + ' »' : '') + '</label><div style="display:flex;gap:8px;margin:4px 0 14px"><input type="text" id="formSubName" placeholder="Ex : Module 1" style="flex:1" onkeydown="if(event.key===\'Enter\')formationSubCreate()"><button onclick="formationSubCreate()" style="background:#3F5D46;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer">Créer</button></div>';
+    h += '<label style="font-size:12px;font-weight:700;color:#66735F">Nom du document (facultatif)</label><input type="text" id="formDocName" placeholder="Ex : Support de cours module 1" style="width:100%;margin:4px 0 10px">';
+    h += '<label style="font-size:12px;font-weight:700;color:#66735F">📎 Ajouter un fichier (3 Mo max)</label><input type="file" multiple id="formDocFile" onchange="formationDocAddFile(this)" style="width:100%;margin:4px 0 10px">';
+    h += '<label style="font-size:12px;font-weight:700;color:#66735F">🔗 Ou un lien (Drive, Dropbox… pour les fichiers lourds)</label><div style="display:flex;gap:8px;margin-top:4px"><input type="text" id="formDocUrl" placeholder="https://..." style="flex:1" onkeydown="if(event.key===\'Enter\')formationDocAddLink()"><button onclick="formationDocAddLink()" style="background:#3F5D46;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;cursor:pointer">Ajouter</button></div>';
+    h += '<p style="font-size:11.5px;color:#8C9686;margin:10px 0 0">Ce dossier et ses sous-dossiers sont aussi visibles dans 🗄️ Archives › 🎓 Formations.</p></div></div>';
+    var oldBox = o.firstElementChild, oldTop = oldBox ? oldBox.scrollTop : 0;
+    o.innerHTML = h;
+    if (o.firstElementChild && oldTop) o.firstElementChild.scrollTop = oldTop;
+  }
+
   function getFormations() {
     try {
       var raw = localStorage.getItem('sfm2_formations');
@@ -6931,7 +7183,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     renderFormations();
   }
   function removeFormation(id) {
-    if (!confirm('Supprimer cette formation ?')) return;
+    if (!confirm('Supprimer cette formation ? (Son dossier de documents reste conservé dans 🗄️ Archives, rien n\'est effacé.)')) return;
     saveFormations(getFormations().filter(function (f) { return f.id !== id; }));
     renderFormations();
   }
@@ -6950,6 +7202,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
           '<div class="home-tile-ico" style="background:#E7EEE1;color:#3F5D46;">' + esc(f.icon || '🎓') + '</div>' +
           '<div style="min-width:0"><div class="home-tile-label" style="white-space:normal">' + esc(f.nom) + '</div><div class="home-tile-sub">Ouvrir la formation →</div></div>' +
         '</a>' +
+        '<button onclick="formationDocsOpen(' + jsAttr(f.id) + ')" style="width:100%;background:#E7EEE1;color:#3F5D46;border:none;border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;text-align:left">📁 Dossier de documents · ' + formationDocsCount(f) + '</button>' +
         '<button onclick="event.stopPropagation();event.preventDefault();removeFormation(' + jsAttr(f.id) + ')" title="Supprimer" style="position:absolute;top:8px;right:8px;background:none;border:none;color:#8C9686;font-size:14px;cursor:pointer;padding:4px;line-height:1">✕</button>' +
       '</div>';
     });
@@ -10765,6 +11018,82 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   // code d'accès connu (currentCode). Même principe que renderCoachMsgTab (📢 Message de ta coach,
   // qui vise TOUTES les clientes) mais ciblé, stocké sous dash_personal_messages/<code> — miroir tenu
   // par DASH_PERSONAL_MESSAGES_ALL.
+
+  // ── 🔓 Déblocage manuel du programme (« Mon programme co-NAÎTRE ») depuis la fiche cliente ─────────────
+  // Le goutte à goutte continue de fonctionner tout seul ; ici, la coach peut ouvrir à la main un contenu (et tout ce
+  // qu'il contient) pour UNE cliente. Rangé dans un emplacement à part : epanouissement_global/mon_espace_deblocages/<code>.
+  // Rien n'est modifié dans les données existantes de la cliente. Re-verrouiller = retour au goutte à goutte.
+  var UNLK_CFG = null, UNLK_CFG_LOADING = false, UNLK_DATA = {}, UNLK_OPEN = {};
+  function unlkKey(tab, id) { return tab + '__' + id; }
+  function renderUnlockBlock(code, k) {
+    if (!code) return '';
+    setTimeout(function() { unlockLoad(code, k); }, 60);
+    return '<div data-unlk="' + esc(code) + '" data-unlkk="' + esc(k) + '" style="margin-top:8px;padding:10px 12px;background:#fff;border:1px solid #e2d9c3;border-radius:8px" onclick="event.stopPropagation()"><div style="font-size:11px;font-weight:700;color:#8a7c5f;text-transform:uppercase;letter-spacing:0.5px">🔓 Déblocage de son programme</div><div style="font-size:12px;color:#8C9686;margin-top:6px">Chargement…</div></div>';
+  }
+  function unlockLoad(code, k) {
+    if (!initSyncFirebase() || !dashFbDB) { unlockRender(code, k, 'Connexion au cloud indisponible pour le moment.'); return; }
+    var pCfg = UNLK_CFG ? Promise.resolve() : dashFbDB.ref('epanouissement_global/mon_espace/sections').once('value').then(function(sn) { UNLK_CFG = sn.val() || {}; });
+    var pDat = dashFbDB.ref('epanouissement_global/mon_espace_deblocages/' + code).once('value').then(function(sn) { UNLK_DATA[code] = sn.val() || {}; });
+    Promise.all([pCfg, pDat]).then(function() { unlockRender(code, k); }).catch(function(e) { unlockRender(code, k, 'Impossible de charger : ' + (e && e.message ? e.message : 'erreur')); });
+  }
+  function unlockRender(code, k, errMsg) {
+    var els = document.querySelectorAll('[data-unlk="' + code + '"]');
+    if (!els.length) return;
+    k = k || els[0].getAttribute('data-unlkk');
+    var head = '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap"><div style="font-size:11px;font-weight:700;color:#8a7c5f;text-transform:uppercase;letter-spacing:0.5px">🔓 Déblocage de son programme</div>';
+    var h;
+    if (errMsg || !UNLK_CFG) { h = head + '</div><div style="font-size:12px;color:#8C9686;margin-top:6px">' + esc(errMsg || 'Chargement…') + '</div>'; }
+    else {
+      var unl = UNLK_DATA[code] || {}, prof = getClientProfile(k), reg = (DASH_ACCESS_REGISTRY.epanouissement || {})[code] || {};
+      var startD = prof.adhesion ? new Date(prof.adhesion + 'T00:00:00') : (reg.createdAt ? new Date(reg.createdAt) : null);
+      var days = startD && !isNaN(startD.getTime()) ? Math.floor((Date.now() - startD.getTime()) / 86400000) : null;
+      var open = !!UNLK_OPEN[code], rows = '', nLock = 0, cs = esc(code);
+      ME_SECTIONS.forEach(function(def) {
+        if (def.id === 'guidance') return;
+        var sec = UNLK_CFG[def.id] || {}, T = meTreeOf(sec), tabRows = '';
+        T.flat.forEach(function(it) {
+          var m = it.m, own = m.delai || 0, key = unlkKey(def.id, m.id);
+          var chain = [], cur = m, seen = {};
+          while (cur && !seen[cur.id]) { seen[cur.id] = 1; chain.unshift(cur); cur = cur.parent ? T.byId[cur.parent] : null; }
+          var byAnc = chain.filter(function(c) { return c.id !== m.id && unl[unlkKey(def.id, c.id)] === true; })[0];
+          var manual = unl[key] === true;
+          if (!own && !manual) return; // seuls les contenus qui ont leur propre délai sont des « verrous »
+          var eff = meEffDelay(m, T.byId).n, path = chain.slice(0, -1).map(function(c) { return c.titre; }).join(' › ');
+          var state, btn = '';
+          if (unl._all === true) state = '<span style="color:#2C4432">✋ Tout est débloqué</span>';
+          else if (manual) { state = '<span style="color:#2C4432;font-weight:700">✋ Débloqué manuellement</span>'; btn = '<button onclick="unlockToggle(' + jsAttr(code) + ',' + jsAttr(key) + ',false)" style="' + unlkBtn('#fff', '#8a7c5f', '#e2d9c3') + '">🔒 Re-verrouiller</button>'; }
+          else if (byAnc) state = '<span style="color:#2C4432">✋ Ouvert avec « ' + esc(byAnc.titre) + ' »</span>';
+          else if (days !== null && days >= eff) state = '<span style="color:#2C4432">✅ Débloqué (délai écoulé)</span>';
+          else { nLock++; state = '<span style="color:#9a5b00;font-weight:700">🔒 ' + (days !== null ? 'Verrouillé (dans ' + (eff - days) + ' j)' : 'Verrouillé') + '</span>'; btn = '<button onclick="unlockToggle(' + jsAttr(code) + ',' + jsAttr(key) + ',true)" style="' + unlkBtn('linear-gradient(135deg,#3F5D46,#2C4432)', '#fff', 'transparent') + '">🔓 Débloquer maintenant</button>'; }
+          tabRows += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 0;border-top:1px solid #F1ECDD"><div style="min-width:0;font-size:12.5px;color:#26312A"><b>' + esc(m.titre) + '</b>' + (it.n ? ' <span style="color:#8C9686">(' + it.n + ' élément' + (it.n > 1 ? 's' : '') + ')</span>' : '') + '<div style="font-size:11px;color:#8C9686">' + (path ? esc(path) + ' · ' : '') + '💧 Jour ' + eff + ' · ' + state + '</div></div>' + btn + '</div>';
+        });
+        if (tabRows) rows += '<div style="margin-top:8px"><div style="font-size:11.5px;font-weight:700;color:#66735F">' + esc(def.label) + '</div>' + tabRows + '</div>';
+      });
+      var info = (days !== null ? 'Elle en est au <b>jour ' + days + '</b> (adhésion ' + startD.toLocaleDateString('fr-FR') + ').' : 'Date d\'adhésion non renseignée : renseigne-la dans « 🪪 Identité » pour voir le décompte.');
+      head += '<button onclick="unlockToggleOpen(' + jsAttr(code) + ')" style="' + unlkBtn('#fff', '#3F5D46', '#b7c9b3') + '">' + (open ? '▾ Masquer' : '▸ Afficher') + (nLock ? ' (' + nLock + ' verrouillé' + (nLock > 1 ? 's' : '') + ')' : '') + '</button></div>';
+      h = head;
+      if (open) {
+        h += '<div style="font-size:12px;color:#66735F;margin-top:6px">' + info + ' Le goutte à goutte reste automatique : ici tu ouvres un contenu à la main, uniquement pour elle (tout ce qu\'il contient s\'ouvre aussi).</div>';
+        h += '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">' + (unl._all === true
+          ? '<button onclick="unlockToggle(' + jsAttr(code) + ',\'_all\',false)" style="' + unlkBtn('#fff', '#8a7c5f', '#e2d9c3') + '">🔒 Retour au goutte à goutte</button>'
+          : '<button onclick="unlockToggle(' + jsAttr(code) + ',\'_all\',true)" style="' + unlkBtn('#fff', '#2C4432', '#9ae6b4') + '">🔓 Tout débloquer pour elle</button>') + '</div>';
+        h += rows || '<div style="font-size:12px;color:#8C9686;margin-top:8px">Aucun contenu avec un goutte à goutte dans ton programme pour l\'instant.</div>';
+      }
+    }
+    for (var i = 0; i < els.length; i++) els[i].innerHTML = h;
+  }
+  function unlkBtn(bg, color, border) { return 'padding:5px 12px;background:' + bg + ';color:' + color + ';border:1px solid ' + border + ';border-radius:8px;font-size:12px;font-weight:700;cursor:pointer'; }
+  function unlockToggleOpen(code) { UNLK_OPEN[code] = !UNLK_OPEN[code]; unlockRender(code); }
+  function unlockToggle(code, key, on) {
+    if (!initSyncFirebase() || !dashFbDB) { alert('Cloud indisponible pour le moment.'); return; }
+    var ref = dashFbDB.ref('epanouissement_global/mon_espace_deblocages/' + code + '/' + key);
+    (on ? ref.set(true) : ref.remove()).then(function() {
+      UNLK_DATA[code] = UNLK_DATA[code] || {};
+      if (on) UNLK_DATA[code][key] = true; else delete UNLK_DATA[code][key];
+      unlockRender(code);
+      try { showToast(on ? '🔓 Débloqué pour elle' : '🔒 Re-verrouillé (retour au goutte à goutte)'); } catch (e) {}
+    }).catch(function(err) { alert('Erreur : ' + (err && err.message ? err.message : 'inconnue')); });
+  }
   function renderPersonalMsgBlock(code) {
     if (!code) return '';
     var pm = DASH_PERSONAL_MESSAGES_ALL[code] || {};
@@ -10809,6 +11138,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       html += '</div>';
       html += renderBilanSlotBlock(k, clientName, safeKey);
       html += renderPersonalMsgBlock(currentCode);
+      html += renderUnlockBlock(currentCode, k);
     } else {
       html += '<button onclick="event.stopPropagation();dashGenerateClientLink(\'epanouissement\',\'' + safeKey + '\',\'' + safeCN + '\')" style="padding:6px 14px;background:linear-gradient(135deg,#3F5D46,#2C4432);color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-bottom:8px;">🔗 Générer et copier son lien</button>';
       if (!codes.length) {
@@ -18740,6 +19070,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (ME_SEL !== 'guidance') h += meModulesHtml(sec);
     if (ME_SEL === 'ressources') h += '<div style="font-size:13px;font-weight:700;color:#26312A;margin:22px 0 4px">🧘 Méditations guidées</div><p style="color:#66735F;font-size:12.5px;margin:0 0 10px;max-width:760px">Elles apparaissent dans l\'onglet « Ressources » de tes clientes, sous les contenus ci-dessus. Colle le lien du fichier (YouTube « non répertorié », Vimeo, Google Drive, ou lien direct .mp3 / .mp4).</p><div id="medMount"></div>';
     ed.innerHTML = h;
+    meDripHintUpdate();
     if (ME_SEL === 'ressources') {
       var mt = document.getElementById('medMount'), fp = document.getElementById('medFormPanel'), ml = document.getElementById('medList');
       if (mt && fp && ml) { mt.appendChild(fp); mt.appendChild(ml); }
@@ -18834,6 +19165,23 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     mods.forEach(function(m) { if (!seen[m.id]) { seen[m.id] = true; flat.push({ m: m, depth: 0, n: 0 }); } }); // sécurité (parents en boucle)
     return { flat: flat, kids: kids, byId: byId, count: mods.length };
   }
+  function meDripLbl(n) { return n ? 'après ' + n + ' jour' + (n > 1 ? 's' : '') : 'tout de suite'; }
+  function meEffDelay(m, byId) { // délai réel = le plus grand délai de la chaîne (le contenu et tous ses parents)
+    var seen = {}, cur = m, eff = 0, via = null;
+    while (cur && !seen[cur.id]) { seen[cur.id] = 1; if ((cur.delai || 0) > eff) { eff = cur.delai || 0; via = cur; } cur = cur.parent ? byId[cur.parent] : null; }
+    return { n: eff, via: via };
+  }
+  // Rappelle dans le formulaire que le goutte à goutte d'un dossier s'applique tout seul à son contenu.
+  function meDripHintUpdate() {
+    var el = document.getElementById('meDripHint'); if (!el) return;
+    var sel = document.getElementById('meModParent'), pid = sel ? sel.value : '';
+    var T = meTreeOf(meSec()), p = pid ? T.byId[pid] : null;
+    if (!p) { el.innerHTML = '💧 Le délai noté ici s\'applique aussi à <b>tout ce que ce contenu contiendra</b> (sous-dossiers compris) : inutile de le répéter sur chaque fichier. Vide = disponible tout de suite.'; return; }
+    var e = meEffDelay(p, T.byId);
+    el.innerHTML = e.n
+      ? '💧 Ce contenu suit <b>automatiquement</b> le goutte à goutte de « ' + esc(e.via.titre) + ' » : débloqué ' + meDripLbl(e.n) + '. <b>Laisse le délai vide</b>, il n\'y a rien à régler ici. (Un nombre plus grand que ' + e.n + ' le débloquerait plus tard.)'
+      : '💧 « ' + esc(p.titre) + ' » est disponible tout de suite, donc ce contenu aussi. Note un délai ici seulement si celui-ci doit arriver plus tard.';
+  }
   function meDescendants(T, id) { var out = [id]; (T.kids[id] || []).forEach(function(c) { out = out.concat(meDescendants(T, c.id)); }); return out; }
   function meModulesHtml(sec) {
     var T = meTreeOf(sec), tabSt = meTabStat(ME_SEL), inp = 'width:100%;box-sizing:border-box;padding:9px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-family:inherit';
@@ -18842,11 +19190,32 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var h = '<div style="font-size:13px;font-weight:700;color:#26312A;margin:6px 0 4px">Contenus de cet onglet (' + T.count + ')</div>';
     h += '<p style="font-size:12px;color:#66735F;margin:0 0 10px">Crée des sections, des leçons et des sous-leçons sans limite de niveaux : le bouton ➕ d\'une ligne ajoute un contenu à l\'intérieur. Les flèches ↑ ↓ changent l\'ordre.</p>';
     if (!T.count) h += '<div class="empty-state"><div class="icon">🌿</div><p>Aucun contenu pour l\'instant — ajoute la première section ou leçon ci-dessous.</p></div>';
+    function dripBadge(m) {
+      var own = m.delai || 0, e = meEffDelay(m, T.byId), n = e.n;
+      var txt = n ? '💧 Jour ' + n : '💧 Tout de suite';
+      var st = n ? 'background:#E3EEFB;color:#1F4E8C' : 'background:#EEF6EC;color:#2C4432';
+      return ' <span title="Goutte à goutte : ' + (n ? 'ce contenu se débloque ' + meDripLbl(n) + ' après l\'adhésion' : 'disponible tout de suite') + '" style="display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;vertical-align:middle;' + st + '">' + txt + '</span>';
+    }
+    function dripNote(m) {
+      var own = m.delai || 0, e = meEffDelay(m, T.byId);
+      if (e.n > own && e.via) return ' · ⏳ attend « ' + esc(e.via.titre) + ' » (' + meDripLbl(e.n) + ')';
+      return ' · ' + (own ? 'débloqué ' + meDripLbl(own) : 'disponible tout de suite');
+    }
+    // 💧 calendrier du goutte-à-goutte : ce qui se débloque quand, d'un coup d'œil
+    var dripDays = {}, dripAny = false;
+    T.flat.forEach(function(it) { var n = meEffDelay(it.m, T.byId).n; if (n > 0) dripAny = true; (dripDays[n] = dripDays[n] || []).push(it.m.titre); });
+    if (dripAny) {
+      h += '<div style="background:#F1F6FD;border:1.5px solid #CFE0F5;border-radius:10px;padding:10px 12px;margin:0 0 12px"><div style="font-size:12.5px;font-weight:700;color:#1F4E8C;margin-bottom:6px">💧 Goutte à goutte — ce qui se débloque, jour après l\'adhésion</div>';
+      Object.keys(dripDays).map(Number).sort(function(a, b) { return a - b; }).forEach(function(n) {
+        h += '<div style="display:flex;gap:10px;font-size:12.5px;line-height:1.5;margin-top:3px"><span style="flex:0 0 84px;font-weight:700;color:#26312A">' + (n ? 'Jour ' + n : 'Tout de suite') + '</span><span style="color:#44504A;min-width:0">' + dripDays[n].map(esc).join(' · ') + '</span></div>';
+      });
+      h += '</div>';
+    }
     T.flat.forEach(function(it) {
       var m = it.m, btn = 'padding:5px 9px;border-radius:6px;font-size:12px;cursor:pointer;';
       h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px ' + (it.depth * 22) + 'px;padding:9px 12px;background:' + (m.type === 'section' ? '#F3F6EE' : '#fff') + ';border:1px solid #E2DCC8;border-radius:8px">';
       var stE = meStatOf(m, T.byId, tabSt), stH = meIsHidden(m, T.byId, tabSt), stC = stH ? '#EEE;color:#555' : (stE === 'construction' ? '#FFF1CC;color:#8a5a00' : '#E3F1E2;color:#2C4432');
-      h += '<div style="min-width:0;font-size:13px;color:#26312A"><b>' + (it.depth ? '↳ ' : '') + esc(m.titre) + '</b>' + (m.doc && m.doc.name ? ' <span title="Document à télécharger : ' + esc(m.doc.name) + '">📎</span>' : '') + ' <span style="display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:' + stC + ';vertical-align:middle">' + (stH ? '🔒 Non publié' : ME_ST_LBL[stE].replace(' – ', ' · ')) + (m.statut ? '' : ' (hérité)') + '</span><div style="font-size:11.5px;color:#8C9686;margin-top:2px">' + esc(ME_TYPE_LBL[m.type] || m.type || '') + (it.n ? ' · ' + it.n + ' élément' + (it.n > 1 ? 's' : '') + ' à l\'intérieur' : '') + ' · ' + (m.delai ? 'débloqué après ' + m.delai + ' jour' + (m.delai > 1 ? 's' : '') : 'disponible tout de suite') + '</div></div>';
+      h += '<div style="min-width:0;font-size:13px;color:#26312A"><b>' + (it.depth ? '↳ ' : '') + esc(m.titre) + '</b>' + (m.doc && m.doc.name ? ' <span title="Document à télécharger : ' + esc(m.doc.name) + '">📎</span>' : '') + ' <span style="display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:' + stC + ';vertical-align:middle">' + (stH ? '🔒 Non publié' : ME_ST_LBL[stE].replace(' – ', ' · ')) + (m.statut ? '' : ' (hérité)') + '</span>' + dripBadge(m) + '<div style="font-size:11.5px;color:#8C9686;margin-top:2px">' + esc(ME_TYPE_LBL[m.type] || m.type || '') + (it.n ? ' · ' + it.n + ' élément' + (it.n > 1 ? 's' : '') + ' à l\'intérieur' : '') + dripNote(m) + '</div></div>';
       h += '<div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;align-items:center">'
         + '<select title="Statut de publication" onchange="meSetStat(' + jsAttr(m.id) + ',this.value)" style="padding:5px 6px;border:1px solid #E2DCC8;border-radius:6px;font-size:11.5px;font-family:inherit;max-width:170px">' + meStatOptions(m.statut, '↩️ Comme le reste') + '</select>'
         + '<button title="Ajouter dans « ' + esc(m.titre) + ' »" onclick="meAddChild(' + jsAttr(m.id) + ')" style="' + btn + 'background:#E7EEE1;border:none;color:#2C4432;font-weight:700">➕</button>'
@@ -18861,11 +19230,12 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">';
     h += '<input id="meModTitre" type="text" placeholder="Titre" value="' + esc(ed.titre || '') + '" style="' + inp + '">';
     h += '<select id="meModType" onchange="meTypeChanged()" style="' + inp + '">' + ['section', 'document', 'video', 'audio', 'pdf', 'lien', 'texte'].map(function(t) { return '<option value="' + t + '"' + ((ed.type || (ME_EDIT_MOD ? 'video' : 'section')) === t ? ' selected' : '') + '>' + ME_TYPE_LBL[t] + '</option>'; }).join('') + '</select>';
-    h += '<select id="meModParent" style="' + inp + '"><option value="">📍 À la racine de cet onglet</option>' + T.flat.filter(function(it) { return banned.indexOf(it.m.id) < 0; }).map(function(it) { return '<option value="' + esc(it.m.id) + '"' + (curParent === it.m.id ? ' selected' : '') + '>' + new Array(it.depth + 1).join('— ') + esc(it.m.titre) + '</option>'; }).join('') + '</select>';
+    h += '<select id="meModParent" onchange="meDripHintUpdate()" style="' + inp + '"><option value="">📍 À la racine de cet onglet</option>' + T.flat.filter(function(it) { return banned.indexOf(it.m.id) < 0; }).map(function(it) { return '<option value="' + esc(it.m.id) + '"' + (curParent === it.m.id ? ' selected' : '') + '>' + new Array(it.depth + 1).join('— ') + esc(it.m.titre) + '</option>'; }).join('') + '</select>';
     h += '<input id="meModUrl" type="url" placeholder="Lien (YouTube, Vimeo, Drive, PDF…) — pas nécessaire pour une section" value="' + esc(ed.url || '') + '" style="' + inp + '">';
     h += '<input id="meModDelai" type="number" min="0" step="1" placeholder="Débloqué après … jours (0 = tout de suite)" value="' + (ed.delai || '') + '" style="' + inp + '">';
     h += '<select id="meModStat" title="Statut de publication" style="' + inp + '">' + meStatOptions(ed.statut, '↩️ Statut : comme le reste') + '</select>';
     h += '</div>';
+    h += '<div id="meDripHint" style="margin-top:8px;font-size:12px;line-height:1.5;padding:8px 10px;border-radius:8px;background:#F1F6FD;color:#1F4E8C"></div>';
     h += meDocPanelHtml('mod', ed.doc);
     h += '<textarea id="meModDesc" rows="2" placeholder="Description courte (facultatif)" style="' + inp + ';margin-top:10px">' + esc(ed.description || '') + '</textarea>';
     h += '<textarea id="meModTexte" rows="4" placeholder="Texte à afficher (pour le type « Texte »)" style="' + inp + ';margin-top:8px">' + esc(ed.texte || '') + '</textarea>';
