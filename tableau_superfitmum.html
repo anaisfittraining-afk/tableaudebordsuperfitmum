@@ -20779,9 +20779,21 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   // Enregistre le tunnel et dit TOUJOURS ce qui s'est passé (message à côté du bouton) : avant, si la connexion
   // à la base était absente ou lente, rien ne s'affichait (ni succès ni erreur) alors que rien n'était enregistré.
+  // Le message d'enregistrement est mémorisé ici : l'écran des tunnels se redessine tout seul dès que la base
+  // répond (c'est justement ce qui effaçait le message « ✅ Tunnel enregistré… n liens » avant qu'on puisse le lire).
+  var ACQ_SAVE_MSG = { id: '', t: '', color: '' };
+  function acqSaveStatusHtml() {
+    var m = ACQ_SAVE_MSG, show = m.t && m.id === ACQ_FSEL;
+    return '<div id="acqSaveStatus" style="margin-top:10px;font-size:13px;font-weight:700;max-width:760px' + (show ? ';color:' + m.color : '') + '">' + (show ? esc(m.t) : '') + '</div>';
+  }
   function acqSaveFunnel() {
-    var st = document.getElementById('acqSaveStatus'), done = false, timer = null;
-    var say = function(t, kind) { if (st) { st.textContent = t; st.style.color = kind === 'ok' ? '#2C4432' : (kind === 'ko' ? '#B3261E' : '#9C6F00'); } };
+    var done = false, timer = null, saveId = ACQ_FSEL;
+    var say = function(t, kind) {
+      var color = kind === 'ok' ? '#2C4432' : (kind === 'ko' ? '#B3261E' : '#9C6F00');
+      ACQ_SAVE_MSG = { id: saveId, t: t, color: color };
+      var st = document.getElementById('acqSaveStatus'); // toujours relu : l'ancien élément peut avoir été remplacé par un redessin
+      if (st && ACQ_FSEL === saveId) { st.textContent = t; st.style.color = color; }
+    };
     try { acqHarvest(); } catch (e) { say('❌ Impossible de lire le formulaire (' + (e && e.message ? e.message : 'erreur') + '). Rien n\'est enregistré.', 'ko'); return; }
     if (!ACQ_FUNNELS_LOADED) { say('⏳ Tes tunnels enregistrés ne sont pas encore chargés : rien n\'a été enregistré (pour ne pas écraser tes liens). Attends quelques secondes ou recharge la page (Cmd+R) avec une meilleure connexion.', 'ko'); return; }
     var db = dashFbDB; if (!db) { try { initSyncFirebase(); } catch (e) {} db = dashFbDB; }
@@ -20850,7 +20862,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       + lab('Bandeau') + '<input type="text" id="acqF-bandeau" value="' + esc(f.bandeau || '') + '" style="' + inp + '">'
       + lab('Message important (encadré jaune, ex : « cartes prélevées une seule fois »)') + '<input type="text" id="acqF-note" value="' + esc(f.note || '') + '" style="' + inp + '">'
       + lab('Message après paiement') + '<textarea id="acqF-merciTexte" style="' + inp + ';min-height:54px">' + esc(f.merciTexte || '') + '</textarea></div>';
-    if (f.type === 'appel') { out += acqAppelHtml(f, inp, lab) + '<div><button onclick="acqSaveFunnel()" style="padding:12px 22px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">💾 Enregistrer ce tunnel</button><div id="acqSaveStatus" style="margin-top:10px;font-size:13px;font-weight:700;max-width:760px"></div></div></div>'; return out; }
+    if (f.type === 'appel') { out += acqAppelHtml(f, inp, lab) + '<div><button onclick="acqSaveFunnel()" style="padding:12px 22px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">💾 Enregistrer ce tunnel</button>' + acqSaveStatusHtml() + '</div></div>'; return out; }
     if (f.type === 'vente') out += acqVenteHtml(f, inp, lab);
     out += '<div style="font-weight:700;margin:6px 0 8px">' + (f.type === 'vente' ? 'Formules de l\'accompagnement (prix à vérifier — repris de l\'ancienne page de vente)' : 'Formules proposées') + '</div>';
     var ids = Object.keys(f.offres || {}).sort(function(a, b) { return (f.offres[a].ordre || 0) - (f.offres[b].ordre || 0); });
@@ -20876,7 +20888,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         + '<button onclick="acqDelOffer(\'' + oid + '\')" style="margin-left:auto;background:none;border:none;color:#c53030;font-size:12px;cursor:pointer;text-decoration:underline">Retirer</button></div></div>';
     });
     out += '<button onclick="acqAddOffer()" style="padding:8px 14px;border:1.5px dashed #6F8F6C;background:#fff;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;margin-bottom:16px">➕ Ajouter une formule</button>';
-    out += '<div><button onclick="acqSaveFunnel()" style="padding:12px 22px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">💾 Enregistrer ce tunnel</button><div id="acqSaveStatus" style="margin-top:10px;font-size:13px;font-weight:700;max-width:760px"></div></div></div>';
+    out += '<div><button onclick="acqSaveFunnel()" style="padding:12px 22px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer">💾 Enregistrer ce tunnel</button>' + acqSaveStatusHtml() + '</div></div>';
     return out;
   }
   // ── Chiffres (30 derniers jours) ──
