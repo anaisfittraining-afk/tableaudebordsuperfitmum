@@ -3278,6 +3278,101 @@ window.EXERCISE_LIBRARY = [
 })();
 </script>
 <script>
+// ── ESPACE ÉTENDU DU NAVIGATEUR (anti-« stockage plein ») ───────────────────────────────────────
+// Safari limite le stockage local à quelques Mo. Ici, rien n'est déplacé ni supprimé tant que ça rentre :
+// seule une donnée que Safari REFUSERAIT d'enregistrer (stockage plein) est rangée à la place dans un
+// second espace du navigateur (IndexedDB, des centaines de Mo). Le reste du code ne voit aucune
+// différence. Une petite étiquette reste dans le stockage local pour que la clé continue d'exister.
+// Jamais d'écrasement : tant que cet espace n'est pas lu, on refuse d'écrire par-dessus une donnée rangée.
+(function(){
+  var proto = Storage.prototype, prevGet = proto.getItem, prevSet = proto.setItem, prevRemove = proto.removeItem;
+  var PFX = '⁣IDB:', DBN = 'sfm_overflow', ST = 'kv';
+  var big = {}, ready = false, failed = false, db = null, pending = {}, noticed = false;
+  function own(k) { return Object.prototype.hasOwnProperty.call(big, k); }
+  function isLocal(o) { try { return o === window.localStorage; } catch (e) { return false; } }
+  function isQuota(e) { return !!e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014 || /quota/i.test(String(e.name) + ' ' + String(e.message))); }
+  function isMarker(raw) { return typeof raw === 'string' && raw.indexOf(PFX) === 0; }
+  function idbPut(k, v) {
+    if (!db) { pending[k] = true; return; }
+    try { db.transaction(ST, 'readwrite').objectStore(ST).put(v, k); } catch (e) { console.error('Espace étendu : écriture impossible', e); }
+  }
+  function idbDel(k) {
+    delete pending[k];
+    if (!db) return;
+    try { db.transaction(ST, 'readwrite').objectStore(ST).delete(k); } catch (e) {}
+  }
+  function finish(resolve) {
+    if (ready) return;
+    ready = true;
+    // Étiquettes manquantes (ex. après un localStorage.clear()) : on les remet, et on envoie dans IndexedDB
+    // ce qui aurait été écrit avant son ouverture.
+    Object.keys(big).forEach(function(k) {
+      try { if (prevGet.call(window.localStorage, k) === null) prevSet.call(window.localStorage, k, PFX); } catch (e) {}
+      if (pending[k]) { delete pending[k]; idbPut(k, big[k]); }
+    });
+    resolve();
+  }
+  var readyP = new Promise(function(resolve) {
+    try {
+      var req = indexedDB.open(DBN, 1);
+      req.onupgradeneeded = function() { try { req.result.createObjectStore(ST); } catch (e) {} };
+      req.onsuccess = function() {
+        db = req.result;
+        try {
+          var tx = db.transaction(ST, 'readonly');
+          var cur = tx.objectStore(ST).openCursor();
+          cur.onsuccess = function() { var c = cur.result; if (c) { if (!own(c.key)) big[c.key] = c.value; c.continue(); } };
+          tx.oncomplete = function() { finish(resolve); };
+          tx.onerror = tx.onabort = function() { failed = true; finish(resolve); };
+        } catch (e) { failed = true; finish(resolve); }
+      };
+      req.onerror = req.onblocked = function() { failed = true; finish(resolve); };
+      setTimeout(function() { if (!ready) { failed = true; finish(resolve); } }, 8000);
+    } catch (e) { failed = true; finish(resolve); }
+  });
+  window.sfmOverflowReady = readyP;
+  window.sfmOverflowStats = function() {
+    return { ready: ready, failed: failed, keys: Object.keys(big).map(function(k) { return { key: k, chars: String(big[k]).length }; }) };
+  };
+  readyP.then(function() { try { if (typeof renderCustomLogos === 'function') renderCustomLogos(); } catch (e) {} });
+
+  proto.getItem = function(k) {
+    if (!isLocal(this)) return prevGet.call(this, k);
+    if (own(k)) return big[k];
+    var raw = prevGet.call(this, k);
+    return isMarker(raw) ? null : raw;
+  };
+  proto.setItem = function(k, v) {
+    if (!isLocal(this)) return prevSet.call(this, k, v);
+    var has = own(k), raw = null;
+    try { raw = prevGet.call(this, k); } catch (e) {}
+    // Donnée rangée dans l'espace étendu mais pas encore relue : on n'écrit surtout pas par-dessus.
+    if (isMarker(raw) && !has && (!ready || failed)) { console.warn('Écriture ignorée sur "' + k + '" (espace étendu pas encore lu).'); return; }
+    v = String(v);
+    try {
+      prevSet.call(this, k, v);
+      if (has) { delete big[k]; idbDel(k); }
+      return;
+    } catch (e) { if (!isQuota(e)) throw e; }
+    big[k] = v;
+    idbPut(k, v);
+    try { prevSet.call(this, k, PFX); } catch (e) {}
+    if (!noticed) {
+      noticed = true;
+      try { if (typeof showToast === 'function') showToast('📦 Une donnée volumineuse a été rangée dans l\'espace étendu du navigateur — rien n\'est perdu.'); } catch (e) {}
+    }
+  };
+  proto.removeItem = function(k) {
+    if (!isLocal(this)) return prevRemove.call(this, k);
+    var has = own(k), raw = null;
+    try { raw = prevGet.call(this, k); } catch (e) {}
+    if (isMarker(raw) && !has && (!ready || failed)) return;
+    if (has) { delete big[k]; idbDel(k); }
+    return prevRemove.call(this, k);
+  };
+})();
+</script>
+<script>
   // ── CONSTANTS (must be first) ──
   var DASH_MENS_KEY = 'sfm2_dashboard_mens';
   var DASH_MENS_FIELDS = [
@@ -16275,12 +16370,14 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   // navigateur est plein — voir l'onglet "Logos" et les autres gros éléments à alléger. Reste affichée
   // jusqu'à ce que la coach recharge la page (après avoir fait de la place), pour ne jamais laisser
   // croire que tout est revenu à la normale alors que ce n'est peut-être pas le cas.
+  var syncIncompleteRestore = false; // vrai dès qu'une restauration locale n'a pas pu tout réécrire : on n'envoie alors plus d'instantané global (il serait incomplet et écraserait la bonne copie cloud)
   function syncShowIncompleteRestoreWarning() {
+    syncIncompleteRestore = true;
     if (document.getElementById('syncIncompleteBanner')) return;
     var b = document.createElement('div');
     b.id = 'syncIncompleteBanner';
     b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#c53030;color:#fff;padding:12px 18px;font-size:13.5px;font-weight:600;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.2)';
-    b.innerHTML = '⚠️ La restauration depuis le cloud est incomplète — le stockage local de ce navigateur est probablement plein. Certaines données peuvent manquer. Libère de la place (onglet Logos notamment) avant de continuer à saisir quoi que ce soit ici, puis recharge la page.';
+    b.innerHTML = '⚠️ La copie de ce navigateur n\'a pas pu tout recharger (stockage de Safari plein). Tes données sont toutes conservées dans le cloud et rien n\'est supprimé. Par sécurité, ne saisis rien dans cette fenêtre et préviens Claude.';
     document.body.appendChild(b);
   }
 
@@ -16459,6 +16556,10 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   async function syncPushNow() {
     if (!syncCryptoKey) return;
+    // Restauration locale incomplète : l'instantané global serait amputé des clés qui n'ont pas pu être
+    // réécrites, et remplacerait la copie cloud complète. On ne l'envoie pas (les clés modifiées
+    // continuent, elles, d'être sauvegardées une par une dans le cloud).
+    if (syncIncompleteRestore) { syncSetStatus('error'); return; }
     var db = initSyncFirebase();
     if (!db) return;
     var dirtyMarkerAtStart = syncDirtySince; // pour ne pas effacer le "dirty" si une NOUVELLE modif arrive pendant l'envoi
@@ -23441,7 +23542,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   var __syncBootStarted = false;
   function __syncBootOnce() {
     if (__syncBootStarted) return; __syncBootStarted = true;
-    try { syncBoot().catch(function(e) { console.error(e); bootLoadingFail('Un problème est survenu au démarrage (' + (e && e.message ? e.message : 'erreur') + '). Recharge la page ; si ça recommence, préviens Claude.'); }); }
+    try { (window.sfmOverflowReady || Promise.resolve()).then(function() { return syncBoot(); }).catch(function(e) { console.error(e); bootLoadingFail('Un problème est survenu au démarrage (' + (e && e.message ? e.message : 'erreur') + '). Recharge la page ; si ça recommence, préviens Claude.'); }); }
     catch (e) { console.error(e); bootLoadingFail('Un problème est survenu au démarrage (' + (e && e.message ? e.message : 'erreur') + '). Recharge la page.'); }
   }
   window.addEventListener('load', __syncBootOnce);
