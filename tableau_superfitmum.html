@@ -20480,7 +20480,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     });
   }
 
-  var ACQ_LEADS = {}, ACQ_FUNNELS = {}, ACQ_STATS = {}, ACQ_CFG = {}, ACQ_FLYERS = {}, ACQ_DRAFT = {};
+  var ACQ_LEADS = {}, ACQ_FUNNELS = {}, ACQ_STATS = {}, ACQ_CFG = {}, ACQ_FLYERS = {}, ACQ_DRAFT = {}, ACQ_FUNNELS_LOADED = false;
   var ACQ_INSC = {}, ACQ_SCOPE = 'pilates', ACQ_TAB = 'prospects', ACQ_FSEL = 'desvres', ACQ_LISTENING = false, ACQ_FILTER = { statut: '', funnel: '', q: '' };
   function acqInit(scope) {
     if (scope) {
@@ -20492,7 +20492,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     acqEnsureLeadsListening(); if (ACQ_SCOPE === 'espace') acqCtListen();
     if (!ACQ_LISTENING) {
       ACQ_LISTENING = true;
-      dashFbDB.ref('acquisition/funnels').on('value', function(sn) { ACQ_FUNNELS = sn.val() || {}; acqRefresh(); });
+      dashFbDB.ref('acquisition/funnels').on('value', function(sn) { ACQ_FUNNELS = sn.val() || {}; ACQ_FUNNELS_LOADED = true; acqRefresh(); });
       dashFbDB.ref('epanouissement_global/inscription').on('value', function(sn) { ACQ_INSC = sn.val() || {}; acqRefresh(); });
       dashFbDB.ref('acquisition/stats').on('value', function(sn) { ACQ_STATS = sn.val() || {}; acqRefresh(); });
       dashFbDB.ref('acquisition/config').on('value', function(sn) { ACQ_CFG = sn.val() || {}; ACQ_AUTO_ON = ACQ_CFG.autoInscription !== false; acqRefresh(); });
@@ -20605,8 +20605,17 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   // ── Tunnels (éditeur) ──
   function acqCurrent(id) {
-    if (!ACQ_DRAFT[id]) ACQ_DRAFT[id] = JSON.parse(JSON.stringify(ACQ_FUNNELS[id] || ACQ_DEFAULT_FUNNELS[id] || ACQ_DEFAULT_FUNNELS.desvres));
+    // correctif : tant que les tunnels enregistrés en ligne ne sont pas arrivés (connexion lente), on ne fige JAMAIS
+    // un brouillon fabriqué à partir des valeurs par défaut (il aurait ensuite écrasé les vrais liens en ligne)
+    if (!ACQ_DRAFT[id]) {
+      var cp = JSON.parse(JSON.stringify(ACQ_FUNNELS[id] || ACQ_DEFAULT_FUNNELS[id] || ACQ_DEFAULT_FUNNELS.desvres));
+      if (!ACQ_FUNNELS_LOADED) return cp;
+      ACQ_DRAFT[id] = cp;
+    }
     return ACQ_DRAFT[id];
+  }
+  function acqLoadingHtml() {
+    return '<div style="max-width:760px;background:#FFF8E5;border:1.5px solid #E8C873;border-radius:12px;padding:16px 18px;font-size:14px;line-height:1.5;color:#5C4500"><b>⏳ Chargement de tes tunnels enregistrés…</b><br>Ne modifie rien tant que ce message est affiché : ça évite d\'écraser tes liens de paiement. Si ça dure plus d\'une minute, ta connexion est trop faible : recharge la page (Cmd+R) avec une meilleure connexion.</div>';
   }
   function acqLoadFlyer(id) {
     if (ACQ_FLYERS[id] !== undefined || !dashFbDB) return;
@@ -20673,6 +20682,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var st = document.getElementById('acqSaveStatus'), done = false, timer = null;
     var say = function(t, kind) { if (st) { st.textContent = t; st.style.color = kind === 'ok' ? '#2C4432' : (kind === 'ko' ? '#B3261E' : '#9C6F00'); } };
     try { acqHarvest(); } catch (e) { say('❌ Impossible de lire le formulaire (' + (e && e.message ? e.message : 'erreur') + '). Rien n\'est enregistré.', 'ko'); return; }
+    if (!ACQ_FUNNELS_LOADED) { say('⏳ Tes tunnels enregistrés ne sont pas encore chargés : rien n\'a été enregistré (pour ne pas écraser tes liens). Attends quelques secondes ou recharge la page (Cmd+R) avec une meilleure connexion.', 'ko'); return; }
     var db = dashFbDB; if (!db) { try { initSyncFirebase(); } catch (e) {} db = dashFbDB; }
     if (!db) { say('❌ Pas de connexion à la base en ligne : le tunnel n\'est PAS enregistré. Recharge la page du tableau de bord (Cmd+R), reviens ici et réessaie.', 'ko'); return; }
     var id = ACQ_FSEL, f = acqCurrent(id), path = 'acquisition/funnels/' + id;
@@ -20713,6 +20723,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function acqSaveCfgBase() { var b = (document.getElementById('acqCfgBase').value || '').trim() || ACQ_DEFAULT_BASE, on = document.getElementById('acqCfgApp').checked; dashFbDB.ref('acquisition/config').update({ baseUrl: b }).then(function() { return dashFbDB.ref('epanouissement_global/inscription').set({ actif: on, base: b.replace(/[?#].*$/, ''), updatedAt: new Date().toISOString() }); }).then(function() { showToast(on ? '✅ L\'application Épanouissement propose maintenant l\'inscription' : '✅ Enregistré (inscription depuis l\'application désactivée)'); }); }
   function acqCopy(id) { var el = document.getElementById(id); if (!el) return; var v = el.value; if (navigator.clipboard) navigator.clipboard.writeText(v).then(function() { showToast('🔗 Lien copié'); }); else { el.select(); document.execCommand('copy'); showToast('🔗 Lien copié'); } }
   function acqTunnelsHtml() {
+    if (!ACQ_FUNNELS_LOADED) return acqLoadingHtml();
     var id = ACQ_FSEL, f = acqCurrent(id), inp = 'width:100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-family:inherit';
     var lab = function(t) { return '<label style="display:block;font-size:11.5px;font-weight:700;color:#66735F;margin:10px 0 4px">' + t + '</label>'; };
     var out = '<div style="max-width:880px">';
@@ -21193,8 +21204,11 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var m = (DASH_MSG[code] && DASH_MSG[code].msgs) || {};
     return Object.keys(m).map(function(k) { var x = m[k] || {}; x._id = k; return x; }).filter(function(x) { return x.text; }).sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); });
   }
+  // « Lu » est mémorisé EN LIGNE (coachReadTs) ET sur cet appareil : si l'enregistrement en ligne échoue
+  // (connexion lente, droits…), l'alerte disparaît quand même ici au lieu de rester affichée.
+  function msgLocalRead() { try { return JSON.parse(localStorage.getItem('sfm_msg_readlocal') || '{}') || {}; } catch (e) { return {}; } }
   function msgUnreadOf(code) {
-    var rd = ((DASH_MSG[code] && DASH_MSG[code].meta) || {}).coachReadTs || 0;
+    var rd = Math.max(((DASH_MSG[code] && DASH_MSG[code].meta) || {}).coachReadTs || 0, msgLocalRead()[code] || 0);
     return msgListOf(code).filter(function(x) { return x.from === 'cliente' && (x.ts || 0) > rd; }).length;
   }
   function msgFmt(ts) { if (!ts) return ''; var d = new Date(ts); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
@@ -21265,8 +21279,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var inner = '';
     unread.forEach(function(c) {
       var l = msgListOf(c), last = l[l.length - 1] || {}, n = msgUnreadOf(c);
-      inner += '<div style="background:#fff;border:1px solid #F0C9B2;border-radius:12px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div style="min-width:0;flex:1 1 220px"><div style="font-weight:700;font-size:14px;color:#26312A">' + esc(msgName(c)) + msgApp(c) + ' <span style="background:#B96A46;color:#fff;border-radius:20px;padding:1px 8px;font-size:11px">' + n + ' nouveau' + (n > 1 ? 'x' : '') + '</span></div><div style="font-size:13px;color:#4A5546;margin-top:3px;white-space:pre-wrap;word-break:break-word">' + esc(String(last.text || '').slice(0, 220)) + '</div><div style="font-size:11px;color:#8C9686;margin-top:2px">' + esc(msgFmt(last.ts)) + '</div></div><button onclick="msgOpen(' + jsAttr(c) + ')" style="' + ACQ_BT + ';background:#2C4432;border-color:#2C4432;color:#fff">💬 Lire et répondre</button></div>';
+      inner += '<div style="background:#fff;border:1px solid #F0C9B2;border-radius:12px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div style="min-width:0;flex:1 1 220px"><div style="font-weight:700;font-size:14px;color:#26312A">' + esc(msgName(c)) + msgApp(c) + ' <span style="background:#B96A46;color:#fff;border-radius:20px;padding:1px 8px;font-size:11px">' + n + ' nouveau' + (n > 1 ? 'x' : '') + '</span></div><div style="font-size:13px;color:#4A5546;margin-top:3px;white-space:pre-wrap;word-break:break-word">' + esc(String(last.text || '').slice(0, 220)) + '</div><div style="font-size:11px;color:#8C9686;margin-top:2px">' + esc(msgFmt(last.ts)) + '</div></div><div style="display:flex;gap:6px;flex-wrap:wrap"><button onclick="msgOpen(' + jsAttr(c) + ')" style="' + ACQ_BT + ';background:#2C4432;border-color:#2C4432;color:#fff">💬 Lire et répondre</button><button onclick="msgMarkRead(' + jsAttr(c) + ')" style="' + ACQ_BT + '" title="Marquer comme lu sans répondre">✓ Marquer comme lu</button></div></div>';
     });
+    if (unread.length > 1) inner += '<div style="text-align:right;margin:-2px 0 6px"><a href="#" onclick="msgMarkAllRead();return false" style="font-size:12.5px;color:#3F5D46;font-weight:700">✓ Tout marquer comme lu</a></div>';
     var others = codes.filter(function(c) { return unread.indexOf(c) === -1; }).sort(byLast);
     if (others.length) {
       inner += '<details style="margin-top:6px;font-size:12.5px;color:#66735F"><summary style="cursor:pointer">Conversations déjà lues (' + others.length + ')</summary>' + others.map(function(c) {
@@ -21291,9 +21306,20 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   function msgClose() { MSG_OPEN = null; var o = document.getElementById('msgOverlay'); if (o) o.classList.remove('open'); try { renderMessagesHome(); } catch (e) {} }
   function msgMarkReadD(code) {
-    if (!dashFbDB || !code || !msgUnreadOf(code)) return;
-    try { dashFbDB.ref('epanouissement_global/messagerie/' + code + '/meta/coachReadTs').set(firebase.database.ServerValue.TIMESTAMP).catch(function() {}); } catch (e) {}
+    if (!code || !msgUnreadOf(code)) return;
+    var lastC = 0; msgListOf(code).forEach(function(x) { if (x.from === 'cliente' && (x.ts || 0) > lastC) lastC = x.ts || 0; });
+    try { var mm = msgLocalRead(); mm[code] = Math.max(mm[code] || 0, lastC); localStorage.setItem('sfm_msg_readlocal', JSON.stringify(mm)); } catch (e) {}
+    try { renderMessagesHome(); } catch (e) {}
+    if (!dashFbDB) return;
+    try {
+      dashFbDB.ref('epanouissement_global/messagerie/' + code + '/meta/coachReadTs').set(firebase.database.ServerValue.TIMESTAMP).catch(function(err) {
+        var st = document.getElementById('msgStatusD');
+        if (st && MSG_OPEN === code) st.textContent = '⚠️ « Lu » non enregistré en ligne (' + (err && err.message ? err.message : 'erreur') + ') — il reste lu sur cet appareil.';
+      });
+    } catch (e) {}
   }
+  function msgMarkRead(code) { msgMarkReadD(code); }
+  function msgMarkAllRead() { Object.keys(DASH_MSG || {}).forEach(function(c) { msgMarkReadD(c); }); }
   function msgRenderOpen(scroll) {
     var code = MSG_OPEN; if (!code) return;
     var l = msgListOf(code), meta = (DASH_MSG[code] && DASH_MSG[code].meta) || {};
@@ -21622,6 +21648,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function acqCtWa(id) { var c = ACQ_CTS[id]; if (!c) return; var n = acqWaNumber(c.telephone); waBusinessOpen(n, acqCtMsg(c, id)); }
   function acqCtMail(id) { var c = ACQ_CTS[id]; if (!c) return; location.href = 'mailto:' + encodeURIComponent(c.email || '') + '?subject=' + encodeURIComponent('Ton inscription à l\'accompagnement co-NAÎTRE') + '&body=' + encodeURIComponent(acqCtMsg(c, id)); }
   function acqContratsHtml() {
+    if (!ACQ_FUNNELS_LOADED) return acqLoadingHtml();
     var f = acqCurrent('accompagnement'), inp = 'width:100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-family:inherit', lb = 'display:block;font-size:11.5px;font-weight:700;color:#66735F;margin:10px 0 4px';
     var offs = Object.keys(f.offres || {}).sort(function(a, b) { return (f.offres[a].ordre || 0) - (f.offres[b].ordre || 0); });
     var o = (f.offres || {})[ACQ_CT.offre];
