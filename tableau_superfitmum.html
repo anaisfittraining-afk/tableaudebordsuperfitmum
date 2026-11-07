@@ -15859,6 +15859,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     // sous epanouissement_global/messagerie/<code> (réponses de la coach + « lu »).
     dashFbDB.ref('epanouissement_global/messagerie').on('value', function(snap) {
       DASH_MSG = snap.val() || {};
+      try { msgNotifyNew(); } catch (e) {}
       try { renderMessagesHome(); } catch (e) {}
       try { if (MSG_OPEN) msgRenderOpen(); } catch (e) {}
     });
@@ -21194,6 +21195,63 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     return msgListOf(code).filter(function(x) { return x.from === 'cliente' && (x.ts || 0) > rd; }).length;
   }
   function msgFmt(ts) { if (!ts) return ''; var d = new Date(ts); return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+
+  // 🔔 Alerte à l'arrivée d'un NOUVEAU message (tant que le tableau de bord est ouvert dans un onglet) :
+  // bandeau cliquable en haut à droite + petit son + notification du navigateur si tu l'as activée.
+  var MSG_KNOWN = null, MSG_TOAST_TIMER = null;
+  function msgSonOn() { try { return localStorage.getItem('sfm_msg_son') !== '0'; } catch (e) { return true; } }
+  function msgToggleSon() { try { localStorage.setItem('sfm_msg_son', msgSonOn() ? '0' : '1'); } catch (e) {} renderMessagesHome(); }
+  function msgBeep() {
+    if (!msgSonOn()) return;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      var ctx = new AC(), t = ctx.currentTime;
+      [880, 1175].forEach(function(f, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, t + i * 0.16); g.gain.exponentialRampToValueAtTime(0.18, t + i * 0.16 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.16 + 0.15);
+        o.start(t + i * 0.16); o.stop(t + i * 0.16 + 0.16);
+      });
+    } catch (e) {}
+  }
+  function msgNotifAsk() {
+    if (!('Notification' in window)) return;
+    try { Notification.requestPermission().then(function() { renderMessagesHome(); }); } catch (e) { try { Notification.requestPermission(function() { renderMessagesHome(); }); } catch (e2) {} }
+  }
+  function msgToast(code, text) {
+    var el = document.getElementById('msgToast');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'msgToast';
+      el.style.cssText = 'position:fixed;top:16px;right:16px;max-width:340px;z-index:2147483000;background:#2C4432;color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer;font-size:13.5px;line-height:1.4';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = '<div style="font-weight:800;margin-bottom:3px">💬 Nouveau message — ' + esc(msgName(code)) + '</div><div style="opacity:.92;white-space:pre-wrap;word-break:break-word">' + esc(String(text || '').slice(0, 140)) + '</div><div style="font-size:11.5px;opacity:.75;margin-top:6px">Touche pour lire et répondre</div>';
+    el.style.display = 'block';
+    el.onclick = function() { el.style.display = 'none'; msgOpen(code); };
+    clearTimeout(MSG_TOAST_TIMER); MSG_TOAST_TIMER = setTimeout(function() { el.style.display = 'none'; }, 20000);
+  }
+  function msgNotifyNew() {
+    var known = {}, fresh = [];
+    Object.keys(DASH_MSG || {}).forEach(function(code) {
+      var m = (DASH_MSG[code] && DASH_MSG[code].msgs) || {};
+      Object.keys(m).forEach(function(id) {
+        known[code + '/' + id] = 1;
+        if (MSG_KNOWN && !MSG_KNOWN[code + '/' + id] && m[id] && m[id].from === 'cliente') fresh.push({ code: code, text: m[id].text });
+      });
+    });
+    var first = (MSG_KNOWN === null);
+    MSG_KNOWN = known;
+    if (first || !fresh.length) return;
+    var last = fresh[fresh.length - 1];
+    msgToast(last.code, fresh.length > 1 ? fresh.length + ' nouveaux messages (dernier : ' + last.text + ')' : last.text);
+    msgBeep();
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        var n = new Notification('💬 ' + msgName(last.code), { body: String(last.text || '').slice(0, 140), tag: 'sfm-msg-' + last.code });
+        n.onclick = function() { try { window.focus(); } catch (e) {} msgOpen(last.code); n.close(); };
+      }
+    } catch (e) {}
+  }
   function renderMessagesHome() {
     var codes = Object.keys(DASH_MSG || {}).filter(function(c) { return msgListOf(c).length; });
     var unread = codes.filter(function(c) { return msgUnreadOf(c) > 0; });
@@ -21213,7 +21271,12 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         return '<div style="margin:8px 0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div><b style="color:#26312A">' + esc(msgName(c)) + '</b>' + msgApp(c) + ' · ' + esc(msgFmt(last.ts)) + (last.from === 'coach' ? ' · tu as répondu' : '') + '</div><button onclick="msgOpen(' + jsAttr(c) + ')" style="' + ACQ_BT + '">Ouvrir</button></div>';
       }).join('') + '</details>';
     }
-    acqHomeSet('homeMessages', (unread.length || others.length) ? acqHomeBox('#8A4A2E', '#FFF7F0', '#F0C9B2', '💬 Messages des clientes', unread.length ? total + ' nouveau' + (total > 1 ? 'x' : '') : 'aucun nouveau', inner) : '');
+    var perm = ('Notification' in window) ? Notification.permission : 'unsupported';
+    var ctrl = '<div style="font-size:12px;color:#66735F;margin-top:8px;display:flex;gap:12px;flex-wrap:wrap">' +
+      (perm === 'default' ? '<a href="#" onclick="msgNotifAsk();return false" style="color:#3F5D46;font-weight:700">🔔 Activer les notifications du navigateur</a>' : (perm === 'granted' ? '<span>🔔 Notifications du navigateur activées</span>' : (perm === 'denied' ? '<span>🔕 Notifications bloquées dans le navigateur</span>' : ''))) +
+      '<a href="#" onclick="msgToggleSon();return false" style="color:#8C9686">' + (msgSonOn() ? '🔊 Son activé (couper)' : '🔇 Son coupé (réactiver)') + '</a></div>';
+    if (unread.length || others.length) acqHomeSet('homeMessages', acqHomeBox('#8A4A2E', '#FFF7F0', '#F0C9B2', '💬 Messages des clientes', unread.length ? total + ' nouveau' + (total > 1 ? 'x' : '') : 'aucun nouveau', inner + ctrl));
+    else acqHomeSet('homeMessages', perm === 'default' ? '<div style="font-size:12px;color:#66735F">💬 Messages des clientes : aucun pour l\'instant. <a href="#" onclick="msgNotifAsk();return false" style="color:#3F5D46;font-weight:700">🔔 Activer les notifications du navigateur</a></div>' : '');
   }
   function msgOpen(code) {
     MSG_OPEN = code;
