@@ -19969,7 +19969,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function meLoadPhoto() {
     var box = document.getElementById('mePhotoBox'); if (!box) return;
     var id = ME_SEL;
-    function show(d) { var b = document.getElementById('mePhotoBox'); if (b && id === ME_SEL) b.innerHTML = d ? '<img src="' + d + '" style="width:100%;height:100%;object-fit:cover">' : 'Pas de photo'; }
+    function show(d) { var b = document.getElementById('mePhotoBox'); if (b && id === ME_SEL) b.innerHTML = d ? '<img src="' + d + '" style="width:100%;height:100%;object-fit:contain">' : 'Pas de photo'; }
     if (id in ME_PHOTO_CACHE) { show(ME_PHOTO_CACHE[id]); return; }
     dashFbDB.ref('epanouissement_global/mon_espace_photos/' + id).once('value').then(function(sn) { var v = sn.val(); ME_PHOTO_CACHE[id] = v && v.dataUrl || null; show(ME_PHOTO_CACHE[id]); });
   }
