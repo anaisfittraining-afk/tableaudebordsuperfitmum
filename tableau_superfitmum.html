@@ -20503,6 +20503,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var a = document.activeElement;
     // ne jamais redessiner pendant qu'une saisie est en cours dans cet onglet
     if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && acqEl('Body') && acqEl('Body').contains(a)) return;
+    // correctif : mémoriser ce qui est tapé (liens Stripe, détails…) AVANT de redessiner, sinon un rafraîchissement
+    // automatique (nouvelles données reçues de la base) efface la saisie non encore enregistrée
+    try { if (ACQ_TAB === 'tunnels') acqHarvest(); } catch (e) {}
     acqRender();
   }
   function acqBase() { return (ACQ_CFG.baseUrl || ACQ_DEFAULT_BASE).replace(/\s+/g, ''); }
