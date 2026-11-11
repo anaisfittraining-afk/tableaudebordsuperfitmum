@@ -23150,10 +23150,55 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     return t ? { on: t.on === true, sujet: t.sujet || d.sujet, corps: t.corps || d.corps } : d;
   }
   function acqMailFill(s, v) { return String(s || '').replace(/\{\{(\w+)\}\}/g, function(m, k) { return v[k] == null ? '' : v[k]; }); }
+
+  // ---- Mise en page « habillée co-NAÎTRE » des e-mails (logo, couleurs, boutons) ----
+  var ACQ_MAIL_BTN = {
+    lien_salle: { t: '✨ Préparons notre appel', main: true },
+    lien_tunnel: { t: 'Choisir mon créneau', main: true },
+    lien_contrat: { t: 'Voir et signer mon contrat', main: true },
+    lien_agenda: { t: '📅 Ajouter à mon agenda', main: false },
+    lien_guide: { t: '📘 Télécharger mon guide (PDF)', main: false }
+  };
+  function acqMailEsc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function acqMailLogoUrl() { return acqBase().replace(/[?#].*$/, '').replace(/[^\/]*$/, '') + 'logo-conaitre-mail.png'; }
+  function acqMailBtnHtml(url, label, main) {
+    var st = main ? 'background:#3F5D46;color:#ffffff;border:2px solid #3F5D46;' : 'background:#ffffff;color:#3F5D46;border:2px solid #3F5D46;';
+    return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:6px auto 14px"><tr><td align="center" style="border-radius:999px;' + (main ? 'background:#3F5D46' : 'background:#ffffff') + '"><a href="' + acqMailEsc(url) + '" target="_blank" style="display:inline-block;' + st + 'font-family:Karla,Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;line-height:1.2;text-decoration:none;padding:14px 26px;border-radius:999px;text-align:center">' + acqMailEsc(label) + '</a></td></tr></table>';
+  }
+  function acqMailHtml(corps, vars) {
+    vars = vars || {};
+    var LK = Object.keys(ACQ_MAIL_BTN);
+    var paras = String(corps || '').replace(/\r/g, '').split(/\n{2,}/), body = '';
+    paras.forEach(function(p) {
+      var btns = [];
+      LK.forEach(function(k) {
+        var re = new RegExp('\\{\\{\\s*' + k + '\\s*\\}\\}', 'g');
+        if (re.test(p)) { p = p.replace(re, ''); if (vars[k]) btns.push(acqMailBtnHtml(vars[k], ACQ_MAIL_BTN[k].t, ACQ_MAIL_BTN[k].main)); }
+      });
+      p = acqMailFill(p, vars).replace(/[ \t]+\n/g, '\n').trim();
+      if (btns.length) p = p.replace(/\s*:\s*$/, '');
+      if (p) {
+        var h = acqMailEsc(p).replace(/(https?:\/\/[^\s<]+)/g, function(u) { return '<a href="' + u + '" target="_blank" style="color:#3F5D46;font-weight:700;text-decoration:underline">' + u + '</a>'; }).replace(/\n/g, '<br>');
+        body += '<p style="margin:0 0 16px;font-family:Karla,Arial,Helvetica,sans-serif;font-size:16px;line-height:1.65;color:#26312A">' + h + '</p>';
+      }
+      body += btns.join('');
+    });
+    return '<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"></head>'
+      + '<body style="margin:0;padding:0;background:#F7F1E6">'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#F7F1E6" style="background:#F7F1E6"><tr><td align="center" style="padding:24px 12px">'
+      + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#ffffff;border:1px solid #E2DCC8;border-radius:16px">'
+      + '<tr><td align="center" style="padding:28px 28px 8px"><img src="' + acqMailEsc(acqMailLogoUrl()) + '" alt="co-NAÎTRE" width="170" style="display:block;border:0;width:170px;max-width:60%;height:auto;margin:0 auto">'
+      + '<div style="font-family:Karla,Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:2.4px;font-weight:700;color:#66735F;margin-top:10px">AVEC ANAÏS FERNET</div></td></tr>'
+      + '<tr><td style="padding:0 28px"><div style="height:1px;background:#E2DCC8;margin:16px 0 22px;line-height:1px;font-size:1px">&nbsp;</div></td></tr>'
+      + '<tr><td style="padding:0 28px 10px">' + body + '</td></tr>'
+      + '<tr><td align="center" style="padding:6px 28px 26px"><div style="height:3px;width:46px;background:#D97A52;margin:6px auto 14px;line-height:3px;font-size:1px;border-radius:3px">&nbsp;</div>'
+      + '<div style="font-family:Karla,Arial,Helvetica,sans-serif;font-size:12.5px;color:#66735F;line-height:1.5">Un accompagnement signé <b style="color:#2F4A3A">co-NAÎTRE</b></div></td></tr>'
+      + '</table></td></tr></table></body></html>';
+  }
   function acqMailRaw(to, sujet, corps, vars) {
     var e = ACQ_MAIL.ejs || {};
     if (!e.pub || !e.service || !e.template) return Promise.reject(new Error('EmailJS pas encore configuré'));
-    return fetch('https://api.emailjs.com/api/v1.0/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: e.service, template_id: e.template, user_id: e.pub, template_params: { to_email: to, subject: acqMailFill(sujet, vars || {}), message: acqMailFill(corps, vars || {}), from_name: e.fromName || 'Anaïs — co-NAÎTRE', reply_to: e.replyTo || e.coachEmail || '' } }) })
+    return fetch('https://api.emailjs.com/api/v1.0/email/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ service_id: e.service, template_id: e.template, user_id: e.pub, template_params: { to_email: to, subject: acqMailFill(sujet, vars || {}), message: acqMailFill(corps, vars || {}), html: acqMailHtml(corps, vars || {}), from_name: e.fromName || 'Anaïs — co-NAÎTRE', reply_to: e.replyTo || e.coachEmail || '' } }) })
       .then(function(r) { if (!r.ok) return r.text().then(function(t) { throw new Error(t || ('erreur ' + r.status)); }); return true; });
   }
   function acqMailVars(d, extra) {
