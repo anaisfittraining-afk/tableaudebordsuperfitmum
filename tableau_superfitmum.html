@@ -15029,6 +15029,35 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   // modale plutôt qu'en ligne. window._openFicheKey garde la trace de la fiche ouverte pour pouvoir la
   // rafraîchir automatiquement quand une donnée change en direct (ex. un contrat lié depuis ailleurs).
   window._openFicheKey = null;
+  // 📝 Fiche cliente : reprend la préparation de l'appel Bilan (objectif + réponses aux questions) retrouvée par e-mail ou téléphone
+  function cfPrepaLoad(key, safeId) {
+    var box = document.getElementById('cfPrepa-' + safeId); if (!box) return;
+    var cl = (buildByClient() || {})[key] || {}, em = String(cl.email || '').trim().toLowerCase(), ph = String(cl.telephone || cl.tel || '').replace(/\D/g, '').slice(-9);
+    var draw = function(leads) {
+      var rows = [];
+      Object.keys(leads || {}).forEach(function(id) {
+        var d = leads[id]; if (!d) return;
+        var okEm = em && String(d.email || '').trim().toLowerCase() === em, okPh = ph.length >= 9 && String(d.telephone || '').replace(/\D/g, '').slice(-9) === ph;
+        if (!(okEm || okPh)) return;
+        var f = ACQ_FUNNELS[d.funnel] || ACQ_DEFAULT_FUNNELS[d.funnel] || {};
+        if (f.type !== 'appel' && !d.prepa) return;
+        if (!d.rdvDate && !d.prepa) return;
+        rows.push({ id: id, d: d });
+      });
+      rows.sort(function(a, b) { return String(b.d.rdvTs || b.d.createdAt || '').localeCompare(String(a.d.rdvTs || a.d.createdAt || '')); });
+      if (!rows.length) { box.innerHTML = ''; return; }
+      box.innerHTML = '<div style="padding:12px 16px 0">' + rows.map(function(r) {
+        var d = r.d, p = acqPrepaHtml(d).replace('<details ', '<details open ');
+        return '<div style="background:#fff;border:1px solid #E2DCC8;border-radius:12px;padding:10px 12px;margin-bottom:8px"><div style="font-weight:800;font-size:13px;color:#3F5D46">' + (d.source === 'guide-prepa' ? '📝 Réponses envoyées via le guide' : '📞 Appel Bilan') + (d.rdvDate ? ' du ' + esc(hliDate(d.rdvDate)) + (d.rdvHeure ? ' à ' + esc(d.rdvHeure) : '') : '') + '</div>'
+          + (d.objectif ? '<div style="font-size:12.5px;margin-top:4px;color:#26312A"><b>Objectif indiqué :</b> ' + esc(d.objectif) + '</div>' : '')
+          + (p || '<div style="font-size:12px;color:#8a8577;margin-top:4px">Pas encore de réponse à la préparation.</div>') + '</div>';
+      }).join('') + '</div>';
+    };
+    try {
+      if (typeof ACQ_LEADS === 'object' && Object.keys(ACQ_LEADS).length) draw(ACQ_LEADS);
+      else if (dashFbDB) dashFbDB.ref('acquisition/leads').once('value').then(function(sn) { draw(sn.val() || {}); }).catch(function() {});
+    } catch (e) {}
+  }
   function openClientFiche(key) {
     var byClient = buildByClient();
     var cl = byClient[key];
@@ -15070,10 +15099,12 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     html += '<button onclick="ficheArchiveClient(\'' + safeKey + '\')" style="padding:4px 10px;background:#edf2f7;color:#66735F;border:none;border-radius:20px;font-size:11.5px;font-weight:700;cursor:pointer">📦 Archiver</button>';
     html += '<button onclick="ficheDeleteClient(\'' + safeKey + '\')" style="padding:4px 10px;background:#fff5f5;color:#c53030;border:none;border-radius:20px;font-size:11.5px;font-weight:700;cursor:pointer">🗑 Supprimer</button>';
     html += '</div>';
+    html += '<div id="cfPrepa-' + safeId + '"></div>';
     html += '<div>' + renderClientFicheBody(key, cl, recaps, safeKey, safeId) + '</div>';
     html += '</div>';
     ov.innerHTML = html;
     setTimeout(function() {
+      try { cfPrepaLoad(key, safeId); } catch (e) {}
       loadClientPhotos();
       loadAttachments(key);
       loadContractFile(key, safeId);
@@ -21481,6 +21512,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function acqLeadList() {
     return Object.keys(ACQ_LEADS).map(function(id) { var d = ACQ_LEADS[id] || {}; d._id = id; return d; })
       .filter(function(d) {
+        if (acqGuideMatched(d)) return false;
         if (ACQ_FILTER.statut && d.status !== ACQ_FILTER.statut) return false;
         if (ACQ_SCOPE !== 'all' && acqScopeOf(d.funnel) !== ACQ_SCOPE) return false;
         if (!acqSuiviMatch(d)) return false;
@@ -21490,7 +21522,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       }).sort(function(a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
   }
   function acqProspectsHtml() {
-    var all = Object.keys(ACQ_LEADS).map(function(k) { return ACQ_LEADS[k] || {}; }).filter(function(d) { return ACQ_SCOPE === 'all' || acqScopeOf(d.funnel) === ACQ_SCOPE; });
+    var all = Object.keys(ACQ_LEADS).map(function(k) { return ACQ_LEADS[k] || {}; }).filter(function(d) { return !acqGuideMatched(d) && (ACQ_SCOPE === 'all' || acqScopeOf(d.funnel) === ACQ_SCOPE); });
     var cnt = {}; all.forEach(function(d) { cnt[d.status] = (cnt[d.status] || 0) + 1; });
     var out = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px;max-width:820px">';
     acqStatutKeys().forEach(function(k) {
@@ -21553,6 +21585,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       var wa = acqWaNumber(d.telephone);
       var slot0 = '';
       var slot = d.creneauDate ? (' · 📅 ' + d.creneauDate.split('-').reverse().slice(0, 2).join('/') + (d.creneauHeure ? ' ' + d.creneauHeure : '')) : (d.creneauId === '' && d.offreId ? '' : '');
+      if (d.source === 'guide-prepa') slot += ' · 📝 réponses reçues via le guide (pas de rendez-vous retrouvé)';
       if (d.rdvDate) slot += ' · 📞 appel le ' + d.rdvDate.split('-').reverse().slice(0, 2).join('/') + (d.rdvHeure ? ' à ' + d.rdvHeure : '');
       if (d.inscription) slot += ' · 🌟 ' + d.inscription.formule + (d.inscription.seances ? ' (+' + d.inscription.seances + ' séances)' : '') + (d.inscription.cotisation ? ' · cotisation validée' : '');
       return '<div style="background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px">'
@@ -21566,7 +21599,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         + (wa ? '<a href="#" onclick="waBusinessOpen(' + jsAttr(wa) + ',\'\');return false" style="padding:6px 12px;background:#E7EEE1;color:#2C4432;border-radius:16px;font-size:12.5px;font-weight:700;text-decoration:none">💬 WhatsApp Business</a>' : '')
         + acqRdvButtons(d) + (d.contratSigne ? '<button onclick="acqOpenContrat(' + jsAttr(d._id) + ')" style="padding:6px 12px;background:#FFF1E0;color:#8a4a2a;border:none;border-radius:16px;font-size:12.5px;font-weight:700;cursor:pointer">✍️ Contrat signé — voir</button>' : '')
         + '</div>'
-        + acqPrepaHtml(d)
+        + acqPrepaHtml(acqPrepaMerged(d))
         + acqSuiviHtml('lead', d)
         + '<textarea placeholder="Notes (ex : rappelée le 12, hésite entre deux formules…)" onchange="acqSaveNote(' + jsAttr(d._id) + ',this.value)" style="width:100%;margin-top:10px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:10px;font-size:13px;font-family:inherit;min-height:44px;resize:vertical">' + esc(d.notes || '') + '</textarea>'
         + '<div style="text-align:right;margin-top:6px"><button onclick="acqDeleteLead(' + jsAttr(d._id) + ')" style="background:none;border:none;color:#c53030;font-size:12px;cursor:pointer;text-decoration:underline">Supprimer</button></div></div>';
@@ -22830,6 +22863,28 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var d = ACQ_LEADS[id]; if (!d) return; var u = acqSalleUrl(id, d.funnel);
     if (navigator.clipboard) navigator.clipboard.writeText(u).then(function() { showToast('✨ Lien « préparer notre appel » copié : colle-le dans un message'); }, function() { window.prompt('Copie ce lien :', u); });
     else window.prompt('Copie ce lien :', u);
+  }
+  // ── Réponses envoyées via le guide PDF (source « guide-prepa ») : rapprochées d'une vraie fiche par e-mail ou téléphone ──
+  function acqSameWho(a, b) {
+    var ea = String(a.email || '').trim().toLowerCase(), eb = String(b.email || '').trim().toLowerCase();
+    var pa = String(a.telephone || '').replace(/\D/g, '').slice(-9), pb = String(b.telephone || '').replace(/\D/g, '').slice(-9);
+    return (!!ea && ea === eb) || (pa.length >= 9 && pa === pb);
+  }
+  function acqGuideMatched(g) {
+    if (!g || g.source !== 'guide-prepa') return false;
+    return Object.keys(ACQ_LEADS).some(function(id) { var o = ACQ_LEADS[id]; return o && o !== g && o.source !== 'guide-prepa' && acqSameWho(g, o); });
+  }
+  function acqPrepaMerged(d) {
+    if (!d || d.source === 'guide-prepa') return d;
+    var extra = Object.keys(ACQ_LEADS).map(function(id) { return ACQ_LEADS[id]; }).filter(function(g) { return g && g.source === 'guide-prepa' && g.prepa && acqSameWho(d, g); });
+    if (!extra.length) return d;
+    var c = Object.assign({}, d), p0 = d.prepa || {}, p = { etapes: Object.assign({}, p0.etapes || {}), rep: Object.assign({}, p0.rep || {}), updatedAt: p0.updatedAt };
+    extra.forEach(function(g) {
+      var r = g.prepa.rep || {};
+      Object.keys(r).forEach(function(k) { if (String(r[k] || '').trim() && !String(p.rep[k] || '').trim()) p.rep[k] = r[k]; });
+      if (String(g.prepa.updatedAt || '') > String(p.updatedAt || '')) p.updatedAt = g.prepa.updatedAt;
+    });
+    c.prepa = p; return c;
   }
   function acqPrepaHtml(d) {
     var p = d.prepa; if (!p) return '';
