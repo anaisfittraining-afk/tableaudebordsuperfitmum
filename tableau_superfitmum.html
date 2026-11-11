@@ -22819,7 +22819,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (!d.rdvDate || !d.rdvHeure) return '';
     var t0 = d.rdvDate.replace(/-/g, '') + 'T' + d.rdvHeure.replace(':', '') + '00', dur = d.rdvDuree || 30, p = d.rdvHeure.split(':'), m = (+p[0]) * 60 + (+p[1]) + dur, e = ('0' + Math.floor(m / 60)).slice(-2) + ('0' + (m % 60)).slice(-2) + '00';
     var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('📞 ' + (((ACQ_FUNNELS[d.funnel] || ACQ_DEFAULT_FUNNELS[d.funnel] || {}).rdvNom) || 'Bilan Forme Santé') + ' — ' + (d.nom || '')) + '&dates=' + t0 + '/' + d.rdvDate.replace(/-/g, '') + 'T' + e + '&ctz=Europe/Paris&details=' + encodeURIComponent('Tél : ' + (d.telephone || '—') + '\nE-mail : ' + (d.email || '—') + (d.objectif ? '\nObjectif : ' + d.objectif : ''));
-    var salle = (d._id && ((ACQ_FUNNELS[d.funnel] || ACQ_DEFAULT_FUNNELS[d.funnel] || {}).type === 'appel')) ? '<button onclick="acqCopySalle(' + jsAttr(d._id) + ')" title="Lien à envoyer à la prospecte : compte à rebours, préparation, lien de la visio" style="padding:6px 12px;background:#FBEFE6;color:#8a4a2a;border:none;border-radius:16px;font-size:12.5px;font-weight:700;cursor:pointer">🚪 Copier le lien de sa salle d\'attente</button>' : '';
+    var salle = (d._id && ((ACQ_FUNNELS[d.funnel] || ACQ_DEFAULT_FUNNELS[d.funnel] || {}).type === 'appel')) ? '<button onclick="acqCopySalle(' + jsAttr(d._id) + ')" title="Lien à envoyer à la prospecte : compte à rebours, préparation, lien de la visio" style="padding:6px 12px;background:#FBEFE6;color:#8a4a2a;border:none;border-radius:16px;font-size:12.5px;font-weight:700;cursor:pointer">✨ Copier le lien « préparer notre appel »</button>' : '';
     return '<a href="' + url + '" target="_blank" rel="noopener" style="padding:6px 12px;background:#3F5D46;color:#fff;border-radius:16px;font-size:12.5px;font-weight:700;text-decoration:none">📅 Ajouter à mon agenda Google</a>' + salle;
   }
   // 🚪 Salle d'attente (tunnel « Ton appel Bilan ») : lien personnel de la prospecte + sa préparation (étapes cochées, réponses aux 6 questions)
@@ -22828,7 +22828,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function acqSalleUrl(id, funnel) { return acqFunnelUrl(funnel, '&salle=1&l=' + encodeURIComponent(id)); }
   function acqCopySalle(id) {
     var d = ACQ_LEADS[id]; if (!d) return; var u = acqSalleUrl(id, d.funnel);
-    if (navigator.clipboard) navigator.clipboard.writeText(u).then(function() { showToast('🚪 Lien de la salle d\'attente copié : colle-le dans un message'); }, function() { window.prompt('Copie ce lien :', u); });
+    if (navigator.clipboard) navigator.clipboard.writeText(u).then(function() { showToast('✨ Lien « préparer notre appel » copié : colle-le dans un message'); }, function() { window.prompt('Copie ce lien :', u); });
     else window.prompt('Copie ce lien :', u);
   }
   function acqPrepaHtml(d) {
@@ -23066,7 +23066,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   var ACQ_MAIL_DEF = {
     appel: {
       lead: { on: false, sujet: 'On se parle bientôt, {{prenom}} ?', corps: 'Bonjour {{prenom}},\n\nMerci pour ta demande de Bilan Forme Santé. Il te reste à choisir ton créneau pour que ton appel soit confirmé : {{lien_tunnel}}\n\nAnaïs — co-NAÎTRE' },
-      rdv: { on: true, sujet: 'Ton Bilan Forme Santé est réservé 🌿', corps: 'Bonjour {{prenom}},\n\nTon appel avec Anaïs est confirmé : {{date_rdv}} à {{heure_rdv}} ({{modalite}}).\n\nAjoute-le à ton agenda : {{lien_agenda}}\n\nTa salle d\'attente (compte à rebours, préparation et lien de la visio) : {{lien_salle}}\n\nTon guide de préparation à l\'appel : {{lien_guide}}\n\nPrends 10 minutes pour répondre aux 6 questions du guide : elles me serviront de point de départ. À très vite !\n\nAnaïs — co-NAÎTRE' },
+      rdv: { on: true, sujet: 'Ton Bilan Forme Santé est réservé 🌿', corps: 'Bonjour {{prenom}},\n\nTon appel avec Anaïs est confirmé : {{date_rdv}} à {{heure_rdv}} ({{modalite}}).\n\nAjoute-le à ton agenda : {{lien_agenda}}\n\nEncore quelques détails pour optimiser notre appel toutes les deux (5 minutes, compte à rebours et lien de la visio) : {{lien_salle}}\n\nTon guide de préparation à l\'appel : {{lien_guide}}\n\nPrends 10 minutes pour répondre aux 6 questions du guide : elles me serviront de point de départ. À très vite !\n\nAnaïs — co-NAÎTRE' },
       relance: { on: false, sujet: '{{prenom}}, il te reste une dernière étape', corps: 'Bonjour {{prenom}},\n\nTu as commencé à réserver ton Bilan Forme Santé offert, mais ton créneau n\'est pas encore confirmé. Tu peux le choisir ici : {{lien_tunnel}}\n\nAnaïs — co-NAÎTRE' }
     },
     vente: {
