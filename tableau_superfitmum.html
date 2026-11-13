@@ -3088,15 +3088,15 @@ window.EXERCISE_LIBRARY = [
         </select></label>
       <input type="text" id="evTrimPrix" placeholder="Prix (facultatif, ex : 25 €)" style="flex:1 1 160px;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
       <label id="evTrimExtWrap" style="flex:1 1 100%;display:flex;gap:8px;align-items:center;font-size:12.5px;color:#26312A;margin-top:4px;cursor:pointer"><input type="checkbox" id="evTrimExt" onchange="evTrimPublicChanged()"> 🌐 Ouvrir aux personnes extérieures (un lien public d'inscription s'affichera sur l'événement)</label>
-      <input type="text" id="evTrimLienCrm" placeholder="Lien HighLevel de cet événement (facultatif — pour que les inscrites arrivent dans ton CRM)" style="flex:1 1 100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
+      <input type="text" id="evTrimLienCrm" placeholder="" style="display:none;flex:1 1 100%;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px">
       <div style="flex:1 1 100%;margin-top:6px;padding:10px 12px;background:#FBF8EE;border:1.5px dashed #C9B98F;border-radius:10px">
         <div style="font-size:13px;font-weight:700;color:#3F5D46;margin-bottom:2px">💳 Lien de paiement selon le statut (facultatif)</div>
-        <div style="font-size:12px;color:#66735F;margin-bottom:8px">Chaque personne est envoyée vers <b>son</b> lien. Une case vide = le comportement habituel (offert, ou ton lien d'inscription Pilates). Colle ici tes liens Stripe, HighLevel…</div>
+        <div style="font-size:12px;color:#66735F;margin-bottom:8px">Chaque personne est envoyée vers <b>son</b> lien. Une case vide = le comportement habituel (offert, ou ton lien d'inscription Pilates). Colle ici tes liens Stripe, et si tu veux un <b>tarif différent</b> pour ce statut, écris-le dessous (il s'affiche à la place du prix général).</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <label style="flex:1 1 260px;font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">🌿 Clientes (Épanouissement / co-NAÎTRE)<input type="text" id="evTrimLienClientes" placeholder="https://…" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
-        <label style="flex:1 1 260px;font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">🔁 Adhérentes sur abonnement<input type="text" id="evTrimLienAbo" placeholder="https://…" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
-        <label style="flex:1 1 260px;font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">🎟️ Adhérentes à la carte ou à la séance<input type="text" id="evTrimLienCarte" placeholder="https://…" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
-        <label style="flex:1 1 260px;font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">🌐 Personnes extérieures (si ouvert aux extérieures)<input type="text" id="evTrimLienExt" placeholder="https://…" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"></label>
+        <label style="flex:1 1 260px;font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">🌿 Clientes (Épanouissement / co-NAÎTRE)<input type="text" id="evTrimLienClientes" placeholder="https://…" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"><input type="text" id="evTrimPrixClientes" placeholder="Tarif pour ce statut (ex : 20 €) — vide = tarif ci-dessus" style="padding:7px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:12.5px"></label>
+        <label style="flex:1 1 260px;font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">🔁 Adhérentes sur abonnement<input type="text" id="evTrimLienAbo" placeholder="https://…" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"><input type="text" id="evTrimPrixAbo" placeholder="Tarif pour ce statut (ex : 20 €) — vide = tarif ci-dessus" style="padding:7px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:12.5px"></label>
+        <label style="flex:1 1 260px;font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">🎟️ Adhérentes à la carte ou à la séance<input type="text" id="evTrimLienCarte" placeholder="https://…" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"><input type="text" id="evTrimPrixCarte" placeholder="Tarif pour ce statut (ex : 20 €) — vide = tarif ci-dessus" style="padding:7px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:12.5px"></label>
+        <label style="flex:1 1 260px;font-size:12px;color:#66735F;display:flex;flex-direction:column;gap:3px">🌐 Personnes extérieures (si ouvert aux extérieures)<input type="text" id="evTrimLienExt" placeholder="https://…" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px"><input type="text" id="evTrimPrixExt" placeholder="Tarif pour ce statut (ex : 20 €) — vide = tarif ci-dessus" style="padding:7px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:12.5px"></label>
         </div>
       </div>
       <div style="flex:1 1 100%;font-size:12px;color:#66735F;margin-top:4px">Activités proposées (facultatif, autant que tu veux — chaque cliente peut en choisir une ou plusieurs ; une case laissée vide est ignorée) :</div>
@@ -23934,8 +23934,20 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     return Object.keys(m).map(function(k) {
       var r = m[k] || {};
       var acts = r.activites ? (Array.isArray(r.activites) ? r.activites : Object.keys(r.activites).map(function(x) { return r.activites[x]; })) : [];
-      return { name: ((r.prenom || '') + ' ' + (r.nom || '')).trim() || r.email || k, prenom: r.prenom || '', nomFamille: r.nom || '', email: r.email || '', telephone: r.telephone || '', source: r.source || '', at: r.firstAt || r.at || '', response: 'oui', app: 'ext', activites: acts.filter(function(a) { return a && a.id; }) };
+      return { name: ((r.prenom || '') + ' ' + (r.nom || '')).trim() || r.email || k, prenom: r.prenom || '', nomFamille: r.nom || '', email: r.email || '', telephone: r.telephone || '', source: r.source || '', paye: !!r.paye, at: r.firstAt || r.at || '', response: 'oui', app: 'ext', activites: acts.filter(function(a) { return a && a.id; }) };
     }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+  }
+  function evTrimOffrir(id) {
+    var sel = document.getElementById('evOffSel_' + id), code = sel ? sel.value : '';
+    if (!code) { showToast('Choisis d\'abord une adhérente'); return; }
+    var c = (RESA_CLIENTS_ALL && RESA_CLIENTS_ALL[code]) || {};
+    if (!dashFbDB) return;
+    dashFbDB.ref('reservations/evenements/' + id + '/offerts/' + code).set({ name: c.nom || c.email || code, at: new Date().toISOString() })
+      .then(function() { showToast('🎁 Place offerte à ' + (c.nom || 'cette adhérente')); }).catch(function() { showToast('Impossible pour le moment — réessaie'); });
+  }
+  function evTrimOffrirRetirer(id, code) {
+    if (!dashFbDB) return;
+    dashFbDB.ref('reservations/evenements/' + id + '/offerts/' + code).remove().then(function() { showToast('Place offerte retirée'); }).catch(function() {});
   }
   function evTrimCopyText(txt, okMsg) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -24039,7 +24051,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var p = document.getElementById('evTrimPublic'); if (p) p.value = 'tous';
     var x = document.getElementById('evTrimExt'); if (x) x.checked = false;
     var lc = document.getElementById('evTrimLienCrm'); if (lc) lc.value = '';
-    ['evTrimLienClientes', 'evTrimLienAbo', 'evTrimLienCarte', 'evTrimLienExt'].forEach(function(i) { var el = document.getElementById(i); if (el) el.value = ''; });
+    ['evTrimLienClientes', 'evTrimLienAbo', 'evTrimLienCarte', 'evTrimLienExt', 'evTrimPrixClientes', 'evTrimPrixAbo', 'evTrimPrixCarte', 'evTrimPrixExt'].forEach(function(i) { var el = document.getElementById(i); if (el) el.value = ''; });
     evTrimPublicChanged();
   }
   function evTrimLiensRead(exterieur) {
@@ -24048,6 +24060,15 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       var el = document.getElementById(map[k]), v = el ? (el.value || '').trim() : '';
       if (k === 'exterieur' && !exterieur) v = '';
       if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
+      if (v) o[k] = v;
+    });
+    return o;
+  }
+  function evTrimPrixStatutRead(exterieur) {
+    var map = { clientes: 'evTrimPrixClientes', abonnement: 'evTrimPrixAbo', carte: 'evTrimPrixCarte', exterieur: 'evTrimPrixExt' }, o = {};
+    Object.keys(map).forEach(function(k) {
+      var el = document.getElementById(map[k]), v = el ? (el.value || '').trim() : '';
+      if (k === 'exterieur' && !exterieur) v = '';
       if (v) o[k] = v;
     });
     return o;
@@ -24076,9 +24097,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var offert = pub === 'epanouissement';
     var extEl = document.getElementById('evTrimExt');
     var exterieur = !!(extEl && extEl.checked) && !offert;
-    var lienCrm = exterieur ? (document.getElementById('evTrimLienCrm').value || '').trim() : '';
+    var lienCrm = '';
     if (lienCrm && !/^https?:\/\//i.test(lienCrm)) lienCrm = 'https://' + lienCrm;
-    var fields = { nom: nom, date: date, heure: heure, heureFin: heureFin, public: pub, payant: offert ? false : type === 'payant', prix: (!offert && type === 'payant') ? prix : '', activites: activites, exterieur: exterieur, lienCrm: lienCrm, liens: evTrimLiensRead(exterieur) };
+    var fields = { nom: nom, date: date, heure: heure, heureFin: heureFin, public: pub, payant: offert ? false : type === 'payant', prix: (!offert && type === 'payant') ? prix : '', activites: activites, exterieur: exterieur, lienCrm: lienCrm, liens: evTrimLiensRead(exterieur), prixStatut: (!offert && type === 'payant') ? evTrimPrixStatutRead(exterieur) : {} };
     if (EV_TRIM_EDIT_ID) {
       // Modification d'un événement existant : la date de création et les réponses des clientes sont conservées.
       var editId = EV_TRIM_EDIT_ID;
@@ -24112,6 +24133,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var lcEl = document.getElementById('evTrimLienCrm'); if (lcEl) lcEl.value = e.lienCrm || '';
     var lv = e.liens || {};
     [['evTrimLienClientes', 'clientes'], ['evTrimLienAbo', 'abonnement'], ['evTrimLienCarte', 'carte'], ['evTrimLienExt', 'exterieur']].forEach(function(m) { var el = document.getElementById(m[0]); if (el) el.value = lv[m[1]] || ''; });
+    var pvs = e.prixStatut || {};
+    [['evTrimPrixClientes', 'clientes'], ['evTrimPrixAbo', 'abonnement'], ['evTrimPrixCarte', 'carte'], ['evTrimPrixExt', 'exterieur']].forEach(function(m) { var el = document.getElementById(m[0]); if (el) el.value = pvs[m[1]] || ''; });
     evTrimPublicChanged();
     document.getElementById('evTrimSubmitBtn').textContent = '💾 Enregistrer les modifications';
     document.getElementById('evTrimCancelBtn').style.display = '';
@@ -24231,7 +24254,20 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       o += '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:#66735F"><span>👥 Suivi pour ton associée (lecture seule) :</span>' +
         '<button onclick="evTrimSuiviCopy(' + jsAttr(e.id) + ')" style="padding:5px 10px;background:#fff;border:1.5px solid #E2DCC8;border-radius:6px;font-size:11.5px;color:#26312A;cursor:pointer">' + (e.suiviToken ? '📋 Copier le lien de suivi' : '🔗 Créer et copier le lien de suivi') + '</button>' +
         (e.suiviToken ? '<button onclick="evTrimSuiviRevoke(' + jsAttr(e.id) + ')" style="padding:5px 10px;background:#fff5f5;border:1px solid #fed7d7;border-radius:6px;font-size:11.5px;color:#c53030;cursor:pointer">Désactiver</button>' : '') + '</div>';
-      if (e.liens && (e.liens.clientes || e.liens.abonnement || e.liens.carte || e.liens.exterieur)) o += '<div style="font-size:12px;color:#3F5D46;margin-top:8px">💳 Liens de paiement : ' + [['clientes', '🌿 clientes'], ['abonnement', '🔁 abonnées'], ['carte', '🎟️ carte / séance'], ['exterieur', '🌐 extérieures']].map(function(m) { return (e.liens[m[0]] ? '✅ ' : '▫️ ') + m[1]; }).join(' · ') + '</div>';
+      // 🎁 Places offertes : adhérentes à qui Anaïs offre la place (elles voient « Place offerte » et rien à régler dans leur espace)
+      if (e.payant) {
+        var offs = e.offerts || {}, offCodes = Object.keys(offs);
+        var offOpts = Object.keys(RESA_CLIENTS_ALL || {}).filter(function(c) { return !offs[c] && RESA_CLIENTS_ALL[c] && (RESA_CLIENTS_ALL[c].nom || RESA_CLIENTS_ALL[c].email); })
+          .sort(function(a, b) { return String(RESA_CLIENTS_ALL[a].nom || '').localeCompare(String(RESA_CLIENTS_ALL[b].nom || '')); })
+          .map(function(c) { return '<option value="' + esc(c) + '">' + esc(RESA_CLIENTS_ALL[c].nom || RESA_CLIENTS_ALL[c].email) + '</option>'; }).join('');
+        o += '<div style="margin-top:10px;padding:10px 12px;background:#F4F8F1;border:1px solid #D4E3CC;border-radius:8px"><div style="font-size:12px;font-weight:700;color:#2C4432;margin-bottom:6px">🎁 Places offertes (' + offCodes.length + ')</div>';
+        o += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><select id="evOffSel_' + esc(e.id) + '" style="padding:6px 8px;border:1.5px solid #E2DCC8;border-radius:6px;font-size:12px;background:#fff;max-width:240px"><option value="">Choisir une adhérente…</option>' + offOpts + '</select>' +
+          '<button onclick="evTrimOffrir(' + jsAttr(e.id) + ')" style="padding:6px 12px;background:#3F5D46;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">🎁 Offrir la place</button></div>';
+        if (offCodes.length) o += '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">' + offCodes.map(function(c) { return '<span style="background:#fff;border:1px solid #D4E3CC;border-radius:14px;padding:3px 6px 3px 10px;font-size:12px;color:#26312A">🎁 ' + esc((offs[c] && offs[c].name) || (RESA_CLIENTS_ALL[c] && RESA_CLIENTS_ALL[c].nom) || c) + ' <button onclick="evTrimOffrirRetirer(' + jsAttr(e.id) + ',' + jsAttr(c) + ')" title="Retirer" style="border:none;background:none;color:#c53030;cursor:pointer;font-size:12px">✕</button></span>'; }).join('') + '</div>';
+        else o += '<div style="font-size:11.5px;color:#66735F;margin-top:6px">Elle verra « 🎁 Place offerte par Anaïs — rien à régler » dans son espace.</div>';
+        o += '</div>';
+      }
+      if ((e.liens && (e.liens.clientes || e.liens.abonnement || e.liens.carte || e.liens.exterieur)) || (e.prixStatut && Object.keys(e.prixStatut).length)) o += '<div style="font-size:12px;color:#3F5D46;margin-top:8px">💳 Liens de paiement : ' + [['clientes', '🌿 clientes'], ['abonnement', '🔁 abonnées'], ['carte', '🎟️ carte / séance'], ['exterieur', '🌐 extérieures']].map(function(m) { return (e.liens[m[0]] ? '✅ ' : '▫️ ') + m[1] + ((e.prixStatut && e.prixStatut[m[0]]) ? ' (' + esc(e.prixStatut[m[0]]) + ')' : ''); }).join(' · ') + '</div>';
       if (e.exterieur) {
         o += '<div style="margin-top:12px;padding:10px 12px;background:#FFF8EE;border:1px solid #F0D9B5;border-radius:8px">';
         o += '<div style="font-size:12px;font-weight:700;color:#8a5a26;margin-bottom:6px">🌐 Ouvert aux personnes extérieures — lien public d\'inscription</div>';
@@ -24240,12 +24276,13 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         o += '<button onclick="evTrimCopyLink(' + jsAttr(e.id) + ')" style="padding:6px 12px;background:#3F5D46;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">📋 Copier le lien</button>';
         o += '<a href="' + esc(evTrimPublicLink(e.id)) + '" target="_blank" rel="noopener" style="padding:6px 10px;border:1.5px solid #E2DCC8;border-radius:6px;font-size:12px;color:#66735F;text-decoration:none;background:#fff">👁️ Voir la page</a>';
         o += '</div>';
-        o += '<div style="font-size:11.5px;color:#66735F;margin-top:6px">' + ((e.liens && e.liens.exterieur) ? '💳 Les inscrites sont envoyées vers ton lien de paiement « personnes extérieures ».' : (e.lienCrm ? '✅ Les inscrites sont envoyées vers ton lien HighLevel (CRM) après leur inscription.' : (e.payant ? '↪️ Événement payant : les inscrites sont envoyées vers ton lien d\'inscription Pilates (Desvres) pour régler.' : '⚠️ Pas de lien HighLevel renseigné : les inscrites sont enregistrées ici seulement. Ajoute-le via ✏️ Modifier pour les faire entrer dans ton CRM, ou copie la liste ci-dessous.'))) + '</div>';
+        if (e.liens && e.liens.exterieur) o += '<div style="font-size:11.5px;color:#66735F;margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">↩️ Dans Stripe, « Après le paiement » : <button onclick="evTrimCopyText(RESA_HOSTED_BASE_URL + \'?merci=1\', \'📋 Adresse de retour Stripe copiée\')" style="padding:4px 10px;background:#fff;border:1.5px solid #E2DCC8;border-radius:6px;font-size:11.5px;color:#26312A;cursor:pointer">📋 Copier l\'adresse de retour</button><span>(la même pour tous tes évènements — les payantes passent en « Payé » dans tes Prospects)</span></div>';
+        o += '<div style="font-size:11.5px;color:#66735F;margin-top:6px">' + ((e.liens && e.liens.exterieur) ? '💳 Les inscrites sont envoyées vers ton lien de paiement « personnes extérieures ».' : '⚠️ Pas de lien de paiement « personnes extérieures » : les inscrites sont enregistrées ici seulement. Ajoute-le via ✏️ Modifier (💳 Lien de paiement selon le statut) ou copie la liste ci-dessous.') + '</div>';
         o += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px"><div style="font-size:12px;font-weight:700;color:#8a5a26">Inscrites extérieures (' + ext.length + ')</div>' + (ext.length ? '<button onclick="evTrimCopyExt(' + jsAttr(e.id) + ')" style="padding:5px 10px;background:#fff;border:1.5px solid #E2DCC8;border-radius:6px;font-size:11.5px;color:#66735F;cursor:pointer">📋 Copier la liste</button>' : '') + '</div>';
         if (ext.length) {
-          o += '<div style="margin-top:6px;overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;color:#3E4A3A;width:100%;min-width:480px"><tr style="text-align:left;color:#8C9686"><th style="padding:3px 8px 3px 0">Nom</th><th style="padding:3px 8px">Email</th><th style="padding:3px 8px">Téléphone</th><th style="padding:3px 8px">Activités</th><th style="padding:3px 8px">Origine</th><th style="padding:3px 0 3px 8px">Le</th></tr>';
+          o += '<div style="margin-top:6px;overflow-x:auto"><table style="border-collapse:collapse;font-size:12px;color:#3E4A3A;width:100%;min-width:480px"><tr style="text-align:left;color:#8C9686"><th style="padding:3px 8px 3px 0">Nom</th><th style="padding:3px 8px">Email</th><th style="padding:3px 8px">Téléphone</th><th style="padding:3px 8px">Activités</th><th style="padding:3px 8px">Origine</th><th style="padding:3px 8px">Paiement</th><th style="padding:3px 0 3px 8px">Le</th></tr>';
           ext.forEach(function(r) {
-            o += '<tr style="border-top:1px solid #F0E9D6"><td style="padding:4px 8px 4px 0">' + esc(r.name) + '</td><td style="padding:4px 8px">' + esc(r.email) + '</td><td style="padding:4px 8px">' + esc(r.telephone) + '</td><td style="padding:4px 8px">' + (r.activites || []).map(function(a) { return esc(known[a.id] || a.nom || ''); }).join(', ') + '</td><td style="padding:4px 8px">' + esc(r.source || '—') + '</td><td style="padding:4px 0 4px 8px;white-space:nowrap">' + esc(String(r.at || '').slice(0, 10)) + '</td></tr>';
+            o += '<tr style="border-top:1px solid #F0E9D6"><td style="padding:4px 8px 4px 0">' + esc(r.name) + '</td><td style="padding:4px 8px">' + esc(r.email) + '</td><td style="padding:4px 8px">' + esc(r.telephone) + '</td><td style="padding:4px 8px">' + (r.activites || []).map(function(a) { return esc(known[a.id] || a.nom || ''); }).join(', ') + '</td><td style="padding:4px 8px">' + esc(r.source || '—') + '</td><td style="padding:4px 8px">' + (r.paye ? '✅ payé' : '—') + '</td><td style="padding:4px 0 4px 8px;white-space:nowrap">' + esc(String(r.at || '').slice(0, 10)) + '</td></tr>';
           });
           o += '</table></div>';
         } else {
