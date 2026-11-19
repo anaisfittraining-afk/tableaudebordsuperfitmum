@@ -4166,6 +4166,81 @@ window.EXERCISE_LIBRARY = [
     if (anyDuplicate) dashShowBilanDuplicateToast(lastDuplicateClient);
     renderBilansAVerifier();
   }
+  // ── Retrouver les bilans reçus qui ont disparu de l'écran ──
+  // Les bilans reçus directement sont gardés dans le cloud (epanouissement/_bilans_recus) même une fois
+  // importés. Si la copie locale du tableau de bord est écrasée par une copie plus ancienne (autre
+  // appareil, restauration…), le bilan disparaît de l'écran alors que l'original est toujours en
+  // ligne. Cette fonction réimporte ceux qui manquent ; le test doublon habituel (même cliente, même
+  // date, mêmes scores) empêche tout double. Les bilans « ignorés volontairement » ne reviennent jamais.
+  // Registre des bilans SUPPRIMÉS VOLONTAIREMENT (par toi) : ils ne sont jamais remis par la récupération.
+  var BILAN_TOMB_KEY = 'sfm2_bilan_deleted_v1';
+  function bilanSig(x) { return String(x.email || x.name || x.nom || '').toLowerCase().trim() + '|' + (x.date || '') + '|' + JSON.stringify(x.scores || {}); }
+  function bilanTombGet() { try { var t = JSON.parse(localStorage.getItem(BILAN_TOMB_KEY) || '[]'); return Array.isArray(t) ? t : []; } catch (e) { return []; } }
+  function bilanTombAdd(list) {
+    try {
+      var t = bilanTombGet();
+      (list || []).forEach(function(x) { if (!x) return; var g = bilanSig(x); if (t.indexOf(g) < 0) t.push(g); });
+      if (t.length > 3000) t = t.slice(-3000);
+      localStorage.setItem(BILAN_TOMB_KEY, JSON.stringify(t));
+    } catch (e) {}
+  }
+  function bilanTombAddClient(key) { try { var t = bilanTombGet(), g = 'C:' + String(key || '').toLowerCase().trim(); if (g.length > 2 && t.indexOf(g) < 0) { t.push(g); localStorage.setItem(BILAN_TOMB_KEY, JSON.stringify(t)); } } catch (e) {} }
+  // ── FUSION DES BILANS ENTRE DEUX APPAREILS OUVERTS EN MÊME TEMPS ──
+  // Avant, chaque appareil réécrivait « tous les bilans » d'un bloc dans le cloud et l'autre appareil
+  // remplaçait sa propre copie par celle-ci : le dernier qui écrivait gagnait, et les bilans reçus
+  // entre-temps de l'autre côté disparaissaient. Désormais on FUSIONNE : on garde les bilans des deux
+  // copies (sans doublon), sauf ceux que tu as supprimés toi-même.
+  function bilanTombUnion(aStr, bStr) {
+    var a = [], b = [];
+    try { a = JSON.parse(aStr || '[]'); } catch (e) {} try { b = JSON.parse(bStr || '[]'); } catch (e) {}
+    if (!Array.isArray(a)) a = []; if (!Array.isArray(b)) b = [];
+    var seen = {}, out = [];
+    a.concat(b).forEach(function(x) { if (typeof x === 'string' && !seen[x]) { seen[x] = 1; out.push(x); } });
+    return JSON.stringify(out.slice(-3000));
+  }
+  function bilanMergeData(localStr, remoteStr) {
+    var L = {}, R = {};
+    try { L = JSON.parse(localStr || '{}'); } catch (e) {} try { R = JSON.parse(remoteStr || '{}'); } catch (e) {}
+    if (!L || typeof L !== 'object' || Array.isArray(L)) L = {};
+    if (!R || typeof R !== 'object' || Array.isArray(R)) R = {};
+    var tomb = bilanTombGet();
+    var dead = function(x) { return tomb.indexOf(bilanSig(x)) >= 0 || tomb.indexOf('C:' + String(x.email || x.name || '').toLowerCase().trim()) >= 0; };
+    var out = {};
+    Object.keys(R).forEach(function(day) {
+      var seen = {}; out[day] = [];
+      (Array.isArray(R[day]) ? R[day] : []).forEach(function(x) { if (!x || typeof x !== 'object' || dead(x)) return; var g = bilanSig(x); if (seen[g]) return; seen[g] = 1; out[day].push(x); });
+    });
+    Object.keys(L).forEach(function(day) {
+      if (!out[day]) out[day] = [];
+      var seen = {}; out[day].forEach(function(x) { seen[bilanSig(x)] = 1; });
+      (Array.isArray(L[day]) ? L[day] : []).forEach(function(x) { if (!x || typeof x !== 'object' || dead(x)) return; var g = bilanSig(x); if (seen[g]) return; seen[g] = 1; out[day].push(x); });
+    });
+    Object.keys(out).forEach(function(d) { if (!out[d].length) delete out[d]; });
+    var str = JSON.stringify(out);
+    return { str: str, changed: str !== JSON.stringify(R) };
+  }
+  function dashRecoverBilans(onlyRecentHours) {
+    var back = [], limit = onlyRecentHours ? Date.now() - onlyRecentHours * 3600000 : 0;
+    Object.keys(DASH_BILANS_RECUS_ALL || {}).forEach(function(code) {
+      var entries = DASH_BILANS_RECUS_ALL[code] || {};
+      Object.keys(entries).forEach(function(id) {
+        var data = entries[id];
+        if (!data || data.status !== 'importe' || data.ignoreVolontaire) return;
+        var tomb = bilanTombGet();
+        if (tomb.indexOf(bilanSig(data)) >= 0 || tomb.indexOf('C:' + String(data.email || data.nom || '').toLowerCase().trim()) >= 0) return;
+        if (limit) { var t = data.importedAt ? Date.parse(data.importedAt) : 0; if (!t || t < limit) return; }
+        var r; try { r = mergeImportedBilan(data); } catch (e) { return; }
+        if (r && r.ok) back.push(r.client.name + (r.client.date ? ' (' + r.client.date + ')' : ''));
+      });
+    });
+    if (back.length) { try { renderToday(); renderHistory(); } catch (e) {} }
+    return back;
+  }
+  function dashRecoverBilansClick() {
+    var back = dashRecoverBilans(0);
+    showToast(back.length ? ('✅ ' + back.length + ' bilan' + (back.length > 1 ? 's' : '') + ' retrouvé' + (back.length > 1 ? 's' : '') + ' : ' + back.slice(0, 4).join(', ') + (back.length > 4 ? '…' : '')) : 'Aucun bilan manquant : tous les bilans reçus sont déjà là.');
+  }
+  var DASH_BILANS_AUTOHEAL_DONE = false;
   function dashShowBilanDirectToast(client) {
     if (!client) return;
     var el = document.getElementById('dashBilanDirectToast');
@@ -4209,8 +4284,9 @@ window.EXERCISE_LIBRARY = [
         if (data && data.status === 'a_verifier') rows.push({ code: code, id: id, data: data });
       });
     });
-    if (!rows.length) { el.innerHTML = ''; return; }
-    var out = '<div class="section-title" style="margin-bottom:6px"><h2>⚠️ Bilans à vérifier (' + rows.length + ')</h2></div>';
+    var recoverBtn = '<div style="margin:6px 0 14px"><button type="button" onclick="dashRecoverBilansClick()" style="padding:7px 13px;background:#F1ECE4;color:#4F5E4A;border:1px solid #DDD5C8;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer">🔄 Un bilan reçu a disparu ? Retrouver mes bilans manquants</button></div>';
+    if (!rows.length) { el.innerHTML = recoverBtn; return; }
+    var out = recoverBtn + '<div class="section-title" style="margin-bottom:6px"><h2>⚠️ Bilans à vérifier (' + rows.length + ')</h2></div>';
     out += '<p style="color:#66735F;font-size:13px;margin-bottom:14px;max-width:700px">Ces bilans, reçus directement depuis Épanouissement, ressemblent à un bilan déjà enregistré pour la même date — ils n\'ont pas été importés automatiquement pour éviter un doublon. Vérifie et choisis : importer quand même, ou ignorer si c\'est vraiment le même.</p>';
     rows.forEach(function(r) {
       var d = r.data;
@@ -4541,6 +4617,7 @@ window.EXERCISE_LIBRARY = [
     for (var i = 0; i < oldClients.length; i++) { if (oldClients[i].id == clientId) { client = oldClients[i]; break; } }
     if (!client) { if (overlay) overlay.remove(); return; }
     // Supprimer de l'ancien jour
+    bilanTombAdd([client]);
     allData[srcDay] = oldClients.filter(function(c) { return c.id != clientId; });
     if (!allData[srcDay].length) delete allData[srcDay];
     // Mettre à jour la date dans l'objet client
@@ -4568,6 +4645,7 @@ window.EXERCISE_LIBRARY = [
     document.getElementById('confirmOkBtn').onclick = function() {
       var allData = loadData();
       if (allData[_currentDay]) {
+        bilanTombAdd(allData[_currentDay].filter(function(c){ return c.id == clientId; }));
         allData[_currentDay] = allData[_currentDay].filter(function(c){ return c.id != clientId; });
         if (!allData[_currentDay].length) delete allData[_currentDay];
         saveData(allData);
@@ -4999,6 +5077,7 @@ window.EXERCISE_LIBRARY = [
     document.getElementById('confirmOkBtn').onclick = function() {
       var allData = loadData();
       if (allData[dateKey]) {
+        bilanTombAdd(allData[dateKey].filter(function(x){ return x.id == clientId; }));
         allData[dateKey] = allData[dateKey].filter(function(x){ return x.id != clientId; });
         if (!allData[dateKey].length) delete allData[dateKey];
         saveData(allData);
@@ -5017,6 +5096,7 @@ window.EXERCISE_LIBRARY = [
     document.getElementById('confirmText').textContent = 'Tous les bilans de ce jour seront supprimés définitivement.';
     document.getElementById('confirmOkBtn').onclick = function() {
       var allData = loadData();
+      bilanTombAdd(allData[dateKey] || []);
       delete allData[dateKey];
       saveData(allData);
       document.getElementById('confirmOverlay').classList.remove('open');
@@ -6872,6 +6952,7 @@ var SFM_VISUELS_BADGES=[{"k": "implication", "l": "Implication", "d": "data:imag
     if (!confirm('Supprimer définitivement la fiche de ' + name + ' ?\nCette action est irréversible : tous ses bilans, récaps et pièces jointes seront effacés.')) return;
     // Bilans
     var data = loadData();
+    bilanTombAddClient(key);
     delete data[key];
     saveData(data);
     // Fathom recaps
@@ -16964,6 +17045,17 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     dashFbDB.ref('epanouissement/_bilans_recus').on('value', function(snap) {
       DASH_BILANS_RECUS_ALL = snap.val() || {};
       dashProcessBilansRecus();
+      if (!DASH_BILANS_AUTOHEAL_DONE) {
+        DASH_BILANS_AUTOHEAL_DONE = true;
+        setTimeout(function() {
+          var heal = function() {
+            var back = dashRecoverBilans(0);
+            if (back.length) showToast('✅ ' + back.length + ' bilan' + (back.length > 1 ? 's' : '') + ' remis depuis le cloud : ' + back.slice(0, 3).join(', '));
+          };
+          heal();
+          setInterval(heal, 300000);
+        }, 25000);
+      }
     });
     dashFbDB.ref('rappels').on('value', function(snap) {
       DASH_RAPPELS_ALL = snap.val() || {};
@@ -17296,6 +17388,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       keep[SYNC_LAST_APPLIED_KEY] = localStorage.getItem(SYNC_LAST_APPLIED_KEY);
       keep[ASSO_ADHERENTS_KEY] = localStorage.getItem(ASSO_ADHERENTS_KEY);
       keep[ASSO_ADHERENTS_LAST_APPLIED_KEY] = localStorage.getItem(ASSO_ADHERENTS_LAST_APPLIED_KEY);
+      var keepBilData = localStorage.getItem('sfm2_bilan_data'), keepBilTomb = localStorage.getItem(BILAN_TOMB_KEY);
       try { localStorage.clear(); } catch (e) {}
       Object.keys(snap.localStorage).forEach(function(k) {
         if (k === ASSO_ADHERENTS_KEY || k === ASSO_ADHERENTS_LAST_APPLIED_KEY) return;
@@ -17307,6 +17400,11 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         try { localStorage.setItem(k, snap.localStorage[k]); } catch (e) { incomplete = true; }
       });
       Object.keys(keep).forEach(function(k) { if (keep[k] != null) { try { localStorage.setItem(k, keep[k]); } catch (e) {} } });
+      // Les bilans de CET appareil ne sont jamais perdus : on les fusionne avec ceux de la capture cloud.
+      try {
+        if (keepBilTomb != null) localStorage.setItem(BILAN_TOMB_KEY, bilanTombUnion(keepBilTomb, snap.localStorage[BILAN_TOMB_KEY]));
+        if (keepBilData != null) localStorage.setItem('sfm2_bilan_data', bilanMergeData(keepBilData, snap.localStorage['sfm2_bilan_data']).str);
+      } catch (e) {}
     }
     if (snap.globals) {
       var syncNewer = function(a, b) { var ta = a && a.generatedAt ? Date.parse(a.generatedAt) : 0, tb = b && b.generatedAt ? Date.parse(b.generatedAt) : 0; return (ta || 0) > (tb || 0); };
@@ -17479,8 +17577,15 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var stillPresent = localStorage.getItem(rawKey) !== null;
     if (v.t <= lastApplied && stillPresent) return; // déjà appliquée ET toujours là : rien à faire
     try {
-      keysyncOriginalSetItem(rawKey, v.v);
+      var val = v.v, pushBack = false;
+      try {
+        if (rawKey === BILAN_TOMB_KEY) { val = bilanTombUnion(localStorage.getItem(rawKey), v.v); pushBack = val !== v.v; }
+        else if (rawKey === 'sfm2_bilan_data') { var mg = bilanMergeData(localStorage.getItem(rawKey), v.v); val = mg.str; pushBack = mg.changed; }
+      } catch (em) { val = v.v; pushBack = false; }
+      keysyncOriginalSetItem(rawKey, val);
       keysyncSetMetaTs(rawKey, v.t);
+      if (pushBack) setTimeout(function() { try { localStorage.setItem(rawKey, val); } catch (e2) {} }, 80);
+      if (rawKey === 'sfm2_bilan_data') { try { renderToday(); renderHistory(); } catch (e3) {} }
     } catch (e) {
       // Stockage local plein au moment de restaurer CETTE clé précise : contrairement à l'ancien
       // système, ça n'affecte qu'elle — toutes les autres clés restent intactes — mais on prévient
