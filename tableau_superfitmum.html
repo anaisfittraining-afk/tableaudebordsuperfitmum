@@ -3339,6 +3339,7 @@ window.EXERCISE_LIBRARY = [
       <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <button onclick="assoCopyDoc()" style="padding:9px 16px;background:#3F5D46;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">📋 Copier le texte</button>
         <button onclick="assoDownloadDoc()" style="padding:9px 16px;background:#f7fafc;border:1px solid #cbd5e0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#3E4A3A">⬇️ Télécharger (.txt)</button>
+        <button onclick="assoSendToSign()" style="padding:9px 16px;background:#C97B5A;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">✍️ Envoyer en signature</button>
         <button onclick="assoSaveAsDoc()" style="padding:9px 16px;background:#f7fafc;border:1px solid #cbd5e0;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#3E4A3A">💾 Enregistrer comme document</button>
         <button onclick="assoRegenerateFromForm()" style="padding:9px 16px;background:#fff;border:1px solid #E2DCC8;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#8C9686">🔄 Régénérer depuis le formulaire</button>
       </div>
@@ -17780,6 +17781,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       keep[ASSO_ADHERENTS_KEY] = localStorage.getItem(ASSO_ADHERENTS_KEY);
       keep[ASSO_ADHERENTS_LAST_APPLIED_KEY] = localStorage.getItem(ASSO_ADHERENTS_LAST_APPLIED_KEY);
       var keepBilData = localStorage.getItem('sfm2_bilan_data'), keepBilTomb = localStorage.getItem(BILAN_TOMB_KEY);
+      var keepAssoDocs = localStorage.getItem('sfm_asso_saved_docs_v1');
       try { localStorage.clear(); } catch (e) {}
       Object.keys(snap.localStorage).forEach(function(k) {
         if (k === ASSO_ADHERENTS_KEY || k === ASSO_ADHERENTS_LAST_APPLIED_KEY) return;
@@ -17796,6 +17798,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         if (keepBilTomb != null) localStorage.setItem(BILAN_TOMB_KEY, bilanTombUnion(keepBilTomb, snap.localStorage[BILAN_TOMB_KEY]));
         if (keepBilData != null) localStorage.setItem('sfm2_bilan_data', bilanMergeData(keepBilData, snap.localStorage['sfm2_bilan_data']).str);
       } catch (e) {}
+      // Les documents d'association enregistrés sur CET ordinateur ne sont jamais perdus non plus : fusion avec ceux du cloud.
+      try { if (keepAssoDocs != null) localStorage.setItem('sfm_asso_saved_docs_v1', assoDocsUnion(keepAssoDocs, snap.localStorage['sfm_asso_saved_docs_v1'])); } catch (e) {}
     }
     if (snap.globals) {
       var syncNewer = function(a, b) { var ta = a && a.generatedAt ? Date.parse(a.generatedAt) : 0, tb = b && b.generatedAt ? Date.parse(b.generatedAt) : 0; return (ta || 0) > (tb || 0); };
@@ -17953,6 +17957,18 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   // notre propre écriture, ignoré via KEYSYNC_META_KEY — ou par un AUTRE appareil/onglet) et la
   // réapplique localement si elle est plus récente que ce qu'on a déjà. N'utilise jamais clear() :
   // chaque clé est réécrite individuellement, par-dessus l'existant, jamais tout d'un coup.
+  // Fusionne deux listes de documents d'association enregistrés (par identifiant) : on garde la version la
+  // plus récente de chaque document et on n'en perd jamais un, d'où qu'il vienne (cet ordinateur ou le cloud).
+  function assoDocsUnion(a, b) {
+    var A = [], B = [];
+    try { A = JSON.parse(a || '[]') || []; } catch (e) {}
+    try { B = JSON.parse(b || '[]') || []; } catch (e) {}
+    var by = {};
+    A.concat(B).forEach(function(d) { if (d && d.id && (!by[d.id] || (d.updatedAt || 0) > (by[d.id].updatedAt || 0))) by[d.id] = d; });
+    var out = Object.keys(by).map(function(k) { return by[k]; });
+    out.sort(function(x, y) { return (y.updatedAt || 0) - (x.updatedAt || 0); });
+    return JSON.stringify(out);
+  }
   // Fusionne deux listes de logos ajoutés (par identifiant) : on ne perd jamais un logo, d'où qu'il vienne.
   function logosUnion(a, b) {
     var A = [], B = [];
@@ -18010,6 +18026,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
             if (k === 'sfm2_custom_logos') merged = logosUnion(local, cur.v).str;
             else if (k === 'sfm2_bilan_data') merged = bilanMergeData(local, cur.v).str;
             else if (k === BILAN_TOMB_KEY) merged = bilanTombUnion(local, cur.v);
+            else if (k === 'sfm_asso_saved_docs_v1') merged = assoDocsUnion(local, cur.v);
           } catch (e) { merged = null; }
           if (merged !== null) { keysyncOriginalSetItem(k, merged); if (merged === cur.v) { st.same++; return; } return pushVal(k, merged); }
           if (cur.t > (meta[k] || 0)) { st.diff.push(k); return; }
@@ -18038,12 +18055,14 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         if (rawKey === BILAN_TOMB_KEY) { val = bilanTombUnion(localStorage.getItem(rawKey), v.v); pushBack = val !== v.v; }
         else if (rawKey === 'sfm2_bilan_data') { var mg = bilanMergeData(localStorage.getItem(rawKey), v.v); val = mg.str; pushBack = mg.changed; }
         else if (rawKey === 'sfm2_custom_logos') { var ml = logosUnion(localStorage.getItem(rawKey), v.v); val = ml.str; pushBack = ml.changed; }
+        else if (rawKey === 'sfm_asso_saved_docs_v1') { val = assoDocsUnion(localStorage.getItem(rawKey), v.v); pushBack = val !== v.v; }
       } catch (em) { val = v.v; pushBack = false; }
       keysyncOriginalSetItem(rawKey, val);
       keysyncSetMetaTs(rawKey, v.t);
       if (pushBack) setTimeout(function() { try { localStorage.setItem(rawKey, val); } catch (e2) {} }, 80);
       if (rawKey === 'sfm2_bilan_data') { try { renderToday(); renderHistory(); } catch (e3) {} }
       if (rawKey === 'sfm2_custom_logos') { try { renderCustomLogos(); } catch (e4) {} }
+      if (rawKey === 'sfm_asso_saved_docs_v1') { try { renderAssoSavedDocsList(); } catch (e5) {} }
     } catch (e) {
       // Stockage local plein au moment de restaurer CETTE clé précise : contrairement à l'ancien
       // système, ça n'affecte qu'elle — toutes les autres clés restent intactes — mais on prévient
@@ -18962,6 +18981,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
           '<div style="font-size:13px;font-weight:700;color:#26312A">' + esc(d.name) + (isOpen ? ' <span style="font-size:11px;font-weight:600;color:#2C4432">· ouvert</span>' : '') + '</div>' +
           '<div style="font-size:11px;color:#8C9686">' + esc(ASSO_DOC_TYPE_LABELS[d.type] || d.type) + ' · modifié le ' + dateStr + '</div>' +
         '</div>' +
+        '<button onclick="assoSendToSign(' + jsAttr(d.id) + ')" style="padding:7px 12px;background:#C97B5A;color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">✍️ Envoyer en signature</button>' +
         '<button onclick="assoOpenSavedDoc(' + jsAttr(d.id) + ')" style="padding:7px 12px;background:#3F5D46;color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer">✏️ Ouvrir</button>' +
         '<button onclick="assoRenameSavedDoc(' + jsAttr(d.id) + ')" style="padding:7px 12px;background:#fff;border:1px solid #E2DCC8;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;color:#3E4A3A">✎ Renommer</button>' +
         '<button onclick="assoDuplicateSavedDoc(' + jsAttr(d.id) + ')" style="padding:7px 12px;background:#fff;border:1px solid #E2DCC8;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;color:#3E4A3A">📄 Dupliquer</button>' +
@@ -26525,6 +26545,60 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var box = document.getElementById('assoSigners');
     if (box && !box.children.length) { assoAddSigner(); assoAddSigner(); }
   }
+  // ── Envoi en un clic depuis l'onglet Association : le document, le nom de l'association et les signataires
+  // habituels (président·e, secrétaire, trésorier·e) sont préremplis dans le bloc de signature ; il ne reste qu'à
+  // vérifier les adresses mail (mémorisées d'une fois sur l'autre) et à cliquer sur « Créer ». ──
+  var ASSO_SIGNER_MAIL_KEY = 'sfm_asso_signer_emails_v1';
+  function assoSignerMails() { try { return JSON.parse(localStorage.getItem(ASSO_SIGNER_MAIL_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function assoRememberSignerMails(sig) {
+    var m = assoSignerMails();
+    Object.keys(sig).forEach(function(k) { var s = sig[k]; if (s.nom && s.email) m[s.nom.toLowerCase()] = s.email; });
+    try { localStorage.setItem(ASSO_SIGNER_MAIL_KEY, JSON.stringify(m)); } catch (e) {}
+  }
+  function assoDocToSignText(text) {
+    var lines = String(text || '').replace(/\r/g, '').split('\n'), firstDone = false;
+    return lines.map(function(l) {
+      var t = l.trim();
+      if (!t) return l;
+      if (!firstDone) { firstDone = true; if (t.length <= 90 && !/^#/.test(t)) return '# ' + t; }
+      if (/^(ARTICLE|Article|TITRE|Titre)\s+\S+/.test(t) && t.length <= 90) return '## ' + t;
+      return l;
+    }).join('\n');
+  }
+  function assoSendToSign(id) {
+    var doc = null, title, text;
+    if (id) { doc = getAssoSavedDocs().filter(function(d) { return d.id === id; })[0]; if (!doc) return; title = doc.name; text = doc.text; }
+    else {
+      var out = document.getElementById('assoDocOutput'), ty = document.getElementById('asso_doc_type');
+      text = out ? out.value : '';
+      title = ASSO_DOC_TYPE_LABELS[ty ? ty.value : ''] || 'Document';
+    }
+    if (!String(text || '').trim()) { showToast('Le texte du document est vide.'); return; }
+    var info = getAssoInfo();
+    var navTab = document.querySelector('.nav-tab[data-view="pole_vente"]');
+    var subTab = document.querySelector('#view-pole_vente .sub-tab[onclick*="\'contrat\'"]');
+    try { showView('pole_vente', navTab); if (subTab) showSubView('contrat', subTab); } catch (e) { console.error(e); }
+    setTimeout(function() {
+      try { renderContratTab(); } catch (e) {}
+      var set = function(i, v) { var e = document.getElementById(i); if (e) e.value = v == null ? '' : v; };
+      var sel = document.getElementById('assoTpl'); if (sel) sel.value = 'libre';
+      var body = document.getElementById('assoBody'); if (body) { body.dataset.tpl = ''; body.dataset.tplKey = 'libre'; }
+      set('assoTitre', title); set('assoBody', assoDocToSignText(text)); set('assoNom', info.nom || '');
+      set('assoDate', new Date().toLocaleDateString('fr-FR'));
+      var box = document.getElementById('assoSigners');
+      if (box) {
+        box.innerHTML = '';
+        var mails = assoSignerMails(), added = 0;
+        [['president', 'Président·e'], ['secretaire', 'Secrétaire'], ['tresorier', 'Trésorier·ère']].forEach(function(r) {
+          var nom = (info[r[0]] || '').trim();
+          if (nom) { assoAddSigner(nom, r[1], mails[nom.toLowerCase()] || ''); added++; }
+        });
+        if (!added) { assoAddSigner(); assoAddSigner(); }
+      }
+      var sec = document.getElementById('assoSection'); if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      showToast('✍️ Document prêt : vérifie les adresses mail des signataires, puis clique sur « Créer le document ».');
+    }, 120);
+  }
   function assoCode() {
     var a = new Uint32Array(2); (window.crypto || window.msCrypto).getRandomValues(a);
     return 'asso_' + a[0].toString(36) + a[1].toString(36);
@@ -26552,6 +26626,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (!n) return fail('Ajoute au moins un signataire avec son adresse mail.');
     var ph = (body.match(/\[[^\]]{1,120}\]/g) || []).length;
     if (ph && !confirm('Il reste ' + ph + ' passage(s) entre [crochets] à compléter dans le texte. Créer quand même les liens ?')) return;
+    try { assoRememberSignerMails(sig); } catch (e) {}
     var code = assoCode();
     var data = { kind: 'assoc', title: titre, body: body, assocNom: v('assoNom'), lieu: v('assoLieu'), dateDoc: v('assoDate'), signataires: sig, status: 'attente', createdAt: new Date().toISOString() };
     dashFbDB.ref('contrats/' + code).set(data).then(function() {
