@@ -16,7 +16,7 @@ messaging.onBackgroundMessage(function(payload) {
   var d = (payload && payload.data) || {};
   return self.registration.showNotification(d.title || 'Tableau de bord', {
     body: d.body || 'Tu as un nouveau message.',
-    icon: 'icon-192.png', badge: 'icon-192.png', tag: d.tag || 'message', renotify: true,
+    icon: 'icon-192.png', badge: 'icon-192.png', tag: d.tag || 'message', renotify: true, silent: false, vibrate: [200, 100, 200, 100, 200],
     data: { url: d.url || self.registration.scope }
   });
 });
