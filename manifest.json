@@ -2,7 +2,7 @@
   "name": "Tableau de bord Superfitmum",
   "short_name": "Tableau de bord",
   "description": "Tableau de bord de la coach",
-  "start_url": "./",
+  "start_url": "tableau_superfitmum.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#FCF7F2",
@@ -27,5 +27,6 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "id": "tableau_superfitmum.html"
 }
