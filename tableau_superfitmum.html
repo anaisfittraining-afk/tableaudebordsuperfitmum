@@ -16809,24 +16809,24 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   // Ajoute (une seule fois) les modèles « Guide nutritionnel Ramadan » et « Plan Booster » à la
   // bibliothèque de plans alimentaires, sans jamais toucher à ce qui y est déjà. Si tu supprimes
   // l'un des deux ensuite, il ne revient pas.
-  function mealAddExtraTemplatesOnce() {
-    try {
-      if (!window.MEALPLAN_EXTRA_TEMPLATES || !window.MEALPLAN_EXTRA_TEMPLATES.length) return;
-      if (localStorage.getItem('sfm2_mealplan_extra_v1') === '1') return;
-      var list = getMealPlanTemplates();
-      if (!list.length) return; // bibliothèque vide : mealSeedTemplatesOnce s'en charge, on réessaiera
-      var ids = {}; list.forEach(function(t) { ids[t.id] = true; });
-      var added = 0;
-      window.MEALPLAN_EXTRA_TEMPLATES.forEach(function(t) {
-        if (ids[t.id]) return;
-        var c = JSON.parse(JSON.stringify(t)); c.updatedAt = new Date().toISOString();
-        list.push(c); added++;
-      });
-      if (added) saveMealPlanTemplates(list);
-      localStorage.setItem('sfm2_mealplan_extra_v1', '1');
-    } catch (e) {}
-  }
-  function mealSeedTemplatesOnce() {
+  function mealAddExtraTemplatesOnce() { try {
+ // v2 : suivi plan par plan (l'ancien repère global « sfm2_mealplan_extra_v1 », déjà posé et
+ // synchronisé dans le cloud par une version précédente, empêchait tout nouveau modèle d'arriver).
+ // Chaque modèle supplémentaire est proposé UNE fois ; si tu le supprimes ensuite, il ne revient pas.
+ if (!window.MEALPLAN_EXTRA_TEMPLATES || !window.MEALPLAN_EXTRA_TEMPLATES.length) return;
+ var list = getMealPlanTemplates(); if (!list.length) return;
+ var seen = []; try { seen = JSON.parse(localStorage.getItem('sfm2_mealplan_extra_seen_v2') || '[]') || []; } catch (e) { seen = []; }
+ var ids = {}; list.forEach(function(t) { ids[t.id] = true; });
+ var added = 0, seenChanged = false;
+ window.MEALPLAN_EXTRA_TEMPLATES.forEach(function(t) {
+ if (seen.indexOf(t.id) !== -1) return;
+ if (!ids[t.id]) { var c = JSON.parse(JSON.stringify(t)); c.updatedAt = new Date().toISOString(); list.push(c); ids[t.id] = true; added++; }
+ seen.push(t.id); seenChanged = true;
+ });
+ if (added) saveMealPlanTemplates(list);
+ if (seenChanged) localStorage.setItem('sfm2_mealplan_extra_seen_v2', JSON.stringify(seen));
+ } catch (e) {} }
+ function mealSeedTemplatesOnce() {
     // Réamorce automatiquement tant que la bibliothèque est vide : évite qu'un chargement précoce
     // (fichier mealplan_templates_data.js pas encore prêt au tout premier affichage) ne bloque
     // définitivement l'apparition des 5 modèles de base.
@@ -20128,6 +20128,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       keysyncSetMetaTs(rawKey, v.t);
       if (pushBack) setTimeout(function() { try { localStorage.setItem(rawKey, val); } catch (e2) {} }, 80);
       if (rawKey === 'sfm2_bilan_data') { try { renderToday(); renderHistory(); } catch (e3) {} }
+ if (rawKey === 'sfm2_mealplan_templates_v1' || rawKey === 'sfm2_mealplan_extra_seen_v2') { setTimeout(function() { try { if (document.getElementById('mealPlanTemplatesContent')) renderMealPlanTemplates(); } catch (e6) {} }, 150); }
       if (rawKey === 'sfm2_custom_logos') { try { renderCustomLogos(); } catch (e4) {} }
       if (rawKey === 'sfm_asso_saved_docs_v1') { try { renderAssoSavedDocsList(); } catch (e5) {} }
     } catch (e) {
