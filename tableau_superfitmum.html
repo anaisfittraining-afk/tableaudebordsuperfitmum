@@ -22160,7 +22160,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (!window.confirm('Rejeter cette demande ? Elle ne sera enregistrée nulle part.')) return;
     var dRej = DASH_PENDING_RESA[id];
     if (dRej && dRej.type === 'guidance' && dRej.creneauDate && dRej.creneauHeure) { try { dashFbDB.ref('acquisition/appels/' + dRej.creneauDate + '_' + dRej.creneauHeure.replace(':', '')).remove(); } catch (e) {} }
-    if (dRej && dRej.leadId) { try { dashFbDB.ref('acquisition/leads/' + dRej.leadId).update({ status: 'perdu' }); } catch (e) {} }
+    if (dRej && dRej.leadId) { try { acqMeetDelete(dRej.leadId, (ACQ_LEADS[dRej.leadId] || {}).meetEventId); } catch (e) {} try { dashFbDB.ref('acquisition/leads/' + dRej.leadId).update({ status: 'perdu' }); } catch (e) {} }
     dashFbDB.ref('reservations/pendingValidations/' + id).remove().catch(function() {});
   }
   // Adhérente Desvres créée/complétée à partir d'une demande en attente — rapproche par email pour ne
@@ -25322,7 +25322,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function acqSaveNote(id, v) { dashFbDB.ref('acquisition/leads/' + id).update({ notes: v }).then(function() { showToast('📝 Note enregistrée'); }); }
   function acqDeleteLead(id) {
     if (!window.confirm('Supprimer définitivement cette prospecte ? (Elle ne pourra pas être récupérée.)')) return;
-    dashFbDB.ref('acquisition/leads/' + id).remove().then(function() { showToast('Prospecte supprimée'); });
+    try { acqMeetDelete(id, (ACQ_LEADS[id] || {}).meetEventId); } catch (e) {}
+ dashFbDB.ref('acquisition/leads/' + id).remove().then(function() { showToast('Prospecte supprimée'); });
   }
   function acqExportCsv() {
     var rows = [['Date', 'Nom', 'Email', 'Téléphone', 'Tunnel', 'Formule', 'Prix', 'Créneau', 'Statut', 'Source', 'Notes', 'Suivi', 'Dernier contact', 'Nb contacts', 'Rappel le']];
@@ -26432,6 +26433,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   function acqRejectProspect(id) {
     var d = ACQ_LEADS[id]; if (!d || !dashFbDB) return; var sl = acqLeadSlot(d);
     if (!window.confirm('Rejeter ' + (d.nom || 'cette personne') + ' ? ' + (sl ? 'Son créneau sera libéré.' : ''))) return;
+ acqMeetDelete(id, d.meetEventId);
     if (sl && (sl.kind === 'attente' || (sl.kind === 'rdv' && d.paiement !== 'paye'))) { try { dashFbDB.ref('acquisition/appels/' + sl.date + '_' + String(sl.heure).replace(':', '')).remove(); } catch (e) {} }
     dashFbDB.ref('acquisition/leads/' + id).update({ status: 'perdu', updatedAt: new Date().toISOString() });
   }
@@ -26440,7 +26442,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var d = ACQ_LEADS[id]; if (!d || !dashFbDB) return; var sl = acqLeadSlot(d);
     if (!window.confirm('Annuler la réservation de ' + (d.nom || 'cette personne') + (sl ? ' (' + acqSlotLabel(sl) + ')' : '') + ' et libérer le créneau ?\n\nSi elle a payé, pense à la rembourser directement dans Stripe.')) return;
     if (sl) { try { dashFbDB.ref('acquisition/appels/' + sl.date + '_' + String(sl.heure).replace(':', '')).remove(); } catch (e) {} }
-    dashFbDB.ref('acquisition/leads/' + id).update({ status: 'perdu', annuleAt: new Date().toISOString(), annuleCreneau: sl ? sl.date + ' ' + sl.heure : null, vu: true, updatedAt: new Date().toISOString() });
+    acqMeetDelete(id, d.meetEventId);
+ dashFbDB.ref('acquisition/leads/' + id).update({ status: 'perdu', annuleAt: new Date().toISOString(), annuleCreneau: sl ? sl.date + ' ' + sl.heure : null, vu: true, updatedAt: new Date().toISOString() });
     showToast('✅ Réservation annulée : le créneau est de nouveau disponible');
   }
   function acqHomeCard(d, infoHtml, btnsHtml, border) {
@@ -26990,7 +26993,15 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   // ── Bouton « ajouter à mon agenda » pour les appels réservés ──
   // 🎥 Lien Google Meet propre à chaque rendez-vous (créé par ton application Google « Apps Script », voir E-mails automatiques)
-  function acqMeetPost(d, id) {
+  // Supprime dans Google Agenda l'événement (et son lien Meet) d'un rendez-vous annulé / rejeté / supprimé.
+ // Sans effet (et sans erreur) si l'application Google n'est pas branchée ou pas encore mise à jour.
+ function acqMeetDelete(leadId, eventId) {
+ var c = ACQ_MAIL.meet || {};
+ if (!c.url || !leadId) return Promise.resolve(false);
+ return fetch(c.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ secret: c.secret || '', action: 'supprimer', leadId: String(leadId), eventId: eventId || '' }) })
+ .then(function(r) { return r.json(); }).then(function(j) { return !!(j && j.ok); }).catch(function() { return false; });
+ }
+ function acqMeetPost(d, id) {
     var c = ACQ_MAIL.meet || {};
     if (!c.url) return Promise.reject(new Error('Application Google non branchée (E-mails automatiques)'));
     var f = ACQ_FUNNELS[d.funnel] || ACQ_DEFAULT_FUNNELS[d.funnel] || {};
