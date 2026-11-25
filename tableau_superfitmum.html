@@ -1490,7 +1490,7 @@ window.EXERCISE_LIBRARY = [
   <div class="nav-tab" data-mode="pro" data-view="monprojet" onclick="showView('monprojet', this)"><span class="nav-tab-ic">🗂️</span><span class="nav-tab-lb">Mon projet</span></div>
   <div class="nav-tab" data-mode="pro" data-view="association" onclick="showView('association', this)"><span class="nav-tab-ic">🏛️</span><span class="nav-tab-lb">Association</span></div>
   <div class="nav-tab" data-mode="pro" data-view="formations" onclick="showView('formations', this)"><span class="nav-tab-ic">🎓</span><span class="nav-tab-lb">Formation</span></div>
-  <div class="nav-tab" data-mode="pro" data-view="acces" onclick="showView('acces', this)"><span class="nav-tab-ic">🛡️</span><span class="nav-tab-lb">Accès</span></div>
+  <div class="nav-tab" data-mode="pro" data-view="acces" onclick="showView('acces', this)"><span class="nav-tab-ic">👥</span><span class="nav-tab-lb">Équipe</span></div>
   <div class="nav-tab" data-mode="perso" data-view="admin_perso" onclick="showView('admin_perso', this)"><span class="nav-tab-ic">🧾</span><span class="nav-tab-lb">Administratif</span></div>
   <div class="nav-tab" data-mode="perso" data-view="raccourcis_perso" onclick="showView('raccourcis_perso', this)"><span class="nav-tab-ic">🔗</span><span class="nav-tab-lb">Raccourcis</span></div>
   <div class="nav-tab" data-mode="perso" data-view="coffre_perso" onclick="showView('coffre_perso', this)"><span class="nav-tab-ic">🔐</span><span class="nav-tab-lb">Coffre-fort</span></div>
@@ -1564,7 +1564,7 @@ window.EXERCISE_LIBRARY = [
       </div>
       <div class="home-tile" data-mode="pro" onclick="showView('acces', document.querySelector('.nav-tab[data-view=acces]'))">
         <div class="home-tile-ico" style="background:#F3E4E4;color:#9b2c2c;">🛡️</div>
-        <div><div class="home-tile-label">Accès assistante</div><div class="home-tile-sub">Choisis ce qu'elle voit et modifie</div></div>
+        <div><div class="home-tile-label">Équipe</div><div class="home-tile-sub">Ajoute ton équipe et choisis ce que chacun voit</div></div>
       </div>
       <div class="home-tile" data-mode="pro" onclick="showView('coffre_pro', document.querySelector('.nav-tab[data-view=coffre_pro]'))">
         <div class="home-tile-ico" style="background:#E4EFE3;color:#2F5A3A;">🔐</div>
@@ -3261,7 +3261,7 @@ window.EXERCISE_LIBRARY = [
   </div>
 
   <div class="view" id="view-acces">
-    <div class="section-title" style="margin-bottom:6px"><h2>🛡️ Accès assistante</h2></div>
+    <div class="section-title" style="margin-bottom:6px"><h2>👥 Équipe</h2></div>
     <div id="accHost"></div>
   </div>
 
@@ -33231,16 +33231,25 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
   var VIEWS=[
     ['raccourcis','🔗','Raccourcis pros'],['daily_overview','📅','Aujourd\'hui (agenda, bilans)'],['grand_chantier','🧱','Grand chantier'],
     ['pole_marketing','📣','Marketing'],['pole_acquisition','🎯','Acquisition'],['pole_vente','📞','Vente'],['pole_livraison','💪','Livraison (suivi clientes)'],
-    ['task_compta','💰','Pôle Admin. (compta)'],['monprojet','🗂️','Mon projet'],['association','🏛️','Association (adhérentes, facturation)'],['formations','🎓','Formation']
+    ['task_compta','💰','Pôle Admin. (compta)'],['monprojet','🗂️','Mon projet'],['association','🏛️','Association (adhérentes, facturation)'],['formations','🎓','Formation'],
+    ['coffre_pro','🔐','Coffre-fort pro (il faut aussi ton mot de passe maître)']
   ];
   var IDS=VIEWS.map(function(v){return v[0];});
-  var enc=new TextEncoder();
+  var enc=new TextEncoder(), OPEN={};
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function b64(buf){var a=new Uint8Array(buf),s='';for(var i=0;i<a.length;i++)s+=String.fromCharCode(a[i]);return btoa(s);}
   function unb64(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
   function toast(m){try{showToast(m);}catch(e){}}
-  function get(){try{var d=JSON.parse(localStorage.getItem(SKEY)||'null');if(d&&typeof d==='object')return d;}catch(e){}return {enabled:false,code:null,perms:{}};}
+  function uid(){return 'm'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+  // Format : { enabled, code (propriétaire), members:[{id,name,code,perms}] }. Ancien format (un seul code assistante) migré une fois.
+  function get(){
+    try{var d=JSON.parse(localStorage.getItem(SKEY)||'null');
+      if(d&&typeof d==='object'){
+        if(!Array.isArray(d.members)){d.members=[];if(d.acode)d.members.push({id:'assistante',name:'Assistante',code:d.acode,perms:d.perms||{}});delete d.acode;delete d.perms;try{localStorage.setItem(SKEY,JSON.stringify(d));}catch(e){}}
+        return d;}}catch(e){}
+    return {enabled:false,code:null,members:[]};}
   function save(d){localStorage.setItem(SKEY,JSON.stringify(d));}
+  function member(id){var m=get().members||[];for(var i=0;i<m.length;i++)if(m[i].id===id)return m[i];return null;}
   function device(){try{return JSON.parse(localStorage.getItem(DKEY)||'{}')||{};}catch(e){return {};}}
   function sget(){try{return sessionStorage.getItem(RKEY);}catch(e){return null;}}
   function sset(v){try{if(v)sessionStorage.setItem(RKEY,v);else sessionStorage.removeItem(RKEY);}catch(e){}}
@@ -33249,17 +33258,18 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     var bits=await crypto.subtle.deriveBits({name:'PBKDF2',salt:salt,iterations:iter,hash:'SHA-256'},base,256);
     return b64(bits);
   }
-  async function checkCode(code,which){var d=get(),c=which==='assistant'?d.acode:d.code;if(!c)return false;return (await hash(code,unb64(c.salt),c.iter))===c.hash;}
+  async function checkCode(code,which){var d=get(),c=(which==='owner')?d.code:((member(which)||{}).code);if(!c)return false;return (await hash(code,unb64(c.salt),c.iter))===c.hash;}
+  function ready(d){return !!(d.enabled&&d.code&&(d.members||[]).some(function(m){return m.code;}));}
   function role(){
-    var d=get();if(!d.enabled||!d.code||!d.acode)return 'owner';
-    var s=sget();if(s==='owner'||s==='assistant')return s;
-    if(device().owner)return 'owner';
-    if(device().assistant)return 'assistant';
+    var d=get();if(!ready(d))return 'owner';
+    var s=sget();if(s==='owner')return s;if(s&&s.indexOf('m:')===0&&member(s.slice(2)))return s;
+    var dv=device();if(dv.owner)return 'owner';if(dv.member&&member(dv.member))return 'm:'+dv.member;
     return null; // pas encore choisi → portail
   }
-  function perm(id){var p=(get().perms||{})[id];return (p==='read'||p==='edit')?p:'none';}
+  function isR(r){return !!r&&r!=='owner';}
+  function perm(id,mid){var m=member(mid||String(role()||'').slice(2)),p=((m&&m.perms)||{})[id];return (p==='read'||p==='edit')?p:'none';}
   function allowed(id){
-    var r=role();if(r==='owner')return true;if(r!=='assistant')return false;
+    var r=role();if(r==='owner')return true;if(!isR(r))return false;
     return id==='accueil'||(IDS.indexOf(id)>=0&&perm(id)!=='none');
   }
   function curView(){var a=document.querySelector('.view.active');return a?a.id.replace('view-',''):'accueil';}
@@ -33270,27 +33280,29 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     var g=document.getElementById('accGate');if(g&&g.getAttribute('data-m')===mode)return;removeGate();
     g=document.createElement('div');g.id='accGate';g.className='acc-gate';g.setAttribute('data-m',mode||'choose');
     var h='<div class="acc-gate-box"><div style="font-size:38px">🛡️</div>';
-    if(mode==='owner'||mode==='assist'){
-      var ow=(mode==='owner');
-      h+='<h2>'+(ow?'Code propriétaire':'Code de l\'assistante')+'</h2><p>'+(ow?'Entre ton code pour retrouver l\'accès complet.':'Entre ton code personnel pour ouvrir le tableau de bord.')+'</p><input class="cf-in" type="password" id="accCode" placeholder="'+(ow?'Code propriétaire':'Ton code personnel')+'" autocomplete="off"><label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:#3E4A3A;margin:2px 0 10px;text-align:left"><input type="checkbox" id="accRem"> Rester connectée sur cet appareil</label><button class="cf-btn" style="width:100%" onclick="accSubmit(\''+mode+'\')">Entrer</button><div class="cf-err" id="accErr"></div><p style="margin:10px 0 0"><a href="#" onclick="accGateBack();return false" style="color:#66735F;font-size:12.5px">← Retour</a></p>';
+    if(mode==='owner'||(mode&&mode.indexOf('m:')===0)){
+      var ow=(mode==='owner'),mm=ow?null:member(mode.slice(2));
+      h+='<h2>'+(ow?'Code propriétaire':'Code de '+esc(mm?mm.name:'l\'équipe'))+'</h2><p>'+(ow?'Entre ton code pour retrouver l\'accès complet.':'Entre ton code personnel pour ouvrir le tableau de bord.')+'</p><input class="cf-in" type="password" id="accCode" placeholder="'+(ow?'Code propriétaire':'Ton code personnel')+'" autocomplete="off"><label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:#3E4A3A;margin:2px 0 10px;text-align:left"><input type="checkbox" id="accRem"> Rester connecté(e) sur cet appareil</label><button class="cf-btn" style="width:100%" onclick="accSubmit(\''+mode+'\')">Entrer</button><div class="cf-err" id="accErr"></div><p style="margin:10px 0 0"><a href="#" onclick="accGateBack();return false" style="color:#66735F;font-size:12.5px">← Retour</a></p>';
     }else{
-      h+='<h2>Qui utilise le tableau de bord ?</h2><p>Choisis ton profil.</p><button class="acc-choice" onclick="showGate_assist()"><b>👩‍💼 Je suis l\'assistante</b><span>Accès aux espaces qu\'Anaïs a partagés, avec mon code personnel</span></button><button class="acc-choice" onclick="showGate_owner()"><b>🔑 Je suis Anaïs</b><span>Accès complet avec mon code</span></button><p style="font-size:11.5px;margin:6px 0 0">Code oublié ? Demande à Anaïs (ou à Claude pour Anaïs).</p>';
+      h+='<h2>Qui utilise le tableau de bord ?</h2><p>Choisis ton profil.</p>'+
+        (get().members||[]).filter(function(m){return m.code;}).map(function(m){return '<button class="acc-choice" onclick="showGate_member(\''+m.id+'\')"><b>👤 Je suis '+esc(m.name)+'</b><span>Accès aux espaces qu\'Anaïs a partagés, avec mon code personnel</span></button>';}).join('')+
+        '<button class="acc-choice" onclick="showGate_owner()"><b>🔑 Je suis Anaïs</b><span>Accès complet avec mon code</span></button><p style="font-size:11.5px;margin:6px 0 0">Code oublié ? Demande à Anaïs (ou à Claude pour Anaïs).</p>';
     }
     g.innerHTML=h+'</div>';document.body.appendChild(g);
-    var c=document.getElementById('accCode');if(c){setTimeout(function(){c.focus();},30);c.addEventListener('keydown',function(e){if(e.key==='Enter')window.accSubmitOwner();});}
+    var c=document.getElementById('accCode');if(c){setTimeout(function(){c.focus();},30);c.addEventListener('keydown',function(e){if(e.key==='Enter')window.accSubmit(mode);});}
   }
   window.showGate_owner=function(){showGate('owner');};
-  window.showGate_assist=function(){showGate('assist');};
+  window.showGate_member=function(id){showGate('m:'+id);};
   window.accGateBack=function(){showGate('choose');};
     var tries=0,until=0;
   window.accSubmitOwner=function(){window.accSubmit('owner');};
   window.accSubmit=async function(which){
     var er=document.getElementById('accErr'),c=document.getElementById('accCode');if(!c)return;
     if(Date.now()<until){er.textContent='Patiente '+Math.ceil((until-Date.now())/1000)+' s.';return;}
-    var ok=false;try{ok=await checkCode(c.value,which==='owner'?'owner':'assistant');}catch(e){}
-    if(ok){tries=0;sset(which==='owner'?'owner':'assistant');
-      if(document.getElementById('accRem').checked){try{var dv=device();if(which==='owner')dv.owner=true;else dv.assistant=true;localStorage.setItem(DKEY,JSON.stringify(dv));}catch(e){}}
-      removeGate();enforce(true);toast(which==='owner'?'🔑 Accès complet':'👩‍💼 Bienvenue');}
+    var ok=false;try{ok=await checkCode(c.value,which==='owner'?'owner':String(which).slice(2));}catch(e){}
+    if(ok){tries=0;sset(which);
+      if(document.getElementById('accRem').checked){try{var dv=device();delete dv.owner;delete dv.member;if(which==='owner')dv.owner=true;else dv.member=String(which).slice(2);localStorage.setItem(DKEY,JSON.stringify(dv));}catch(e){}}
+      removeGate();enforce(true);toast(which==='owner'?'🔑 Accès complet':'👋 Bienvenue');}
     else{tries++;until=Date.now()+Math.min(30000,1000*Math.pow(2,tries));er.textContent='Code incorrect.';c.value='';}
   };
   window.accLogout=function(){sset(null);try{localStorage.removeItem(DKEY);}catch(e){}location.reload();};
@@ -33299,7 +33311,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
   // ── Habillage selon le profil ──
   function viewOfEl(el){var m=(el.getAttribute('onclick')||'').match(/showView\('(\w+)'/);return m?m[1]:null;}
   function chrome(){
-    var r=role(),assist=(r==='assistant');
+    var r=role(),assist=isR(r);
     document.body.classList.toggle('acc-assist',assist);
     document.querySelectorAll('.nav-tab[data-view]').forEach(function(t){var id=t.getAttribute('data-view');t.classList.toggle('acc-hide',!allowed(id)&&id!=='accueil'&&assist);});
     document.querySelectorAll('.home-tile').forEach(function(t){var id=viewOfEl(t);t.classList.toggle('acc-hide',!!(assist&&id&&!allowed(id)));});
@@ -33308,15 +33320,14 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
       document.querySelectorAll('.home-tile[data-mode="perso"]').forEach(function(t){t.classList.add('acc-hide');});
       try{localStorage.getItem('sfm_dashboard_mode_v1')==='perso'&&window.setDashboardMode('pro');}catch(e){}
     }
-    // le banner est dans <body> au début : on le place avant l'en-tête
     var b=document.getElementById('accBanner'),hd=document.querySelector('header');if(b&&hd&&b.nextElementSibling!==hd&&b.parentNode===document.body){document.body.insertBefore(b,hd);}
     after(curView());
   }
   function after(id){
-    var assist=role()==='assistant',ro=assist&&IDS.indexOf(id)>=0&&perm(id)==='read';
+    var assist=isR(role()),ro=assist&&IDS.indexOf(id)>=0&&perm(id)==='read';
     document.body.classList.toggle('acc-ro',!!ro);
-    var t=document.getElementById('accBannerTxt');
-    if(t)t.textContent=assist?('👩‍💼 Mode assistante — Perso et coffre-fort masqués'+(ro?' · 👁 Cet espace est en LECTURE SEULE':'')):'';
+    var t=document.getElementById('accBannerTxt'),m=assist?member(String(role()).slice(2)):null;
+    if(t)t.textContent=assist?('👤 '+(m?m.name:'Équipe')+' — Perso et coffre-fort perso masqués'+(ro?' · 👁 Cet espace est en LECTURE SEULE':'')):'';
     if(ro){applyRO();observe();}else{clearRO();}
     guard();
   }
@@ -33372,57 +33383,75 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
   // ── Orchestration ──
   function enforce(force){
     var d=get(),r=role();
-    if(d.enabled&&d.code&&d.acode&&!r){if(!document.getElementById('accGate'))showGate('choose');return;}
-    var gg=document.getElementById('accGate');if(r&&gg&&!force&&!(r==='assistant'&&gg.getAttribute('data-m')==='owner')){removeGate();}
+    if(ready(d)&&!r){if(!document.getElementById('accGate'))showGate('choose');return;}
+    var gg=document.getElementById('accGate');if(r&&gg&&!force&&!(isR(r)&&gg.getAttribute('data-m')==='owner')){removeGate();}
     chrome();
-    if(r==='assistant'&&!allowed(curView())){try{window.showView('accueil',document.querySelector('.nav-tab[data-view=accueil]'));}catch(e){}}
+    if(isR(r)&&!allowed(curView())){try{window.showView('accueil',document.querySelector('.nav-tab[data-view=accueil]'));}catch(e){}}
   }
-  // enveloppes des fonctions de navigation
   var oShow=window.showView;
   window.showView=function(id,tab){
-    if(role()==='assistant'&&id!=='accueil'&&!allowed(id)){toast('🚫 Cet espace n\'est pas partagé avec toi.');id='accueil';tab=document.querySelector('.nav-tab[data-view=accueil]');}
+    if(isR(role())&&id!=='accueil'&&!allowed(id)){toast('🚫 Cet espace n\'est pas partagé avec toi.');id='accueil';tab=document.querySelector('.nav-tab[data-view=accueil]');}
     var r=oShow.call(this,id,tab);
     after(id);
     if(id==='acces')render();
     return r;
   };
   var oFilter=window.filterNavTabsByMode;
-  if(oFilter)window.filterNavTabsByMode=function(m){var x=oFilter.call(this,role()==='assistant'?'pro':m);chrome();return x;};
+  if(oFilter)window.filterNavTabsByMode=function(m){var x=oFilter.call(this,isR(role())?'pro':m);chrome();return x;};
   var oMode=window.setDashboardMode;
-  if(oMode)window.setDashboardMode=function(m){var x=oMode.call(this,role()==='assistant'?'pro':m);chrome();return x;};
+  if(oMode)window.setDashboardMode=function(m){var x=oMode.call(this,isR(role())?'pro':m);chrome();return x;};
 
-  // ── Panneau propriétaire ──
+  // ── Panneau « Équipe » (propriétaire) ──
+  function codeBox(w,label,ok){
+    return '<div class="cf-stack"><div style="font-size:13px;font-weight:700">'+label+' '+(ok?'<span class="cf-chip ok">défini</span>':'<span class="cf-chip todo">à définir</span>')+'</div><input class="cf-in" type="password" id="accN_'+w+'" placeholder="'+(ok?'Nouveau code':'Code')+'" autocomplete="new-password"><input class="cf-in" type="password" id="accN2_'+w+'" placeholder="Confirme" autocomplete="new-password"><button class="cf-btn sm" onclick="accSetCode(\''+w+'\')">'+(ok?'Changer le code':'Enregistrer le code')+'</button><div class="cf-err" id="accSetErr_'+w+'"></div></div>';
+  }
+  function memberBox(m){
+    var n=0;IDS.forEach(function(id){if(perm(id,m.id)!=='none')n++;});
+    var o='<details class="cf-box" style="margin-bottom:10px" '+(OPEN[m.id]?'open ':'')+'ontoggle="accOpen(\''+m.id+'\',this.open)"><summary style="cursor:pointer;font-weight:700">👤 '+esc(m.name)+' <span class="cf-chip '+(m.code?'ok':'todo')+'">'+(m.code?'code défini':'code à définir')+'</span> <span class="cf-chip orph">'+n+' espace'+(n>1?'s':'')+' partagé'+(n>1?'s':'')+'</span></summary><div style="margin-top:10px">';
+    o+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><input class="cf-in" style="max-width:260px;margin:0" value="'+esc(m.name)+'" aria-label="Nom" onchange="accRename(\''+m.id+'\',this.value)"><button class="cf-btn sec sm" onclick="accPreview(\''+m.id+'\')">👁 Voir comme '+esc(m.name)+'</button><button class="cf-btn dng sm" onclick="accDelMember(\''+m.id+'\')">Supprimer</button></div>';
+    o+=codeBox(m.id,'Code personnel de '+esc(m.name),!!m.code);
+    o+='<p class="cf-note" style="margin:12px 0 6px">Ce que '+esc(m.name)+' peut voir (tout est masqué par défaut, enregistré tout de suite) :</p><div class="acc-scroll"><table class="acc-tbl">';
+    VIEWS.forEach(function(v){var p=perm(v[0],m.id);o+='<tr><td>'+v[1]+' '+esc(v[2])+'</td><td style="text-align:right"><span class="acc-seg">'+
+      [['none','🚫 Masqué'],['read','👁 Lecture seule'],['edit','✏️ Modification']].map(function(x){return '<label class="'+x[0]+(p===x[0]?' on':'')+'"><input type="radio" name="accp_'+m.id+'_'+v[0]+'" value="'+x[0]+'" onchange="accSetPerm(\''+m.id+'\',\''+v[0]+'\',\''+x[0]+'\')"'+(p===x[0]?' checked':'')+'>'+x[1]+'</label>';}).join('')+'</span></td></tr>';});
+    o+='<tr><td>🏡 Espace Perso · 🔐 Coffre-fort perso · 🛡️ cet onglet</td><td style="text-align:right"><span class="cf-chip orph">Toujours masqués</span></td></tr></table></div></div></details>';
+    return o;
+  }
   function render(){
     var h=document.getElementById('accHost');if(!h)return;
     if(role()!=='owner'){h.innerHTML='';return;}
-    var d=get(),has=!!(d.code&&d.acode);
-    var o='<div class="cf-wrap"><p class="cf-intro">Donne la main sur ton tableau de bord à ton assistante : <b>ton espace Perso et les coffres-forts ne lui sont jamais accessibles</b>, et tu choisis pour chaque onglet Pro : masqué, lecture seule ou modification.</p>';
-    o+='<div class="cf-box" style="margin-bottom:14px"><b>1. Les deux codes</b><p class="cf-note" style="margin:4px 0 10px">Ton code te donne l\'accès complet. Le code de ton assistante lui donne uniquement les espaces que tu partages. Choisis-les différents (6 caractères minimum).</p>'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">'+
-      ['owner','assist'].map(function(w){var ow=w==='owner',ok=ow?!!d.code:!!d.acode;return '<div class="cf-stack"><div style="font-size:13px;font-weight:700">'+(ow?'🔑 Ton code propriétaire':'👩‍💼 Code personnel de l\'assistante')+' '+(ok?'<span class="cf-chip ok">défini</span>':'<span class="cf-chip todo">à définir</span>')+'</div><input class="cf-in" type="password" id="accN_'+w+'" placeholder="'+(ok?'Nouveau code':'Code')+'" autocomplete="new-password"><input class="cf-in" type="password" id="accN2_'+w+'" placeholder="Confirme" autocomplete="new-password"><button class="cf-btn sm" onclick="accSetCode(\''+w+'\')">'+(ok?'Changer le code':'Enregistrer le code')+'</button><div class="cf-err" id="accSetErr_'+w+'"></div></div>';}).join('')+'</div></div>';
-    o+='<div class="cf-box" style="margin-bottom:14px"><b>2. Ce que ton assistante peut voir</b><p class="cf-note" style="margin:4px 0 8px">Tout est masqué par défaut. Les changements sont enregistrés tout de suite.</p><div class="acc-scroll"><table class="acc-tbl">';
-    VIEWS.forEach(function(v){var p=perm(v[0]);o+='<tr><td>'+v[1]+' '+esc(v[2])+'</td><td style="text-align:right"><span class="acc-seg">'+
-      [['none','🚫 Masqué'],['read','👁 Lecture seule'],['edit','✏️ Modification']].map(function(x){return '<label class="'+x[0]+(p===x[0]?' on':'')+'"><input type="radio" name="accp_'+v[0]+'" value="'+x[0]+'" onchange="accSetPerm(\''+v[0]+'\',\''+x[0]+'\')"'+(p===x[0]?' checked':'')+'>'+x[1]+'</label>';}).join('')+'</span></td></tr>';});
-    o+='<tr><td>🏡 Espace Perso · 🔐 Coffres-forts · 🛡️ cet onglet</td><td style="text-align:right"><span class="cf-chip orph">Toujours masqués</span></td></tr></table></div></div>';
-    o+='<div class="cf-box"><b>3. Activer</b><p class="cf-note" style="margin:4px 0 10px">'+(d.enabled?'✅ La protection est <b>active</b> : à chaque ouverture, le tableau de bord demande « Je suis l\'assistante » ou « Je suis Anaïs (code) ».':'Quand c\'est activé, chaque appareil qui ouvre le tableau de bord doit choisir son profil.')+'</p><div style="display:flex;gap:8px;flex-wrap:wrap">'+
-      (d.enabled?'<button class="cf-btn sec" onclick="accPreview()">👩‍💼 Voir comme l\'assistante</button><button class="cf-btn dng" onclick="accToggle(false)">Désactiver la protection</button>':'<button class="cf-btn" '+(has?'':'disabled title="Définis d\'abord les deux codes"')+' onclick="accToggle(true)">Activer la protection</button>')+
+    var d=get(),ms=d.members||[],has=!!(d.code&&ms.some(function(m){return m.code;}));
+    var o='<div class="cf-wrap"><p class="cf-intro">Ajoute autant de personnes que tu veux à ton équipe (assistante, closeuse, comptable…). <b>Ton espace Perso et ton coffre-fort perso ne leur sont jamais accessibles</b>. Pour chacune, tu choisis par onglet : masqué, lecture seule ou modification. Le coffre-fort pro peut être partagé, mais il reste protégé par ton mot de passe maître.</p>';
+    o+='<div class="cf-box" style="margin-bottom:14px"><b>1. Ton code</b><p class="cf-note" style="margin:4px 0 10px">Il te donne l\'accès complet (6 caractères minimum).</p>'+codeBox('owner','🔑 Ton code propriétaire',!!d.code)+'</div>';
+    o+='<div class="cf-box" style="margin-bottom:14px"><b>2. Mon équipe</b><p class="cf-note" style="margin:4px 0 10px">Chaque personne a son code personnel et ses propres accès.</p>'+
+      (ms.length?ms.map(memberBox).join(''):'<p class="cf-note">Personne pour l\'instant.</p>')+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><input class="cf-in" style="max-width:300px;margin:0" id="accNewName" placeholder="Prénom (ex : Lucie, closeuse)" autocomplete="off"><button class="cf-btn" onclick="accAddMember()">➕ Ajouter une personne</button></div><div class="cf-err" id="accAddErr"></div></div>';
+    o+='<div class="cf-box"><b>3. Activer</b><p class="cf-note" style="margin:4px 0 10px">'+(d.enabled?'✅ La protection est <b>active</b> : à chaque ouverture, le tableau de bord demande qui tu es (une personne de l\'équipe ou toi avec ton code).':'Quand c\'est activé, chaque appareil qui ouvre le tableau de bord doit choisir son profil.')+'</p><div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      (d.enabled?'<button class="cf-btn dng" onclick="accToggle(false)">Désactiver la protection</button>':'<button class="cf-btn" '+(has?'':'disabled title="Définis ton code et celui d\'au moins une personne"')+' onclick="accToggle(true)">Activer la protection</button>')+
       '</div><div class="cf-err" id="accTogErr"></div></div>';
-    o+='<p class="cf-note" style="margin-top:14px">⚠️ À savoir : cette protection masque et verrouille les écrans, ce qui suffit à éviter les erreurs et la curiosité. Elle ne remplace pas un vrai cloisonnement : pour une confidentialité totale, ton assistante devrait utiliser son propre navigateur/profil, et les mots de passe doivent rester dans le coffre-fort (chiffré par ton mot de passe maître).</p></div>';
+    o+='<p class="cf-note" style="margin-top:14px">⚠️ À savoir : cette protection masque et verrouille les écrans, ce qui suffit à éviter les erreurs et la curiosité. Elle ne remplace pas un vrai cloisonnement : pour une confidentialité totale, chaque personne devrait utiliser son propre navigateur/profil, et les mots de passe doivent rester dans le coffre-fort (chiffré par ton mot de passe maître).</p></div>';
     h.innerHTML=o;
   }
+  window.accOpen=function(id,on){if(on)OPEN[id]=1;else delete OPEN[id];};
+  window.accAddMember=function(){
+    var i=document.getElementById('accNewName'),er=document.getElementById('accAddErr'),n=(i&&i.value||'').trim();
+    if(!n){er.textContent='Indique un prénom.';return;}
+    var d=get();d.members=d.members||[];var id=uid();d.members.push({id:id,name:n.slice(0,40),code:null,perms:{}});save(d);OPEN[id]=1;toast('👤 '+n+' ajoutée : définis son code');render();
+  };
+  window.accRename=function(id,v){var d=get();(d.members||[]).forEach(function(m){if(m.id===id&&String(v).trim())m.name=String(v).trim().slice(0,40);});save(d);render();};
+  window.accDelMember=function(id){var m=member(id);if(!m||!confirm('Supprimer '+m.name+' de l\'équipe ? Son code ne fonctionnera plus.'))return;var d=get();d.members=(d.members||[]).filter(function(x){return x.id!==id;});if(!d.members.some(function(x){return x.code;}))d.enabled=false;save(d);toast('Supprimée');render();};
   window.accSetCode=async function(w){
     var a=document.getElementById('accN_'+w).value,b=document.getElementById('accN2_'+w).value,er=document.getElementById('accSetErr_'+w);
     if(a.length<6){er.textContent='6 caractères minimum.';return;}if(a!==b){er.textContent='Les deux codes diffèrent.';return;}
-    var d=get();
-    var other=await checkCode(a,w==='owner'?'assistant':'owner');if(other){er.textContent='Choisis un code différent de l\'autre.';return;}
-    var salt=crypto.getRandomValues(new Uint8Array(16)),it=300000;
-    d[w==='owner'?'code':'acode']={salt:b64(salt),iter:it,hash:await hash(a,salt,it)};save(d);toast('🔑 Code enregistré');render();
+    var d=get(),all=['owner'].concat((d.members||[]).map(function(m){return m.id;})).filter(function(x){return x!==w;});
+    for(var i=0;i<all.length;i++){if(await checkCode(a,all[i])){er.textContent='Choisis un code différent des autres.';return;}}
+    var salt=crypto.getRandomValues(new Uint8Array(16)),it=300000,rec={salt:b64(salt),iter:it,hash:await hash(a,salt,it)};
+    d=get();if(w==='owner')d.code=rec;else(d.members||[]).forEach(function(m){if(m.id===w)m.code=rec;});save(d);toast('🔑 Code enregistré');render();
   };
-  window.accSetPerm=function(id,p){var d=get();d.perms=d.perms||{};d.perms[id]=p;save(d);render();};
-  window.accToggle=function(on){var d=get();if(on&&!(d.code&&d.acode)){document.getElementById('accTogErr').textContent='Définis d\'abord les deux codes.';return;}
+  window.accSetPerm=function(mid,id,p){var d=get();(d.members||[]).forEach(function(m){if(m.id===mid){m.perms=m.perms||{};m.perms[id]=p;}});save(d);render();};
+  window.accToggle=function(on){var d=get();if(on&&!(d.code&&(d.members||[]).some(function(m){return m.code;}))){document.getElementById('accTogErr').textContent='Définis ton code et celui d\'au moins une personne.';return;}
     if(!on&&!confirm('Désactiver la protection ? Tout le monde aura de nouveau accès à tout.'))return;
     d.enabled=!!on;save(d);if(on){sset('owner');}toast(on?'🛡️ Protection activée':'Protection désactivée');render();};
-  window.accPreview=function(){sset('assistant');enforce(true);window.showView('accueil',document.querySelector('.nav-tab[data-view=accueil]'));toast('👩‍💼 Aperçu : voici ce que voit ton assistante');};
+  window.accPreview=function(mid){var m=member(mid);if(!m)return;sset('m:'+mid);enforce(true);window.showView('accueil',document.querySelector('.nav-tab[data-view=accueil]'));toast('👁 Aperçu : voici ce que voit '+m.name+' (clique « Accès Anaïs » pour revenir)');};
 
   window.accRole=role;
   // démarrage
