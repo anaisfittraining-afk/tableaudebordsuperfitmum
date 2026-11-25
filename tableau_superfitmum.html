@@ -1490,6 +1490,7 @@ window.EXERCISE_LIBRARY = [
   <div class="nav-tab" data-mode="pro" data-view="monprojet" onclick="showView('monprojet', this)"><span class="nav-tab-ic">🗂️</span><span class="nav-tab-lb">Mon projet</span></div>
   <div class="nav-tab" data-mode="pro" data-view="association" onclick="showView('association', this)"><span class="nav-tab-ic">🏛️</span><span class="nav-tab-lb">Association</span></div>
   <div class="nav-tab" data-mode="pro" data-view="formations" onclick="showView('formations', this)"><span class="nav-tab-ic">🎓</span><span class="nav-tab-lb">Formation</span></div>
+  <div class="nav-tab" data-mode="pro" data-view="boutique" onclick="showView('boutique', this)"><span class="nav-tab-ic">🛍️</span><span class="nav-tab-lb">Boutique</span></div>
   <div class="nav-tab" data-mode="pro" data-view="acces" onclick="showView('acces', this)"><span class="nav-tab-ic">👥</span><span class="nav-tab-lb">Équipe</span></div>
   <div class="nav-tab" data-mode="perso" data-view="admin_perso" onclick="showView('admin_perso', this)"><span class="nav-tab-ic">🧾</span><span class="nav-tab-lb">Administratif</span></div>
   <div class="nav-tab" data-mode="perso" data-view="raccourcis_perso" onclick="showView('raccourcis_perso', this)"><span class="nav-tab-ic">🔗</span><span class="nav-tab-lb">Raccourcis</span></div>
@@ -3258,6 +3259,12 @@ window.EXERCISE_LIBRARY = [
       <button onclick="addRaccourciFromForm()" style="width:100%;padding:11px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">🔗 Ajouter le raccourci</button>
     </div>
     <div id="raccourcisContent" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px"></div>
+  </div>
+
+  <div class="view" id="view-boutique">
+    <div class="section-title" style="margin-bottom:6px"><h2>🛍️ Boutique co-NAÎTRE</h2></div>
+    <p style="color:#66735F;font-size:14px;margin-bottom:14px;max-width:760px">Ajoute tes produits avec photos, prix et description. Tes clientes les trouvent dans l'onglet « Boutique » des deux applications, remplissent leur panier et paient en ligne. Les commandes arrivent ici.</p>
+    <div id="bqHost"></div>
   </div>
 
   <div class="view" id="view-acces">
@@ -5711,6 +5718,7 @@ window.EXERCISE_LIBRARY = [
     if (id === 'association') setTimeout(renderAssoAdmin, 50);
     if (id === 'evenements') setTimeout(function() { renderEvTrimTab(); dashRencontresFetch(false); renderEvTrimRencontres(); }, 50);
     if (id === 'formations') setTimeout(renderFormations, 50);
+    if (id === 'boutique') setTimeout(function() { if (window.bqInit) bqInit(); }, 50);
   }
 
   // ── PRÉPARATION À L'APPEL (guide à envoyer aux prospectes) ──
@@ -15074,7 +15082,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       var days = startD && !isNaN(startD.getTime()) ? Math.floor((Date.now() - startD.getTime()) / 86400000) : null;
       var open = !!UNLK_OPEN[code], rows = '', nLock = 0, cs = esc(code);
       ME_SECTIONS.forEach(function(def) {
-        if (def.id === 'guidance') return;
+        if (def.id === 'guidance' || def.id === 'rituel') return;
         var sec = UNLK_CFG[def.id] || {}, T = meTreeOf(sec), tabRows = '';
         T.flat.forEach(function(it) {
           var m = it.m, own = m.delai || 0, key = unlkKey(def.id, m.id);
@@ -20052,6 +20060,8 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   KEYSYNC_EXCLUDE[ASSO_ADHERENTS_LAST_APPLIED_KEY] = true;
   KEYSYNC_EXCLUDE[KEYSYNC_META_KEY] = true;
   KEYSYNC_EXCLUDE['sfm_acces_device_v1'] = true;
+  KEYSYNC_EXCLUDE['sfm_dev_id'] = true; KEYSYNC_EXCLUDE['sfm_coach_device'] = true; // propres à chaque appareil
+  KEYSYNC_EXCLUDE['sfm_acces_v1'] = true; KEYSYNC_EXCLUDE['sfm_acces_cloud_t'] = true; // réglages d'équipe : sauvegarde cloud dédiée (dash_team/config)
   KEYSYNC_EXCLUDE[SFMU_URGENT] = true; KEYSYNC_EXCLUDE[SFMU_TRASH] = true; KEYSYNC_EXCLUDE[SFMU_PENDING] = true;
   var keysyncOriginalSetItem = null;
   var keysyncOriginalRemoveItem = null;
@@ -22174,10 +22184,10 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var isFP = d.lieu === 'fitness_park';
     var lieuLabel = d.lieu === 'fitness_park' ? '🏋️ Fitness Park' : (d.lieu === 'en_ligne' ? '💻 100% en ligne' : '📍 Desvres');
     var isGuid = d.type === 'guidance';
-    if (isGuid) lieuLabel = '🃏 ' + (d.offre || 'Guidance');
+    if (isGuid) lieuLabel = (d.funnel === 'rituel' ? '🕊️ ' : '🃏 ') + (d.offre || 'Guidance');
     var out = '<div class="client-card">';
     out += '<div class="client-card-header">';
-    out += '<div class="avatar" style="background:#3F5D46">' + (isGuid ? '🃏' : '🆕') + '</div>';
+    out += '<div class="avatar" style="background:#3F5D46">' + (isGuid ? (d.funnel === 'rituel' ? '🕊️' : '🃏') : '🆕') + '</div>';
     out += '<div class="client-info">';
     out += '<div class="client-name">' + esc(d.nom || 'Sans nom') + ' — ' + lieuLabel + '</div>';
     out += '<div class="client-meta"><span>' + esc(d.email || '') + (d.telephone ? (' · ' + esc(d.telephone)) : '') + '</span></div>';
@@ -23563,10 +23573,11 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     { id: 'phase2', label: 'Phase 2 : reconstruire son identité', short: 'Phase 2' },
     { id: 'phase3', label: 'Phase 3 : transformer la dynamique familiale', short: 'Phase 3' },
     { id: 'ressources', label: 'Ressources', short: 'Ressources' },
-    { id: 'guidance', label: 'Réserve ta guidance', short: 'Guidance' }
+    { id: 'guidance', label: 'Réserve ta guidance', short: 'Guidance' },
+    { id: 'rituel', label: 'Rituel de libération', short: 'Rituel' }
   ];
   var ME_CFG = {}, ME_SEL = 'phase1', ME_LISTENING = false, ME_EDIT_MOD = null, ME_PHOTO_CACHE = {};
-  var ME_DEF_ICON = { phase1: '🌱', phase2: '🦋', phase3: '🌀', ressources: '📚', guidance: '🗓️' };
+  var ME_DEF_ICON = { phase1: '🌱', phase2: '🦋', phase3: '🌀', ressources: '📚', guidance: '🗓️', rituel: '🕊️' };
   var ME_ICONS = {}, ME_ICONS_LOADED = false; // petites photos d'icône (carrées), lues une fois : epanouissement_global/mon_espace_icons/<id>
   function meIconHtml(id, size) {
     var ph = ME_ICONS[id], sec = (ME_CFG.sections && ME_CFG.sections[id]) || {};
@@ -23686,15 +23697,15 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       + '</div>';
     h += '<input id="meTitre" type="text" placeholder="Titre affiché" value="' + esc(sec.titre || def.label) + '" style="' + inp + ';margin-bottom:8px">';
     h += '<textarea id="meIntro" rows="3" placeholder="Texte d\'introduction (facultatif)" style="' + inp + ';margin-bottom:8px">' + esc(sec.intro || '') + '</textarea>';
-    if (ME_SEL === 'guidance') {
+    if (ME_SEL === 'guidance' || ME_SEL === 'rituel') {
       h += '<input id="meUrl" type="url" placeholder="Lien de réservation (ton agenda, ta page de réservation…)" value="' + esc(sec.url || '') + '" style="' + inp + ';margin-bottom:8px">';
-      h += '<input id="meBtn" type="text" placeholder="Texte du bouton (ex : Réserver ma guidance)" value="' + esc(sec.bouton || '') + '" style="' + inp + ';margin-bottom:8px">';
-      h += '<button onclick="meUseGuidanceTunnel()" style="padding:8px 14px;background:#E7EEE1;color:#2C4432;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;margin:0 0 10px">🗓️ Utiliser mon tunnel de réservation « Guidance »</button>';
+      h += '<input id="meBtn" type="text" placeholder="Texte du bouton (ex : ' + (ME_SEL === 'rituel' ? 'Demander mon rituel' : 'Réserver ma guidance') + ')" value="' + esc(sec.bouton || '') + '" style="' + inp + ';margin-bottom:8px">';
+      h += '<button onclick="meUseGuidanceTunnel()" style="padding:8px 14px;background:#E7EEE1;color:#2C4432;border:none;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;margin:0 0 10px">🗓️ Utiliser mon tunnel de réservation « ' + (ME_SEL === 'rituel' ? 'Rituel de libération' : 'Guidance') + ' »</button>';
     }
     h += meDocPanelHtml('tab', sec.doc);
     h += '<button onclick="meSaveSection()" style="padding:10px 18px;background:#3F5D46;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Enregistrer cet onglet</button>';
     h += '</div>';
-    if (ME_SEL !== 'guidance') h += meModulesHtml(sec);
+    if (ME_SEL !== 'guidance' && ME_SEL !== 'rituel') h += meModulesHtml(sec);
     if (ME_SEL === 'ressources') h += '<div style="font-size:13px;font-weight:700;color:#26312A;margin:22px 0 4px">🧘 Méditations guidées</div><p style="color:#66735F;font-size:12.5px;margin:0 0 10px;max-width:760px">Elles apparaissent dans l\'onglet « Ressources » de tes clientes, sous les contenus ci-dessus. Colle le lien du fichier (YouTube « non répertorié », Vimeo, Google Drive, ou lien direct .mp3 / .mp4).</p><div id="medMount"></div>';
     ed.innerHTML = h;
     (function() { // formulaire « Modifier / Ajouter dans » : juste sous la ligne concernée, pas tout en bas de la liste
@@ -23758,14 +23769,15 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   function meUseGuidanceTunnel() {
     var u = document.getElementById('meUrl'); if (!u) return;
-    u.value = acqFunnelUrl('guidance', '&src=app');
-    var b = document.getElementById('meBtn'); if (b && !b.value) b.value = 'Réserver ma guidance';
+    var rit = ME_SEL === 'rituel';
+    u.value = acqFunnelUrl(rit ? 'rituel' : 'guidance', '&src=app');
+    var b = document.getElementById('meBtn'); if (b && !b.value) b.value = rit ? 'Demander mon rituel' : 'Réserver ma guidance';
     showToast('🗓️ Lien du tunnel mis en place — clique sur « Enregistrer cet onglet »');
   }
   function meSaveSection() {
     var v = function(i) { var e = document.getElementById(i); return e ? (e.value || '').trim() : ''; };
     var upd = { titre: v('meTitre'), intro: v('meIntro'), icone: v('meIcone') };
-    if (ME_SEL === 'guidance') {
+    if (ME_SEL === 'guidance' || ME_SEL === 'rituel') {
       var u = v('meUrl'); if (u && !/^https?:\/\//i.test(u)) { alert('Le lien doit commencer par http:// ou https://'); return; }
       upd.url = u; upd.bouton = v('meBtn');
     }
@@ -24378,6 +24390,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   var ACQ_DEFAULT_FUNNELS = {"desvres": {"titre": "Bouger, respirer, se sentir bien", "intro": "Un moment pour vous, pour bouger, respirer et cultiver votre bien-être au quotidien.", "avantages": "Mobilité & flexibilité\nRenforcement en douceur\nPosture & équilibre\nRespiration & bien-être", "bandeau": "Deux cours par semaine dispensés par une coach diplômée", "note": "Attention, les cartes ne sont bien prélevées qu'une seule fois, pas tous les mois ;)", "merciTexte": "Ton paiement est bien reçu. Anaïs valide ta place et te confirme tout par message très vite.", "active": true, "nom": "Pilates Desvres (hybride)", "lieu": "desvres", "offres": {"unite_pres": {"label": "Séance en présentiel à l'unité", "detail": "20 € de frais de configuration et 8 € par mois", "prix": "28 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 1}, "carte10_pres": {"label": "Carte 10 séances en présentiel", "detail": "20 € de frais de configuration et 70 € par mois", "prix": "90 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 2}, "abo_pres": {"label": "Abonnement présentiel", "detail": "20 € de frais de configuration et 25 € par mois", "prix": "45 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 3}, "abo_complet": {"label": "Abonnement complet", "detail": "32 € par mois", "prix": "32 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 4}, "carte10_visio": {"label": "Carte 10 séances en visio", "detail": "20 € de frais de configuration et 50 € par mois", "prix": "70 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 5}, "unite_visio": {"label": "Séance en visio à l'unité", "detail": "20 € de frais de configuration et 6 € par mois", "prix": "26 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 6}, "passage": {"label": "Passage de la carte à l'abonnement", "detail": "Essai de 45 jours puis 32 € par mois", "prix": "0 €", "format": "aucun", "lien": "", "actif": true, "ordre": 7}}}, "fitness_park": {"titre": "Bouger, respirer, se sentir bien", "intro": "Un moment pour vous, pour bouger, respirer et cultiver votre bien-être au quotidien.", "avantages": "Mobilité & flexibilité\nRenforcement en douceur\nPosture & équilibre\nRespiration & bien-être", "bandeau": "Deux cours par semaine dispensés par une coach diplômée · Au Fitness Park Boulogne ou en direct de ton salon", "note": "Attention, les cartes ne sont bien prélevées qu'une seule fois, pas tous les mois ;)", "merciTexte": "Ton paiement est bien reçu. Anaïs valide ta place et te confirme tout par message très vite.", "active": true, "nom": "Pilates Fitness Park", "lieu": "fitness_park", "offres": {"unite_pres": {"label": "Séance en présentiel à l'unité", "detail": "Au Fitness Park Boulogne", "prix": "8 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 1}, "abo_pres": {"label": "Abonnement présentiel", "detail": "1 séance par semaine · 25 € par mois", "prix": "25 €/mois", "format": "presentiel", "lien": "", "actif": true, "ordre": 2}, "abo_global": {"label": "Abonnement global", "detail": "Présentiel et visio : 2 séances par semaine · 32 € par mois", "prix": "32 €/mois", "format": "presentiel", "lien": "", "actif": true, "ordre": 3}, "unite_visio": {"label": "Séance en visio à l'unité", "detail": "En direct de ton salon", "prix": "6 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 4}, "carte10_pres": {"label": "Carte 10 séances en présentiel", "detail": "Au Fitness Park Boulogne", "prix": "70 €", "format": "presentiel", "lien": "", "actif": true, "ordre": 5}, "carte10_visio": {"label": "Carte 10 séances en visio", "detail": "En direct de ton salon", "prix": "50 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 6}}}, "en_ligne": {"titre": "Bouger, respirer, se sentir bien", "intro": "Un moment pour vous, pour bouger, respirer et cultiver votre bien-être au quotidien.", "avantages": "Mobilité & flexibilité\nRenforcement en douceur\nPosture & équilibre\nRespiration & bien-être", "bandeau": "1 cours par semaine en ligne dispensé par une coach diplômée · en direct de ton salon", "note": "", "merciTexte": "Ton paiement est bien reçu. Anaïs valide ta place et te confirme tout par message très vite.", "active": true, "nom": "Pilates 100 % en ligne", "lieu": "en_ligne", "offres": {"carte10_visio": {"label": "Carte 10 séances en visio", "detail": "20 € de frais de configuration et 50 € par mois", "prix": "70 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 1}, "unite_visio": {"label": "Séance en visio à l'unité", "detail": "20 € de frais de configuration et 6 € par mois", "prix": "26 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 2}, "abo_visio": {"label": "Abonnement visio", "detail": "20 € de frais de configuration et 16 € par mois", "prix": "36 €", "format": "en_ligne", "lien": "", "actif": true, "ordre": 3}}}};
   (function() { var E = {"bilan": {"scope": "espace", "type": "appel", "nom": "Bilan Forme Santé (appel offert)", "lieu": "en_ligne", "active": true, "titre": "Ton Bilan Forme Santé", "bandeau": "Il te reste une dernière étape", "intro": "Un appel de 30 minutes avec Anaïs pour faire le point sur ta situation, poser ton objectif et repartir avec un plan clair.", "avantages": "Faire le point — Où tu en es aujourd'hui, ce qui te freine et ce qui fonctionne déjà.\nPoser ton objectif — Énergie, poids, confiance, rythme de vie : on choisit ce qui compte pour toi.\nRepartir avec un plan — Des pistes concrètes, adaptées à ton quotidien de maman.", "note": "Offert, sans engagement. Les créneaux de la semaine partent vite : réserve le tien dès maintenant.", "faq": "Le Bilan est-il vraiment offert ?|Oui. Il est 100 % offert, sans carte bancaire et sans engagement.\nÀ quoi sert cet appel ?|À faire le point ensemble et à repartir avec un aperçu personnalisé et des conseils pratiques.\nCombien de temps dure-t-il ?|Environ 30 minutes, par téléphone ou en visio, au moment que tu as choisi.\nDois-je acheter quelque chose ?|Non. À la fin de l'appel, tu décides librement : continuer avec co-NAÎTRE ou repartir avec tes conseils.", "apropos": "Je m'appelle Anaïs. Je suis coach, athlète et maman de trois enfants… et femme avant tout.\nAprès la naissance de mes aînés, je me suis donnée sans compter, jusqu'au burn-out parental. Aujourd'hui, j'accompagne les mamans à redevenir des femmes épanouies : parce qu'une maman épanouie, c'est une famille qui rayonne.", "merciTexte": "C'est noté, ton appel est réservé ! Ajoute-le à ton agenda et prépare tes questions : Anaïs t'appelle à l'heure choisie.", "agenda": {"duree": 30, "horizon": 14, "preavis": 24, "pas": 30, "modalite": "Appel téléphonique ou visio", "calendarId": "", "apiKey": "", "lien": "", "dispo": {"lun": "09:30-12:00,14:00-16:30", "mar": "09:30-12:00,14:00-16:30", "mer": "", "jeu": "09:30-12:00,14:00-16:30", "ven": "09:30-12:00", "sam": "", "dim": ""}}}, "accompagnement": {"scope": "espace", "type": "vente", "nom": "Page de vente — Accompagnement co-NAÎTRE", "lieu": "en_ligne", "active": false, "titre": "Ton accompagnement co-NAÎTRE", "bandeau": "Pour toutes les mamans débordées", "intro": "Se réconcilier avec son corps, retrouver son énergie et sa confiance en soi, sans s'oublier en tant que maman.", "avantages": "Un plan alimentaire personnalisé — pour toute la famille\nUn programme sportif — adapté au rythme d'une maman\nUn programme de développement personnel — pour reprendre confiance en toi\nUn suivi par ta coach — et des outils d'accompagnement\nDe nouvelles habitudes — qui tiennent dans ton quotidien\nLe soutien de la communauté — des mamans qui avancent comme toi", "note": "Ton inscription se fait en 3 temps : tes coordonnées, la signature de ton contrat, puis le paiement sécurisé.", "faq": "", "apropos": "Je m'appelle Anaïs. Je suis coach, athlète et maman de trois enfants… et femme avant tout.\nJ'ai créé co-NAÎTRE pour aider les mamans à redevenir des femmes épanouies : parce qu'une maman épanouie, c'est une famille qui rayonne.", "merciTexte": "Ton paiement est bien reçu et ton contrat est signé. Bienvenue dans co-NAÎTRE ! Anaïs te contacte très vite pour démarrer.", "prestataire": "[À COMPLÉTER : nom, forme juridique, SIRET, adresse et e-mail de la Coach]", "mediateur": "[À COMPLÉTER : nom et coordonnées du médiateur de la consommation]", "contrat": "CONTRAT D'ACCOMPAGNEMENT co-NAÎTRE\n\nEntre les soussignés :\n{{prestataire}}\nci-après « la Coach »,\net {{nom}}, adresse e-mail {{email}}{{adresse}}, ci-après « la Cliente ».\n\nArticle 1 — Objet\nLe présent contrat a pour objet l'accompagnement de la Cliente par la Coach dans le cadre du programme « {{offre}} » : plan alimentaire personnalisé, programme sportif, programme de développement personnel, suivi par la Coach et outils d'accompagnement, tels que présentés sur la page de vente.\n\nArticle 2 — Durée\nL'accompagnement débute à la date de signature du présent contrat, sous réserve du paiement, pour la durée de la formule choisie.\n{{essai}}\n\nArticle 3 — Prix et paiement\nLe prix de la formule « {{offre}} » est de {{prix}} TTC. Le paiement s'effectue en ligne, de façon sécurisée, par l'intermédiaire de la plateforme Stripe, selon les modalités affichées avant la signature.\n\nArticle 4 — Droit de rétractation\nLa Cliente, consommatrice, dispose d'un délai de quatorze (14) jours à compter de la signature du contrat pour se rétracter, sans avoir à justifier de motif, en adressant sa décision à la Coach par e-mail. Si la Cliente demande expressément que l'accompagnement commence avant la fin de ce délai, elle devra payer un montant proportionnel à ce qui lui a été fourni jusqu'à la communication de sa décision de se rétracter.\n\nArticle 5 — Engagements de la Coach\nLa Coach s'engage à mettre en œuvre tous les moyens nécessaires à la bonne réalisation de l'accompagnement, avec sérieux et bienveillance. Il s'agit d'une obligation de moyens : aucun résultat chiffré n'est garanti, les résultats dépendant notamment de l'implication de la Cliente.\n\nArticle 6 — Engagements de la Cliente\nLa Cliente s'engage à fournir des informations exactes, à suivre les conseils dans la mesure de ses possibilités, et à prévenir la Coach de tout changement de sa situation.\n\nArticle 7 — Santé\nLa Cliente déclare ne connaître aucune contre-indication à la pratique d'une activité physique adaptée et s'engage à consulter son médecin en cas de doute, de grossesse, de pathologie ou de suites de grossesse. L'accompagnement ne remplace pas un avis médical.\n\nArticle 8 — Données personnelles\nLes données de la Cliente sont utilisées uniquement pour la gestion et le suivi de l'accompagnement. Elle peut exercer ses droits d'accès, de rectification et de suppression en écrivant à la Coach.\n\nArticle 9 — Propriété intellectuelle\nLes contenus (programmes, plans, supports) sont strictement personnels à la Cliente et ne peuvent être revendus ni diffusés.\n\nArticle 10 — Médiation de la consommation\nEn cas de litige, la Cliente peut recourir gratuitement à un médiateur de la consommation : {{mediateur}}\n\nArticle 11 — Droit applicable\nLe présent contrat est soumis au droit français.\n\nFait en ligne, le {{date}}.", "offres": {"n1": {"label": "Accompagnement — niveau 1", "detail": "", "prix": "249 €", "format": "aucun", "lien": "", "actif": true, "ordre": 1}, "n2_mensuel": {"label": "Accompagnement — niveau 2 (en mensualités)", "detail": "", "prix": "229 €/mois", "format": "aucun", "lien": "", "actif": true, "ordre": 2}, "n2_comptant": {"label": "Accompagnement — niveau 2 (comptant)", "detail": "", "prix": "2 257 €", "format": "aucun", "lien": "", "actif": true, "ordre": 3}}}}; Object.keys(E).forEach(function(k) { ACQ_DEFAULT_FUNNELS[k] = E[k]; }); })();
   ACQ_DEFAULT_FUNNELS.guidance = {"scope": "espace", "type": "appel", "nom": "Guidance par les cartes (séance avec Anaïs)", "lieu": "en_ligne", "active": true, "titre": "Réserve ta guidance par les cartes", "bandeau": "Réservé aux clientes co-NAÎTRE", "badge": "Un moment rien que pour toi", "intro": "Un temps individuel avec Anaïs, en visio ou par téléphone, autour d'un tirage de cartes. Les cartes servent de point de départ : elles font émerger ce que tu ressens, éclairent ta situation du moment et t'aident à y voir plus clair pour la suite.", "avantages": "Un tirage rien que pour toi — Tu poses ton sujet ou ta question, Anaïs tire les cartes et les interprète avec toi, dans un cadre bienveillant et sans jugement.\nY voir plus clair — Les cartes aident à mettre des mots sur ce que tu traverses : ce qui te freine, ce qui te porte, ce qui demande ton attention.\nRepartir avec des pistes concrètes — Quelques messages clés et des idées simples à mettre en pratique dans les semaines qui viennent.", "note": "Choisis le créneau qui t'arrange : seuls les moments où Anaïs est disponible te sont proposés. La guidance par les cartes est un temps d'écoute et de réflexion : elle ne remplace ni un avis médical, ni un suivi psychologique, et ne prédit pas l'avenir.", "faq": "En quoi consiste une guidance par les cartes ?|Anaïs tire des cartes en lien avec ton sujet ou ta situation du moment et les interprète avec toi. C'est un temps d'échange pour mettre des mots sur ce que tu ressens et trouver des pistes.\nCombien de temps dure la séance ?|Environ 45 minutes, en visio ou par téléphone, au moment que tu as choisi.\nDois-je avoir une question précise ?|Pas obligatoirement, mais un sujet t'aide à en tirer le meilleur : une situation, une décision à prendre, un blocage. Tu l'indiques au moment de la réservation.\nPuis-je déplacer mon rendez-vous ?|Oui : écris à Anaïs au moins 24 h avant pour trouver un autre créneau.\nLa guidance remplace-t-elle un avis médical ?|Non. C'est un temps de réflexion et d'écoute, ni un diagnostic, ni une prédiction de l'avenir.", "apropos": "", "cta": "Réserver ma guidance", "confirmLabel": "Confirmer ma guidance", "rdvNom": "Guidance par les cartes", "merciTitre": "Ta guidance est réservée", "merciTexte": "C'est noté ! Ajoute-la à ton agenda. Avant la séance, installe-toi au calme et pense au sujet ou à la question que tu souhaites poser aux cartes.", "objMode": "texte", "objLabel": "Le sujet ou la question que tu veux poser aux cartes", "consentTxt": "J'accepte que mes données soient utilisées pour organiser et réaliser cette guidance.", "fermeMsg": "Les réservations de guidance ne sont pas ouvertes pour le moment", "agenda": {"duree": 45, "horizon": 21, "preavis": 24, "pas": 45, "modalite": "Visio ou téléphone", "calendarId": "", "apiKey": "", "lien": "", "dispo": {"lun": "", "mar": "14:00-17:00", "mer": "", "jeu": "14:00-17:00", "ven": "", "sam": "", "dim": ""}}};
+  ACQ_DEFAULT_FUNNELS.rituel = {"scope": "espace", "type": "appel", "nom": "Rituel de libération (demande de prestation)", "lieu": "en_ligne", "active": true, "titre": "Réserve ton rituel de libération", "bandeau": "Un temps pour te libérer", "badge": "Un moment rien que pour toi", "intro": "Un temps guidé avec Anaïs pour déposer ce qui te pèse, desserrer ce qui te retient et repartir plus légère. Tu fais ta demande et tu règles en ligne : Anaïs te recontacte ensuite pour fixer la date ensemble.", "avantages": "Un temps rien que pour toi — Anaïs t'accueille et te guide pas à pas, dans un cadre bienveillant et sans jugement.\nDéposer ce qui pèse — Tu mets des mots sur ce que tu portes et tu choisis ce que tu souhaites laisser derrière toi.\nRepartir plus légère — Tu repars avec un geste simple à reprendre chez toi dans les jours qui suivent.", "note": "Une fois ta demande et ton paiement reçus, Anaïs te recontacte pour fixer ensemble la date et le déroulé de ton rituel. Le rituel est un temps d'accompagnement bien-être : il ne remplace ni un avis médical, ni un suivi psychologique.", "faq": "En quoi consiste le rituel de libération ?|C'est un temps guidé avec Anaïs pour déposer ce qui te pèse et te sentir plus légère. Anaïs te guide pas à pas.\nCombien de temps dure le rituel ?|Il peut durer plusieurs heures. La durée exacte et la date sont fixées ensemble après ta demande.\nComment ça se passe après ma demande ?|Tu règles en ligne de façon sécurisée. Anaïs te recontacte ensuite pour convenir de la date qui vous arrange.\nDois-je préparer quelque chose ?|Anaïs te dira tout au moment de fixer la date. Prévois simplement un moment au calme, sans être dérangée.\nLe rituel remplace-t-il un avis médical ?|Non. C'est un temps d'accompagnement bien-être, ni un soin, ni un suivi psychologique.", "apropos": "", "cta": "Demander mon rituel", "confirmLabel": "Demander mon rituel", "rdvNom": "Rituel de libération", "merciTitre": "Ta demande est bien reçue", "merciTexte": "Merci ! Ton paiement est confirmé. Anaïs te recontacte très vite pour fixer ensemble la date de ton rituel. Pense à regarder dans tes courriers indésirables.", "objMode": "texte", "objLabel": "Ce que tu souhaites libérer ou déposer (quelques mots)", "consentTxt": "J'accepte que mes données soient utilisées pour traiter ma demande et organiser ce rituel.", "fermeMsg": "Les demandes de rituel ne sont pas ouvertes pour le moment", "paiementLien": "https://buy.stripe.com/7sY3cv4EtcQZfRk6US0x20q", "paiementPrix": "80 €", "sansCreneau": true};
   ACQ_DEFAULT_FUNNELS.foyer = {"scope": "apps", "type": "vente", "sansContrat": true, "nom": "co-NAÎTRE son foyer (application)", "lieu": "en_ligne", "active": false, "titre": "co-NAÎTRE son foyer", "bandeau": "L’application de toute la famille", "intro": "La maison qui tourne, sans que tout repose sur la même personne : qui fait quoi, quel jour, et ce que chacun gagne en s’impliquant.", "video": "https://anaisfittraining-afk.github.io/co-naitre-en-mouvement/videos/presentation_foyer.mp4", "videoVertical": true, "avantages": "Une semaine claire — Qui fait quoi, jour par jour, avec les tâches à cocher.\nDes tâches partagées — Quotidiennes, hebdomadaires, mensuelles : chacun a les siennes.\nDes enfants qui s’impliquent — Une journée par enfant, de l’argent de poche et un salaire à mériter.\nCourses, repas et recettes — Une liste commune et des repas planifiés pour toute la famille.\nUn accès par personne — Chaque membre de la famille s’y connecte depuis son téléphone.", "note": "Ton accès t’est envoyé par e-mail dès que ton paiement est confirmé.", "faq": "Pour qui est cette application ?|Pour les familles qui veulent partager les tâches de la maison, la charge mentale et l’argent de poche, avec des enfants qui s’impliquent vraiment.\nComment ça s’utilise ?|Elle s’ouvre depuis un lien sur le téléphone de chaque membre de la famille, avec un accès adapté à chacun.\nQuand reçois-je mon accès ?|Par e-mail, une fois ton paiement confirmé.\nUne question avant d’acheter ?|Écris à Anaïs : elle te répond personnellement.", "apropos": "Je m’appelle Anaïs. Je suis coach, athlète et maman de trois enfants… et femme avant tout.\nJ’ai créé co-NAÎTRE son foyer parce qu’une maison qui tourne à plusieurs, c’est une maman qui respire.", "cta": "Choisir mon accès", "cgvTexte": "Je reconnais avoir pu consulter le contrat ci-dessus et j’en accepte les conditions.", "contratModele": "unique", "contratVersion": 1, "prestataire": "[À COMPLÉTER : nom, forme juridique, SIRET, adresse et e-mail de la Coach]", "mediateur": "[À COMPLÉTER : nom et coordonnées du médiateur de la consommation]", "contrat": "CONTRAT D’ACCÈS À L’APPLICATION « {{produit}} »\n\nEntre les soussignés :\n{{prestataire}}\nci-après « le Prestataire »,\net {{nom}}, adresse e-mail {{email}}, ci-après « l’Utilisatrice ».\n\nArticle 1 — Objet\nLe présent contrat a pour objet l’accès de l’Utilisatrice à l’application « {{produit}} » (formule « {{offre}} »), pour un usage personnel et familial.\n\nArticle 2 — Accès\nUn code d’accès personnel est envoyé par e-mail une fois le paiement confirmé. Il est strictement personnel : il ne doit pas être partagé en dehors du foyer de l’Utilisatrice.\n\nArticle 3 — Prix et paiement\nL’accès est vendu au prix de {{prix}}, en un seul paiement, réglé en ligne de façon sécurisée par Stripe. Aucun autre frais n’est dû.\n\nArticle 4 — Durée de l’accès\nL’accès est accordé pour une durée illimitée, tant que l’application est exploitée par le Prestataire. En cas d’arrêt de l’application, le Prestataire en informe l’Utilisatrice par e-mail avec un préavis raisonnable.\n\nArticle 5 — Droit de rétractation\nConformément au Code de la consommation, l’Utilisatrice dispose de 14 jours à compter de l’achat pour se rétracter, sans avoir à se justifier, en écrivant au Prestataire. Si elle demande l’accès immédiat à l’application, elle reconnaît que le contenu numérique est fourni sans attendre la fin de ce délai ; elle peut toutefois demander le remboursement dans les 14 jours tant qu’elle n’a pas utilisé l’application.\n\nArticle 6 — Utilisation de l’application\nL’Utilisatrice s’engage à utiliser l’application de bonne foi. Les contenus (textes, visuels, programmes) restent la propriété du Prestataire et ne peuvent être copiés ni revendus.\n\nArticle 7 — Données personnelles\nLes données recueillies (nom, e-mail, téléphone, données saisies dans l’application) servent uniquement à fournir l’accès et le suivi du service. L’Utilisatrice peut demander à tout moment l’accès, la correction ou la suppression de ses données en écrivant au Prestataire.\n\nArticle 8 — Responsabilité\nL’application est un outil d’organisation et d’accompagnement. Le Prestataire s’engage à la maintenir accessible dans des conditions normales, sans pouvoir garantir une disponibilité continue (maintenance, incident technique).\n\nArticle 9 — Médiation\nEn cas de litige, l’Utilisatrice peut recourir gratuitement au médiateur de la consommation : {{mediateur}}.\n\nArticle 10 — Droit applicable\nLe présent contrat est soumis au droit français.\n\nContrat accepté en ligne le {{date}}.", "cgvUrl": "", "merciTitre": "Bienvenue dans co-NAÎTRE son foyer", "merciEtapes": "Vérifie ta boîte mail|Ton accès t’est envoyé par e-mail dès que ton paiement est confirmé. Pense à regarder dans tes courriers indésirables.\nOuvre l’application|Clique sur le bouton ci-dessous, ou sur le lien de l’e-mail, puis saisis ton code d’accès.\nInvite ta famille|Chaque membre de la famille se connecte depuis son téléphone, avec un accès adapté à chacun.\nGarde-la sous la main|Sur ton téléphone, ajoute l’application à ton écran d’accueil depuis le menu de ton navigateur.", "merciBtnLabel": "Ouvrir co-NAÎTRE son foyer", "merciBtnUrl": "https://anaisfittraining-afk.github.io/Cooperation-familiale/", "merciTexte": "Ton paiement est bien reçu. Anaïs t’envoie ton accès à co-NAÎTRE son foyer par e-mail très vite.", "merciAttente": "Merci ! Ta demande est bien enregistrée. Anaïs te recontacte très vite pour finaliser ton accès.", "offres": {"foyer": {"label": "Accès à co-NAÎTRE son foyer", "detail": "", "prix": "", "format": "aucun", "lien": "", "actif": true, "ordre": 1, "apps": {"espace": false, "foyer": true}}}};
   ACQ_DEFAULT_FUNNELS.mouvement = {"scope": "apps", "type": "vente", "sansContrat": true, "nom": "co-NAÎTRE en mouvement (application)", "lieu": "en_ligne", "active": false, "titre": "co-NAÎTRE en mouvement", "bandeau": "Ton Pilates, en toute simplicité", "intro": "Réserve ta séance en deux gestes, retrouve ta place à chaque cours et tes replays, sans écrire à personne.", "video": "https://anaisfittraining-afk.github.io/co-naitre-en-mouvement/videos/presentation_mouvement.mp4", "videoVertical": true, "avantages": "Réserver en deux gestes — Choisis ton créneau, ta place est à toi.\nAnnuler en un geste — Tu libères ta place pour une autre.\nTa formule sous les yeux — Ta carte ou ton abonnement, toujours à jour.\nLes replays — Retrouve les cours que tu as manqués.\nLes événements — Ateliers et rendez-vous : réponds en un clic.", "note": "Ton accès t’est envoyé par e-mail dès que ton paiement est confirmé.", "faq": "À qui s’adresse cette application ?|Aux personnes qui suivent les cours de Pilates en présentiel ou en ligne et veulent gérer leurs séances sans écrire à personne.\nComment je me connecte ?|Avec ton lien personnel, ou simplement avec ton prénom et ton e-mail.\nQuand reçois-je mon accès ?|Par e-mail, une fois ton paiement confirmé.\nUne question avant d’acheter ?|Écris à Anaïs : elle te répond personnellement.", "apropos": "Je m’appelle Anaïs. Je suis coach, athlète et maman de trois enfants… et femme avant tout.\nJ’ai créé co-NAÎTRE en mouvement pour que bouger, respirer et se sentir bien tienne dans l’agenda d’une maman.", "cta": "Choisir mon accès", "cgvTexte": "Je reconnais avoir pu consulter le contrat ci-dessus et j’en accepte les conditions.", "contratModele": "abonnement", "contratVersion": 1, "prestataire": "[À COMPLÉTER : nom, forme juridique, SIRET, adresse et e-mail de la Coach]", "mediateur": "[À COMPLÉTER : nom et coordonnées du médiateur de la consommation]", "contrat": "CONTRAT D’ACCÈS À L’APPLICATION « {{produit}} »\n\nEntre les soussignés :\n{{prestataire}}\nci-après « le Prestataire »,\net {{nom}}, adresse e-mail {{email}}, ci-après « l’Utilisatrice ».\n\nArticle 1 — Objet\nLe présent contrat a pour objet l’accès de l’Utilisatrice à l’application « {{produit}} » (formule « {{offre}} »), pour un usage personnel.\n\nArticle 2 — Accès\nLes informations de connexion sont envoyées par e-mail une fois le paiement confirmé. L’accès est strictement personnel et ne doit pas être partagé.\n\nArticle 3 — Prix et paiement\nL’abonnement est de {{prix}}, prélevé chaque mois par Stripe, de façon sécurisée, à compter de la date d’achat.\n\nArticle 4 — Durée et résiliation\nL’abonnement est sans engagement de durée. Il se renouvelle chaque mois par tacite reconduction. L’Utilisatrice peut y mettre fin à tout moment en écrivant au Prestataire ; la résiliation prend effet à la fin de la période déjà payée, sans autre frais.\n\nArticle 5 — Droit de rétractation\nConformément au Code de la consommation, l’Utilisatrice dispose de 14 jours à compter de l’achat pour se rétracter, sans avoir à se justifier, en écrivant au Prestataire. Si elle demande l’accès immédiat au service, elle reconnaît qu’il est fourni sans attendre la fin de ce délai ; elle peut toutefois demander le remboursement dans les 14 jours tant qu’elle n’a pas utilisé le service.\n\nArticle 6 — Séances et santé\nLes séances proposées (Pilates, en ligne ou en présentiel) sont des séances de bien-être et de remise en mouvement. Elles ne remplacent pas un avis médical. L’Utilisatrice déclare ne connaître aucune contre-indication à une activité physique douce, ou avoir pris l’avis de son médecin, et s’engage à signaler tout problème de santé avant les séances.\n\nArticle 7 — Réservations et annulations\nLes séances se réservent dans l’application. Une séance annulée dans les délais indiqués dans l’application est reportable ; au-delà, elle est décomptée.\n\nArticle 8 — Données personnelles\nLes données recueillies (nom, e-mail, téléphone, réservations) servent uniquement à fournir le service et son suivi. L’Utilisatrice peut demander à tout moment l’accès, la correction ou la suppression de ses données en écrivant au Prestataire.\n\nArticle 9 — Médiation\nEn cas de litige, l’Utilisatrice peut recourir gratuitement au médiateur de la consommation : {{mediateur}}.\n\nArticle 10 — Droit applicable\nLe présent contrat est soumis au droit français.\n\nContrat accepté en ligne le {{date}}.", "cgvUrl": "", "merciTitre": "Bienvenue dans co-NAÎTRE en mouvement", "merciEtapes": "Vérifie ta boîte mail|Ton accès t’est envoyé par e-mail dès que ton paiement est confirmé. Pense à regarder dans tes courriers indésirables.\nOuvre co-NAÎTRE en mouvement|Clique sur le bouton ci-dessous, puis tape ton prénom et l’adresse e-mail utilisée pour ton achat.\nRéserve tes séances|Choisis tes créneaux de Pilates ; les liens des lives s’affichent dans l’application.\nGarde-la sous la main|Sur ton téléphone, ajoute l’application à ton écran d’accueil depuis le menu de ton navigateur.", "merciBtnLabel": "Ouvrir co-NAÎTRE en mouvement", "merciBtnUrl": "https://anaisfittraining-afk.github.io/co-naitre-en-mouvement/reservation.html", "merciTexte": "Ton paiement est bien reçu. Anaïs t’envoie ton accès à co-NAÎTRE en mouvement par e-mail très vite.", "merciAttente": "Merci ! Ta demande est bien enregistrée. Anaïs te recontacte très vite pour finaliser ton accès.", "offres": {"mouvement": {"label": "Accès à co-NAÎTRE en mouvement", "detail": "", "prix": "", "format": "aucun", "lien": "", "actif": true, "ordre": 1, "apps": {"espace": false, "foyer": false, "mouvement": true}}}};
   var ACQ_DEFAULT_BASE = 'https://anaisfittraining-afk.github.io/co-naitre-en-mouvement/tunnel.html';
@@ -26447,6 +26460,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (!d || d.status === 'perdu') return 'perdu';
     var fn = acqFn(d), t = fn.type || 'pilates', paid = acqIsPaid(d);
     if (t === 'appel') {
+      if (d.funnel === 'rituel') return paid ? 'reservation' : 'prospect'; // demande de prestation payée : pas de créneau
       if (d.funnel === 'guidance') return (d.rdvDate && (paid || !fn.paiementLien)) ? 'reservation' : 'prospect';
       return 'prospect';
     }
@@ -32285,19 +32299,18 @@ function formPageEdit(fid) {
   // ── Rendu général ──────────────────────────────────────────────────────────────────────────────
   function avRender() {
     var root = $a('avRoot'); if (!root) return;
-    var c = cfg(), on = c.publie === true, auto = c.ouvertureAuto ? Date.parse(c.ouvertureAuto) : NaN, autoOn = !on && !isNaN(auto) && Date.now() >= auto, sched = !on && !isNaN(auto) && Date.now() < auto, tabs = [['liens', '🔗 Liens et aperçu'], ['reglages', '⚙️ Réglages'], ['cases', '🗓️ Les 24 cases'], ['dossier', '📁 Dossier prospectes'], ['cadeaux', '🎁 Cadeaux']];
+    var c = cfg(), on = c.publie === true, auto = c.ouvertureAuto ? Date.parse(c.ouvertureAuto) : NaN, autoOn = !on && !isNaN(auto) && Date.now() >= auto, sched = !on && !isNaN(auto) && Date.now() < auto, tabs = [['liens', '🔗 Liens et aperçu'], ['reglages', '⚙️ Réglages'], ['cases', '🗓️ Les 24 cases'], ['dossier', '📁 Dossier prospectes'], ['cadeaux', '🎁 Cadeaux'], ['codes', '🔑 Codes et appareils']];
     var dOpen = on || autoOn, fmt = function (t) { return new Date(t).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); };
     var h = '<div class="avbox ' + (dOpen ? 'on' : 'off') + '"><div><b>' + (dOpen ? '✅ Calendrier ouvert' : sched ? '🕒 Ouverture programmée : ' + esc(fmt(auto)) : '🚧 Calendrier fermé') + '</b><div class="avs">' + (dOpen ? 'Les mamans qui cliquent sur le lien peuvent payer et ouvrir leur calendrier, et les clientes entrer avec leur code.' : 'Tant que c’est fermé, personne ne peut payer ni entrer (clientes comprises) : les mamans voient « Préviens-moi de l’ouverture » et sont enregistrées. Toi, tu peux toujours voir le calendrier avec les aperçus.') + '</div></div>' + btn(dOpen ? 'Fermer le calendrier' : '🚀 Ouvrir maintenant', 'avTogglePublie(' + (dOpen ? 'false' : 'true') + ')', dOpen ? 'line' : 'main') + '</div>';
     h += '<div class="avcard"><h3>Ouverture automatique <span class="avs">(facultatif)</span></h3><p class="avs">Publie tout à l’avance, puis choisis le jour et l’heure (heure de France) : le calendrier s’ouvrira tout seul, sans que tu aies à revenir ici.</p><div class="avrow"><input type="datetime-local" id="avAutoDt" value="' + esc(c.ouvertureAuto || '') + '" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:14px">' + btn('Programmer', 'avSetAuto()', 'main') + (c.ouvertureAuto ? btn('Annuler la programmation', 'avClearAuto()', 'line') : '') + '</div></div>';
     h += '<div class="avtabs">' + tabs.map(function (t) { return '<button class="avtab' + (AV.tab === t[0] ? ' on' : '') + '" onclick="avTab(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>';
-    h += '<div id="avBody">' + ({ liens: avLiens, reglages: avReglages, cases: avCases, dossier: avDossier, cadeaux: avCadeaux }[AV.tab] || avLiens)() + '</div>';
+    h += '<div id="avBody">' + ({ liens: avLiens, reglages: avReglages, cases: avCases, dossier: avDossier, cadeaux: avCadeaux, codes: avCodes }[AV.tab] || avLiens)() + '</div>';
     root.innerHTML = h;
   }
-  window.avTab = function (t) { AV.tab = t; AV.sel = null; avRender(); };
+  window.avTab = function (t) { AV.tab = t; AV.sel = null; if (t === 'codes') AV.secLoaded = false; avRender(); };
   function avChecks() {
     var c = cfg(), pb = [];
     if (!c.lienPaiement) pb.push('le lien de paiement Stripe n’est pas encore enregistré (Réglages)');
-    if (!c.codeHash) pb.push('aucun code d’accès n’a été créé (Réglages)');
     return pb.length ? 'Attention : ' + pb.join(' et ') + '.\n\n' : '';
   }
   window.avTogglePublie = function (on) {
@@ -32334,7 +32347,7 @@ function formPageEdit(fid) {
     if (!code) h += '<p class="avs">Crée d’abord ton code d’aperçu (il n’est connu que de toi).</p>' + btn('Créer mon code d’aperçu', 'avMakeApercu()', 'main');
     else h += '<div class="avrow">' + btn('👀 Prospecte · jour 1', 'avOpen(\'' + mk('prospect', 1) + '\')') + btn('👀 Prospecte · jour 5', 'avOpen(\'' + mk('prospect', 5) + '\')') + btn('👀 Prospecte · jour 24', 'avOpen(\'' + mk('prospect', 24) + '\')') + '</div><div class="avrow">' + btn('👀 Cliente · jour 1', 'avOpen(\'' + mk('cliente', 1) + '\')') + btn('👀 Cliente · jour 24', 'avOpen(\'' + mk('cliente', 24) + '\')') + '</div><p class="avs">L’aperçu simule le jour choisi. Il s’ouvre dans un nouvel onglet et ne compte ni dans les clics ni dans le dossier. La page doit être publiée pour fonctionner.</p>';
     h += '</div>';
-    h += '<div class="avcard"><h3>Comment ça marche</h3><ol class="avol"><li>Tu règles le prix, le lien de paiement et le code dans <b>Réglages</b>.</li><li>Tu remplis les 24 cases de chaque parcours dans <b>Les 24 cases</b> (contenu libre ou relié à ton programme).</li><li>Tu publies la page, puis tu ouvres les ventes et tu envoies le lien.</li><li>Chaque maman qui s’inscrit arrive dans le <b>Dossier prospectes</b>. Après paiement, elle reçoit le code et ouvre son calendrier.</li></ol></div>';
+    h += '<div class="avcard"><h3>Comment ça marche</h3><ol class="avol"><li>Tu règles le prix et le lien de paiement dans <b>Réglages</b>.</li><li>Tu remplis les 24 cases de chaque parcours dans <b>Les 24 cases</b> (contenu libre ou relié à ton programme).</li><li>Tu publies la page, puis tu ouvres les ventes et tu envoies le lien.</li><li>Chaque maman qui s’inscrit arrive dans le <b>Dossier prospectes</b>. Après paiement, un <b>code unique</b> s’affiche sur la page de remerciement (tu le retrouves dans <b>Codes et appareils</b>) et ouvre son calendrier sur un seul appareil.</li></ol></div>';
     return h;
   }
   window.avCopy = function (t) { copyTxt(t, '📋 Lien copié'); };
@@ -32350,10 +32363,10 @@ function formPageEdit(fid) {
     var h = '<div class="avcard"><h3>Prix et paiement</h3><div class="avgrid">'
       + fld('avPrix', 'Prix du calendrier (€)', c.prix || '19,90', '19,90') + fld('avPay', 'Lien de paiement Stripe', c.lienPaiement || '', 'https://buy.stripe.com/…')
       + fld('avGift', 'Lien de paiement « offrir » (facultatif, sinon le même)', c.lienCadeau || '', 'https://buy.stripe.com/…') + fld('avMail', 'Ton adresse mail de contact', c.contactMail || '', 'ton@mail.fr') + '</div>'
-      + '<p class="avs">Dans Stripe, mets pour « Après le paiement » : un message avec le <b>code d’accès ci-dessous</b> et le lien de redirection <code>' + esc(PAGE) + '?merci=1</code>.</p></div>';
-    h += '<div class="avcard"><h3>Code d’accès après paiement</h3>'
-      + (s.code ? '<div class="avcode">' + esc(s.code) + '</div><p class="avs">C’est le code que reçoivent les mamans qui ont payé (mail de remerciement et message Stripe). Si tu le changes, l’ancien code ne marche plus pour les nouvelles venues.</p>' : '<p class="avs">Aucun code créé pour l’instant.</p>')
-      + '<div class="avrow">' + btn(s.code ? 'Générer un nouveau code' : 'Créer le code d’accès', 'avMakeCode()', 'main') + (s.code ? btn('Copier le code', 'avCopy(\'' + esc(s.code) + '\')') : '') + '</div></div>';
+      + '<p class="avs">Dans Stripe, la redirection « Après le paiement » doit être : <code>' + esc(PAGE) + '?merci=1&amp;sid={CHECKOUT_SESSION_ID}</code> (garde tel quel le mot entre accolades). Chaque achat reçoit alors un <b>code unique</b>, affiché à la maman sur la page de remerciement.</p></div>';
+    h += '<div class="avcard"><h3>Ancien code commun</h3>'
+      + (c.codeHash ? '<p class="avs">Un ancien code commun est encore actif' + (s.code ? ' : <b>' + esc(s.code) + '</b>' : '') + '. Il permet à n’importe qui de s’inscrire sans payer si on le lui passe. Désactive-le dès que les mamans qui l’ont reçu ont toutes ouvert leur calendrier.</p><div class="avrow">' + btn('Désactiver l’ancien code', 'avKillCode()', 'main') + '</div>'
+        : '<p class="avs">✅ Il n’y a plus de code commun : chaque achat a son propre code, valable sur un seul appareil (voir l’onglet « Codes et appareils »).</p>') + '</div>';
     h += '<div class="avcard"><h3>Dates et textes de la page</h3><div class="avgrid">'
       + fld('avDebut', 'Premier jour du calendrier (AAAA-MM-JJ)', c.debut || '2026-12-01', '2026-12-01') + fld('avTitre', 'Titre', c.titre || '', 'Le calendrier de l’Avent des mamans')
       + fld('avAcc', 'Phrase d’accroche', c.accroche || '', '24 jours pour souffler avant Noël, pour moins d’1 € par jour.') + fld('avSous', 'Sous-titre', c.sousAccroche || '', 'Une petite case par jour…')
@@ -32393,10 +32406,77 @@ function formPageEdit(fid) {
     Object.keys(upd).forEach(function (k) { if (upd[k] === '' || upd[k] == null) upd[k] = null; }); // vide = valeur par défaut de la page
     R(BP + '/config').update(upd).then(function () { showToast('✅ Réglages enregistrés'); }).catch(function (e) { alert('Erreur : ' + (e && e.message || 'inconnue')); });
   };
-  window.avMakeCode = function () {
-    if (AV.secret && AV.secret.code && !window.confirm('Remplacer le code actuel ? Les mamans qui ont déjà payé gardent leur accès, mais le nouveau code devra figurer dans Stripe et dans le mail de remerciement.')) return;
-    var c = accGen();
-    R('dash_avent2026/secret/code').set(c).then(function () { return R(BP + '/config/codeHash').set(accHash(c)); }).then(function () { showToast('✅ Code créé : ' + c); });
+  window.avKillCode = function () {
+    if (!window.confirm('Désactiver l’ancien code commun ? Il ne fonctionnera plus pour personne. Les mamans qui l’ont déjà utilisé sur leur appareil perdront leur accès à la prochaine ouverture : donne-leur d’abord un code unique (onglet Codes et appareils).')) return;
+    Promise.all([R(BP + '/config/codeHash').remove(), R('dash_avent2026/secret/code').remove()]).then(function () { showToast('✅ Ancien code désactivé'); });
+  };
+
+  // ── Onglet Codes et appareils ──────────────────────────────────────────────────────────────────
+  var SEC_APPS = { conaitre: 'co-NAÎTRE', foyer: 'co-NAÎTRE son foyer', mouvement: 'co-NAÎTRE en mouvement' };
+  function avLoadSecure() {
+    if (AV.secLoading) return; AV.secLoading = true;
+    R('avent_secure').once('value').then(function (sn) { AV.sec = sn.val() || {}; AV.secLoaded = true; AV.secLoading = false; AV.secErr = ''; if (AV.tab === 'codes') avRender(); })
+      .catch(function (e) { AV.secLoading = false; AV.secLoaded = true; AV.secErr = (e && e.message) || 'lecture impossible'; if (AV.tab === 'codes') avRender(); });
+  }
+  function secDevs(o) { var k = Object.keys(o || {}); return k.map(function (d) { return o[d] || {}; }); }
+  function uaTxt(ua) { ua = String(ua || ''); var m = /(iPhone|iPad|Android|Macintosh|Windows|Linux)/.exec(ua), b = /(Edg|Chrome|Firefox|Safari)/.exec(ua); return (m ? m[1] : 'appareil') + (b ? ' · ' + b[1] : ''); }
+  function avCodes() {
+    if (!AV.secLoaded) { avLoadSecure(); return '<div class="avcard"><p class="avs">Chargement…</p></div>'; }
+    if (AV.secErr) return '<div class="avcard"><p class="avs">Lecture impossible : ' + esc(AV.secErr) + '. Vérifie que les règles Firebase sont publiées et que tu es connectée.</p><div class="avrow">' + btn('Réessayer', 'avTab(\'codes\')', 'main') + '</div></div>';
+    var sec = AV.sec || {}, ach = sec.achats || {}, cf = sec.config || {}, h = '';
+    var rows = Object.keys(ach).map(function (k) { return Object.assign({ id: k }, ach[k]); }).sort(function (a, b) { return String(b.createdAt || '').localeCompare(String(a.createdAt || '')); });
+    h += '<div class="avcard"><h3>Codes uniques du calendrier</h3><p class="avs">Chaque paiement Stripe crée un code. Il s’affiche à la maman sur la page de remerciement ; tu le retrouves ici pour le lui renvoyer si besoin. Il ne marche que sur ' + (parseInt(cf.maxCalendrier, 10) || 1) + ' appareil(s). Si elle change de téléphone, clique sur « Libérer ».</p>';
+    if (!rows.length) h += '<p class="avs">Aucun achat enregistré pour l’instant.</p>';
+    else h += '<div style="overflow-x:auto"><table class="avtb"><thead><tr><th>Date</th><th>Maman</th><th>Type</th><th>Code</th><th>Appareils</th><th></th></tr></thead><tbody>' + rows.map(function (r) {
+      var ds = secDevs(r.devices), mx = parseInt(r.max, 10) || 1, gift = r.type === 'cadeau';
+      var msg = gift ? 'Voici le lien cadeau à envoyer à ton amie : ' + PAGE + '?cadeau=' + (r.giftId || '') : 'Merci pour ton inscription ! Voici ton code personnel : ' + r.code + '\nOuvre ton calendrier ici : ' + PAGE + '\nCe code ne fonctionne que sur un seul appareil.';
+      return '<tr><td>' + esc(dFr(r.createdAt)) + '</td><td>' + esc(r.nom || '') + '<div class="avs">' + esc(r.email || '') + '</div></td><td>' + (gift ? '🎁 Cadeau' : r.manuel ? '✍️ Manuel' : '🛒 Achat') + '</td><td><code>' + esc(r.code || '') + '</code></td><td>' + (gift ? '—' : (ds.length + '/' + mx + (ds.length ? '<div class="avs">' + esc(uaTxt(ds[0].ua)) + '</div>' : ''))) + '</td><td style="white-space:nowrap">' + btn('Copier le message', 'avCopyMsg(' + JSON.stringify(msg).replace(/"/g, '&quot;') + ')') + (gift || !ds.length ? '' : ' ' + btn('Libérer', 'avFree(\'' + esc(r.id) + '\')', 'line')) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+    h += '</div>';
+    h += '<div class="avcard"><h3>Créer un code pour une personne</h3><p class="avs">Pour une maman qui a payé autrement (virement, espèces…) ou que tu veux inviter : crée son code, puis envoie-le lui.</p><div class="avgrid">' + fld('avNmN', 'Prénom (et nom)', '', 'Marie Dupont') + fld('avNmE', 'Adresse mail', '', 'marie@mail.fr') + '</div><div class="avrow">' + btn('Créer son code', 'avNewCode()', 'main') + '</div><div id="avNmOut"></div></div>';
+    // Appareils des applis
+    var ap = sec.appareils || {}, lines = [];
+    Object.keys(SEC_APPS).forEach(function (a) { var cs = ap[a] || {}; Object.keys(cs).forEach(function (c) { lines.push({ app: a, code: c, devs: secDevs(cs[c]) }); }); });
+    lines.sort(function (x, y) { return y.devs.length - x.devs.length || x.code.localeCompare(y.code); });
+    var q = String(AV.secQ || '').toLowerCase(), shown = lines.filter(function (l) { return !q || (l.code + ' ' + SEC_APPS[l.app]).toLowerCase().indexOf(q) >= 0; });
+    h += '<div class="avcard"><h3>Appareils des applis (co-NAÎTRE, foyer, en mouvement)</h3><p class="avs">Chaque lien personnel de cliente s’ouvre sur ' + (parseInt(cf.maxApps, 10) || 2) + ' appareils : les deux premiers qui l’ouvrent sont enregistrés. Si une cliente change de téléphone, clique sur « Libérer » : elle pourra reconnecter ses appareils. Ton ordinateur (celui du tableau de bord) n’est jamais compté.</p>'
+      + '<input type="text" id="avSecQ" placeholder="Chercher un code ou une appli…" value="' + esc(AV.secQ || '') + '" oninput="avSecSearch(this.value)" style="padding:9px;border:1.5px solid #E2DCC8;border-radius:8px;width:100%;max-width:340px;margin-bottom:10px">';
+    if (!shown.length) h += '<p class="avs">Aucun appareil enregistré' + (q ? ' pour cette recherche' : ' pour l’instant (ils s’enregistrent quand une cliente ouvre son lien après la mise à jour)') + '.</p>';
+    else h += '<div style="overflow-x:auto"><table class="avtb"><thead><tr><th>Appli</th><th>Code de la cliente</th><th>Appareils</th><th></th></tr></thead><tbody>' + shown.slice(0, 200).map(function (l) {
+      return '<tr><td>' + esc(SEC_APPS[l.app]) + '</td><td><code>' + esc(l.code) + '</code></td><td>' + l.devs.length + '/' + (parseInt(cf.maxApps, 10) || 2) + '<div class="avs">' + l.devs.map(function (d) { return esc(uaTxt(d.ua)); }).join(' · ') + '</div></td><td>' + btn('Libérer', 'avFreeApp(\'' + l.app + '\',\'' + esc(l.code) + '\')', 'line') + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+    h += '</div>';
+    h += '<div class="avcard"><h3>Nombre d’appareils autorisés</h3><div class="avgrid">' + fld('avMaxC', 'Calendrier : appareils par code', parseInt(cf.maxCalendrier, 10) || 1, '1') + fld('avMaxA', 'Applis : appareils par cliente', parseInt(cf.maxApps, 10) || 2, '2') + '</div><div class="avrow">' + btn('Enregistrer', 'avSaveMax()', 'main') + '</div></div>';
+    return h;
+  }
+  window.avSecSearch = function (v) { AV.secQ = v; var b = $a('avBody'); if (b) { b.innerHTML = avCodes(); var i = $a('avSecQ'); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } } };
+  window.avCopyMsg = function (t) { copyTxt(t, '📋 Message copié'); };
+  window.avFree = function (id) {
+    if (!window.confirm('Libérer le code de cette maman ? Son appareil actuel sera oublié : le prochain appareil qui entre le code sera enregistré à sa place.')) return;
+    R('avent_secure/achats/' + id + '/devices').remove().then(function () { showToast('✅ Code libéré'); AV.secLoaded = false; avRender(); });
+  };
+  window.avFreeApp = function (app, code) {
+    if (!window.confirm('Libérer les appareils de ce lien ? Les 2 prochains appareils qui l’ouvrent seront enregistrés.')) return;
+    R('avent_secure/appareils/' + app + '/' + code).remove().then(function () { showToast('✅ Appareils libérés'); AV.secLoaded = false; avRender(); });
+  };
+  window.avSaveMax = function () {
+    var a = Math.max(1, Math.min(10, parseInt(val('avMaxC'), 10) || 1)), b = Math.max(1, Math.min(10, parseInt(val('avMaxA'), 10) || 2));
+    R('avent_secure/config').update({ maxCalendrier: a, maxApps: b }).then(function () { showToast('✅ Enregistré'); AV.secLoaded = false; avRender(); });
+  };
+  function secHash(code) {
+    var n = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode('avent-v2|' + n)).then(function (b) { var o = ''; new Uint8Array(b).forEach(function (x) { o += ('0' + x.toString(16)).slice(-2); }); return o; });
+  }
+  window.avNewCode = function () {
+    var nom = val('avNmN'), em = val('avNmE').toLowerCase(), out = $a('avNmOut');
+    if (!nom && !em) { out.innerHTML = '<p class="avs" style="color:#B23B3B">Indique au moins un prénom ou une adresse mail.</p>'; return; }
+    var al = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', b = crypto.getRandomValues(new Uint8Array(10)), c = '', i;
+    for (i = 0; i < 10; i++) c += al[b[i] % al.length]; c = c.slice(0, 5) + '-' + c.slice(5);
+    var id = 'manuel_' + Date.now().toString(36);
+    secHash(c).then(function (h) {
+      var upd = {}; upd['avent_secure/achats/' + id] = { type: 'achat', manuel: true, nom: nom, email: em, code: c, createdAt: new Date().toISOString(), max: parseInt((AV.sec && AV.sec.config && AV.sec.config.maxCalendrier), 10) || 1 }; upd['avent_secure/codes/' + h] = id;
+      return dashFbDB.ref().update(upd);
+    }).then(function () { showToast('✅ Code créé : ' + c); AV.secLoaded = false; AV.tab = 'codes'; avRender(); }).catch(function (e) { out.innerHTML = '<p class="avs" style="color:#B23B3B">Erreur : ' + esc((e && e.message) || 'inconnue') + '</p>'; });
   };
 
   // ── Onglet Les 24 cases ────────────────────────────────────────────────────────────────────────
@@ -33232,6 +33312,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     ['raccourcis','🔗','Raccourcis pros'],['daily_overview','📅','Aujourd\'hui (agenda, bilans)'],['grand_chantier','🧱','Grand chantier'],
     ['pole_marketing','📣','Marketing'],['pole_acquisition','🎯','Acquisition'],['pole_vente','📞','Vente'],['pole_livraison','💪','Livraison (suivi clientes)'],
     ['task_compta','💰','Pôle Admin. (compta)'],['monprojet','🗂️','Mon projet'],['association','🏛️','Association (adhérentes, facturation)'],['formations','🎓','Formation'],
+    ['boutique','🛍️','Boutique (produits, commandes, précommandes)'],
     ['coffre_pro','🔐','Coffre-fort pro (il faut aussi ton mot de passe maître)']
   ];
   var IDS=VIEWS.map(function(v){return v[0];});
@@ -33248,7 +33329,34 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
         if(!Array.isArray(d.members)){d.members=[];if(d.acode)d.members.push({id:'assistante',name:'Assistante',code:d.acode,perms:d.perms||{}});delete d.acode;delete d.perms;try{localStorage.setItem(SKEY,JSON.stringify(d));}catch(e){}}
         return d;}}catch(e){}
     return {enabled:false,code:null,members:[]};}
-  function save(d){localStorage.setItem(SKEY,JSON.stringify(d));}
+  // ── Sauvegarde cloud directe des réglages d'équipe (indépendante de la synchro générale) ──
+  var CLOUD='dash_team/config', TKEY='sfm_acces_cloud_t', ST={ok:null,msg:'Vérification de la connexion au cloud…'}, pulling=false, pollN=0;
+  function dbq(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
+  function stTxt(){return (ST.ok===false?'⚠️ ':ST.ok?'☁️ ':'')+ST.msg;}
+  function renderStatus(){var e=document.getElementById('accCloudSt');if(e){e.textContent=stTxt();e.style.color=ST.ok===false?'#B23B3B':'#4F5B49';}}
+  function cloudPush(d,t){
+    var db=dbq();if(!db){ST={ok:false,msg:'connexion Firebase pas encore prête'};renderStatus();return;}
+    db.ref(CLOUD).set({v:JSON.stringify(d),t:t}).then(function(){ST={ok:true,msg:'Réglages sauvegardés dans le cloud ('+new Date(t).toLocaleTimeString('fr-FR')+')'};renderStatus();})
+      .catch(function(e){ST={ok:false,msg:'Sauvegarde cloud impossible : '+((e&&(e.code||e.message))||'erreur')};renderStatus();});
+  }
+  function cloudPull(){
+    if(pulling)return;var db=dbq();if(!db)return;pulling=true;
+    db.ref(CLOUD).once('value').then(function(sn){
+      pulling=false;var r=sn.val(),lt=parseInt(localStorage.getItem(TKEY)||'0',10)||0;
+      if(r&&typeof r.t==='number'&&r.v){
+        if(r.t>lt){try{localStorage.setItem(SKEY,r.v);localStorage.setItem(TKEY,String(r.t));}catch(e){}ST={ok:true,msg:'Réglages d’équipe reçus du cloud'};enforce();render();}
+        else if(r.t<lt){cloudPush(get(),lt);}
+        else ST={ok:true,msg:'Réglages d’équipe à jour avec le cloud'};
+      }else{
+        var d=get();
+        if(d&&(d.code||(d.members||[]).length)){var t0=lt||Date.now();try{localStorage.setItem(TKEY,String(t0));}catch(e){}cloudPush(d,t0);}
+        else ST={ok:true,msg:'Aucun réglage d’équipe dans le cloud pour l’instant'};
+      }
+      renderStatus();
+    }).catch(function(e){pulling=false;ST={ok:false,msg:'Lecture du cloud impossible : '+((e&&(e.code||e.message))||'erreur')};renderStatus();});
+  }
+  function cloudLoop(){cloudPull();pollN++;setTimeout(cloudLoop,pollN<24?1500:10000);}
+  function save(d){localStorage.setItem(SKEY,JSON.stringify(d));var t=Date.now();try{localStorage.setItem(TKEY,String(t));}catch(e){}cloudPush(d,t);}
   function member(id){var m=get().members||[];for(var i=0;i<m.length;i++)if(m[i].id===id)return m[i];return null;}
   function device(){try{return JSON.parse(localStorage.getItem(DKEY)||'{}')||{};}catch(e){return {};}}
   function sget(){try{return sessionStorage.getItem(RKEY);}catch(e){return null;}}
@@ -33428,6 +33536,8 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     o+='<div class="cf-box"><b>3. Activer</b><p class="cf-note" style="margin:4px 0 10px">'+(d.enabled?'✅ La protection est <b>active</b> : à chaque ouverture, le tableau de bord demande qui tu es (une personne de l\'équipe ou toi avec ton code).':'Quand c\'est activé, chaque appareil qui ouvre le tableau de bord doit choisir son profil.')+'</p><div style="display:flex;gap:8px;flex-wrap:wrap">'+
       (d.enabled?'<button class="cf-btn dng" onclick="accToggle(false)">Désactiver la protection</button>':'<button class="cf-btn" '+(has?'':'disabled title="Définis ton code et celui d\'au moins une personne"')+' onclick="accToggle(true)">Activer la protection</button>')+
       '</div><div class="cf-err" id="accTogErr"></div></div>';
+    o+='<div class="cf-box" style="margin-top:14px"><b>Sauvegarde dans le cloud</b><p class="cf-note" id="accCloudSt" style="margin:4px 0 0">'+esc(stTxt())+'</p></div>';
+    o+='<div class="cf-box" style="margin-top:14px"><b>Cet appareil</b><p class="cf-note" style="margin:4px 0 10px">Pour revoir l\'écran « Qui utilise le tableau de bord ? » sur cet ordinateur, déconnecte-le.</p><button class="cf-btn sec" onclick="accLogout()">Déconnecter cet appareil</button></div>';
     o+='<p class="cf-note" style="margin-top:14px">⚠️ À savoir : cette protection masque et verrouille les écrans, ce qui suffit à éviter les erreurs et la curiosité. Elle ne remplace pas un vrai cloisonnement : pour une confidentialité totale, chaque personne devrait utiliser son propre navigateur/profil, et les mots de passe doivent rester dans le coffre-fort (chiffré par ton mot de passe maître).</p></div>';
     h.innerHTML=o;
   }
@@ -33455,9 +33565,10 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
 
   window.accRole=role;
   // démarrage
-  function start(){guard();enforce();}
+  function coachFlag(){try{if(role()==='owner')localStorage.setItem('sfm_coach_device','1');else localStorage.removeItem('sfm_coach_device');}catch(e){}}
+  function start(){guard();enforce();coachFlag();setTimeout(cloudLoop,800);}
   if(document.readyState==='complete')setTimeout(start,50);else window.addEventListener('load',function(){setTimeout(start,50);});
-  setInterval(function(){guard();enforce();},2500);
+  setInterval(function(){guard();enforce();coachFlag();},2500);
 })();
 </script>
 
@@ -34534,5 +34645,229 @@ getH().then(function(h){CUR=h;});
 })();
 </script>
 
+<script id="bq-script">
+/* ───────── 🛍️ Boutique co-NAÎTRE : produits, commandes, précommandes, réglages ─────────
+   Données dans Firebase (accès réservé à Anaïs) : boutique/config · boutique/produits · boutique/commandes · boutique/precommandes · boutique/compteurs
+   Les clientes voient la boutique par la page boutique.html (intégrée aux deux applications) ; le paiement passe par Stripe (fonctions du serveur). */
+(function () {
+  var BQ_URL = 'https://anaisfittraining-afk.github.io/co-naitre-en-mouvement/boutique.html';
+  var D = { cfg: null, prods: null, cmds: null, pres: null, cpt: {} }, TAB = 'produits', FILT = 'payee', EDIT = null, LISTEN = false, TRY = 0, ERR = '';
+  var TYPES = { expedie: '📦 Expédié', main: '🤝 Main propre', numerique: '💾 Numérique' };
+  var ST = { attente: 'Non payée', payee: 'À traiter', expediee: 'Expédiée / remise', terminee: 'Terminée' };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function eur(c) { c = (parseInt(c, 10) || 0) / 100; return (c % 1 ? c.toFixed(2) : String(c)).replace('.', ',') + ' €'; }
+  function toast(m) { try { showToast(m); } catch (e) { } }
+  function db() { try { return initSyncFirebase(); } catch (e) { return null; } }
+  function host() { return document.getElementById('bqHost'); }
+  var inp = 'width:100%;padding:9px 11px;border:1.5px solid #E2DCC8;border-radius:10px;font-size:14px;font-family:inherit;background:#fff';
+  var btn = 'padding:8px 14px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid #b7c9b3;background:#fff;color:#2C4432';
+  var btnP = 'padding:9px 16px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;border:none;background:#3F5D46;color:#fff';
+  var lab = 'display:block;font-size:12px;font-weight:700;color:#66735F;margin:10px 0 4px';
+  var card = 'background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px;margin-bottom:12px';
+
+  /* ───── écoute des données (avec nouvelle tentative : la connexion sécurisée peut arriver après l'ouverture de l'onglet) ───── */
+  function listen() {
+    if (LISTEN) return; var d = db(); if (!d) { if (TRY++ < 20) setTimeout(listen, 1500); else { ERR = 'Connexion au cloud indisponible.'; render(); } return; }
+    LISTEN = true;
+    function on(path, key) {
+      d.ref(path).on('value', function (sn) { D[key] = sn.val() || {}; ERR = ''; render(true); }, function (e) {
+        LISTEN = false; ERR = 'Lecture impossible (' + ((e && e.code) || 'erreur') + ')'; try { d.ref(path).off(); } catch (x) { }
+        if (TRY++ < 6) setTimeout(listen, 3000); render(true);
+      });
+    }
+    on('boutique/config', 'cfg'); on('boutique/produits', 'prods'); on('boutique/commandes', 'cmds'); on('boutique/precommandes', 'pres'); on('boutique/compteurs', 'cpt');
+  }
+  window.bqInit = function () { listen(); render(); };
+  window.bqTab = function (t) { TAB = t; EDIT = null; render(); };
+
+  /* ───── affichage ───── */
+  function nbATraiter() { var n = 0; Object.keys(D.cmds || {}).forEach(function (k) { if ((D.cmds[k] || {}).status === 'payee') n++; }); return n; }
+  function nbPre() { var n = 0; Object.keys(D.pres || {}).forEach(function (k) { if ((D.pres[k] || {}).status === 'reservee' && (D.pres[k] || {}).vu === false) n++; }); return n; }
+  function render(soft) {
+    var h = host(); if (!h) return;
+    if (soft && EDIT) { var k = document.activeElement; if (k && /^bqf-/.test(k.id || '')) return; } // une mise à jour des données ne doit pas faire perdre la saisie en cours
+    var tabs = [['produits', '🎁 Produits'], ['commandes', '📦 Commandes' + (nbATraiter() ? ' (' + nbATraiter() + ')' : '')], ['pre', '⏳ Précommandes' + (nbPre() ? ' (' + nbPre() + ')' : '')], ['reglages', '⚙️ Réglages']];
+    var o = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">' + tabs.map(function (t) { var on = t[0] === TAB; return '<button onclick="bqTab(\'' + t[0] + '\')" style="padding:9px 16px;border-radius:999px;border:1.5px solid ' + (on ? '#3F5D46' : '#E2DCC8') + ';background:' + (on ? '#3F5D46' : '#fff') + ';color:' + (on ? '#fff' : '#2C4432') + ';font-weight:700;font-size:13.5px;cursor:pointer">' + t[1] + '</button>'; }).join('') + '</div>';
+    if (ERR) o += '<div style="background:#FBE9E7;border:1px solid #E8B4AE;color:#8A2B22;border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:13px">⚠️ ' + esc(ERR) + '</div>';
+    if (D.prods === null && !ERR) o += '<p style="color:#66735F">Chargement…</p>';
+    else o += TAB === 'produits' ? (EDIT ? vEdit() : vProduits()) : TAB === 'commandes' ? vCommandes() : TAB === 'pre' ? vPre() : vReglages();
+    h.innerHTML = o;
+  }
+
+  /* ───── produits ───── */
+  function sortedProds() { var P = D.prods || {}; return Object.keys(P).map(function (k) { return Object.assign({ id: k }, P[k]); }).sort(function (a, b) { return (a.ordre || 0) - (b.ordre || 0) || String(a.createdAt || '').localeCompare(String(b.createdAt || '')); }); }
+  function vProduits() {
+    var L = sortedProds();
+    var o = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><button onclick="bqNew()" style="' + btnP + '">+ Ajouter un produit</button><button onclick="window.open(\'' + BQ_URL + '\',\'_blank\')" style="' + btn + '">👁 Voir ma boutique</button><button onclick="bqCopy(\'' + BQ_URL + '\')" style="' + btn + '">🔗 Copier le lien</button></div>';
+    if (!L.length) return o + '<div style="' + card + ';text-align:center;color:#66735F"><div style="font-size:38px">🚧</div><b>Aucun produit pour l\'instant.</b><br><span style="font-size:13px">Tant que la boutique est vide, tes clientes voient « Boutique en cours de création ». Ajoute ton premier produit pour l\'ouvrir.</span></div>';
+    L.forEach(function (p, i) {
+      var cnt = parseInt(D.cpt[p.id], 10) || 0;
+      o += '<div style="' + card + ';display:flex;gap:12px;align-items:center;flex-wrap:wrap;' + (p.actif === false ? 'opacity:.6' : '') + '">'
+        + '<div style="width:72px;height:72px;border-radius:12px;background:#EFE8D6;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:30px;flex:0 0 auto">' + (p.thumb ? '<img alt="" src="' + esc(p.thumb) + '" style="width:100%;height:100%;object-fit:cover">' : '🎁') + '</div>'
+        + '<div style="flex:1;min-width:180px"><div style="font-weight:800;color:#26312A">' + esc(p.nom) + '</div><div style="font-size:13px;color:#66735F">' + eur(p.prix) + ' · ' + (TYPES[p.type] || TYPES.expedie)
+        + (p.stock !== undefined && p.stock !== null && p.stock !== '' ? ' · stock : ' + esc(p.stock) : '') + (p.precommande ? ' · ⏳ précommande (' + cnt + '/' + (p.minimum || '?') + ')' : '') + (p.actif === false ? ' · masqué' : '') + '</div></div>'
+        + '<div style="display:flex;gap:6px;flex-wrap:wrap"><button onclick="bqMove(\'' + p.id + '\',-1)" style="' + btn + '" ' + (i === 0 ? 'disabled' : '') + ' aria-label="Monter">↑</button><button onclick="bqMove(\'' + p.id + '\',1)" style="' + btn + '" ' + (i === L.length - 1 ? 'disabled' : '') + ' aria-label="Descendre">↓</button>'
+        + '<button onclick="bqToggle(\'' + p.id + '\')" style="' + btn + '">' + (p.actif === false ? 'Afficher' : 'Masquer') + '</button><button onclick="bqEdit(\'' + p.id + '\')" style="' + btn + '">✏️ Modifier</button></div></div>';
+    });
+    return o;
+  }
+  window.bqCopy = function (t) { try { navigator.clipboard.writeText(t).then(function () { toast('Lien copié'); }); } catch (e) { prompt('Copie ce lien :', t); } };
+  window.bqNew = function () { EDIT = { id: null, nom: '', prix: '', desc: '', type: 'expedie', stock: '', actif: true, precommande: false, minimum: '', precoInfo: '', lien: '', photos: [], thumb: '' }; render(); window.scrollTo(0, 0); };
+  window.bqEdit = function (id) { var p = (D.prods || {})[id]; if (!p) return; EDIT = { id: id, nom: p.nom || '', prix: ((parseInt(p.prix, 10) || 0) / 100).toString().replace('.', ','), desc: p.desc || '', type: p.type || 'expedie', stock: p.stock === undefined || p.stock === null ? '' : String(p.stock), actif: p.actif !== false, precommande: p.precommande === true, minimum: p.minimum || '', precoInfo: p.precoInfo || '', lien: p.lien || '', photos: (p.photos || []).slice(), thumb: p.thumb || '' }; render(); window.scrollTo(0, 0); };
+  window.bqToggle = function (id) { var p = (D.prods || {})[id]; if (!p) return; db().ref('boutique/produits/' + id + '/actif').set(p.actif === false); };
+  window.bqMove = function (id, dir) {
+    var L = sortedProds(), i = -1; L.forEach(function (p, k) { if (p.id === id) i = k; }); var j = i + dir; if (i < 0 || j < 0 || j >= L.length) return;
+    var t = L[i]; L[i] = L[j]; L[j] = t; var u = {}; L.forEach(function (p, k) { u['boutique/produits/' + p.id + '/ordre'] = k + 1; }); db().ref().update(u);
+  };
+  function field(id, label, v, extra) { return '<label style="' + lab + '" for="bqf-' + id + '">' + label + '</label><input id="bqf-' + id + '" value="' + esc(v) + '" style="' + inp + '" ' + (extra || '') + '>'; }
+  function vEdit() {
+    var e = EDIT, o = '<div style="' + card + '"><h3 style="margin:0 0 4px;color:#2C4432">' + (e.id ? 'Modifier le produit' : 'Nouveau produit') + '</h3>';
+    o += field('nom', 'Nom du produit', e.nom, 'maxlength="100"') + field('prix', 'Prix (en euros, ex : 24,90)', e.prix, 'inputmode="decimal"');
+    o += '<label style="' + lab + '" for="bqf-desc">Description</label><textarea id="bqf-desc" rows="5" style="' + inp + ';resize:vertical">' + esc(e.desc) + '</textarea>';
+    o += '<label style="' + lab + '" for="bqf-type">Comment la cliente le reçoit-elle ?</label><select id="bqf-type" onchange="bqType()" style="' + inp + '"><option value="expedie"' + (e.type === 'expedie' ? ' selected' : '') + '>📦 Expédié chez elle (frais de port, adresse demandée)</option><option value="main"' + (e.type === 'main' ? ' selected' : '') + '>🤝 Remis en main propre (pas de livraison)</option><option value="numerique"' + (e.type === 'numerique' ? ' selected' : '') + '>💾 Numérique (lien affiché après le paiement)</option></select>';
+    o += '<div id="bqLienBox" style="' + (e.type === 'numerique' ? '' : 'display:none') + '">' + field('lien', 'Lien du produit numérique (Drive, Dropbox…)', e.lien, 'type="url" placeholder="https://…"') + '<div style="font-size:11.5px;color:#66735F;margin-top:3px">Ce lien n\'est visible qu\'après le paiement.</div></div>';
+    o += field('stock', 'Stock disponible (laisse vide = illimité)', e.stock, 'inputmode="numeric"');
+    o += '<label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px"><input type="checkbox" id="bqf-actif"' + (e.actif ? ' checked' : '') + '> Visible dans la boutique</label>';
+    o += '<div style="margin-top:12px;padding:12px;background:#FFF6E5;border:1.5px solid #F0D9A6;border-radius:12px"><label style="display:flex;gap:8px;align-items:center;font-size:14px;font-weight:700"><input type="checkbox" id="bqf-pre" onchange="bqPreChg()"' + (e.precommande ? ' checked' : '') + '> ⏳ Précommande sans paiement (minimum de réservations)</label>'
+      + '<div id="bqPreBox" style="' + (e.precommande ? '' : 'display:none') + '">' + field('min', 'Nombre minimum de réservations pour lancer le produit', e.minimum, 'inputmode="numeric"') + field('info', 'Message affiché (facultatif)', e.precoInfo, 'maxlength="160" placeholder="ex : livraison prévue en février"')
+      + '<div style="font-size:12px;color:#7A5A12;margin-top:6px">La cliente réserve sans payer. Quand le minimum est atteint, tu lances la production depuis l\'onglet Précommandes et chacune reçoit son lien de paiement.</div></div></div>';
+    o += '<label style="' + lab + '">Photos (4 maximum — la première est la photo principale)</label><div style="display:flex;gap:8px;flex-wrap:wrap">';
+    e.photos.forEach(function (p, i) { o += '<div style="position:relative;width:92px;height:92px;border-radius:12px;overflow:hidden;border:1.5px solid #E2DCC8"><img alt="" src="' + esc(p) + '" style="width:100%;height:100%;object-fit:cover"><button onclick="bqPhotoDel(' + i + ')" aria-label="Retirer la photo" style="position:absolute;top:3px;right:3px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,.65);color:#fff;font-size:14px;cursor:pointer">×</button></div>'; });
+    if (e.photos.length < 4) o += '<label style="width:92px;height:92px;border-radius:12px;border:2px dashed #b7c9b3;display:flex;align-items:center;justify-content:center;font-size:28px;color:#6F8F6C;cursor:pointer">+<input type="file" accept="image/*" multiple style="display:none" onchange="bqPhotoAdd(this)"></label>';
+    o += '</div><div id="bqMsg" style="color:#8A2B22;font-size:13px;margin-top:10px;min-height:18px"></div>';
+    o += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button onclick="bqSave()" style="' + btnP + '">Enregistrer</button><button onclick="bqCancel()" style="' + btn + '">Annuler</button>' + (e.id ? '<button onclick="bqDel()" style="' + btn + ';color:#A4302A;border-color:#E8B4AE;margin-left:auto">Supprimer</button>' : '') + '</div></div>';
+    return o;
+  }
+  function grab() { var g = function (i) { var x = document.getElementById('bqf-' + i); return x ? x.value : ''; }; var e = EDIT; if (!document.getElementById('bqf-nom')) return; e.nom = g('nom'); e.prix = g('prix'); e.desc = g('desc'); e.type = g('type'); e.stock = g('stock'); e.lien = g('lien'); e.minimum = g('min'); e.precoInfo = g('info'); e.actif = !!document.getElementById('bqf-actif').checked; e.precommande = !!document.getElementById('bqf-pre').checked; }
+  window.bqType = function () { var t = document.getElementById('bqf-type').value; document.getElementById('bqLienBox').style.display = t === 'numerique' ? '' : 'none'; };
+  window.bqPreChg = function () { document.getElementById('bqPreBox').style.display = document.getElementById('bqf-pre').checked ? '' : 'none'; };
+  window.bqCancel = function () { EDIT = null; render(); };
+  function compress(file, max, q) {
+    return new Promise(function (res, rej) {
+      var fr = new FileReader(); fr.onerror = rej; fr.onload = function () {
+        var im = new Image(); im.onerror = rej; im.onload = function () {
+          var r = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * r); c.height = Math.round(im.height * r);
+          c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); var d = c.toDataURL('image/webp', q); if (d.indexOf('data:image/webp') !== 0) d = c.toDataURL('image/jpeg', q); res(d);
+        }; im.src = fr.result;
+      }; fr.readAsDataURL(file);
+    });
+  }
+  window.bqPhotoAdd = function (inpEl) {
+    grab(); var files = Array.prototype.slice.call(inpEl.files || []).slice(0, 4 - EDIT.photos.length); if (!files.length) return;
+    var m = document.getElementById('bqMsg'); if (m) m.textContent = 'Préparation des photos…';
+    Promise.all(files.map(function (f) { return compress(f, 900, 0.8); })).then(function (arr) {
+      arr.forEach(function (d) { EDIT.photos.push(d); }); return compress(files[0], 360, 0.75).then(function (t) { if (arr.length === files.length && EDIT.photos.length === arr.length) EDIT.thumb = t; render(); });
+    }).catch(function () { var m2 = document.getElementById('bqMsg'); if (m2) m2.textContent = 'Cette image n\'a pas pu être lue. Essaie une photo JPG ou PNG.'; });
+  };
+  window.bqPhotoDel = function (i) { grab(); EDIT.photos.splice(i, 1); if (i === 0) { var f = EDIT.photos[0]; EDIT.thumb = ''; if (f) { var im = new Image(); im.onload = function () { var r = Math.min(1, 360 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * r); c.height = Math.round(im.height * r); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); EDIT.thumb = c.toDataURL('image/webp', 0.75); render(); }; im.src = f; } } render(); };
+  window.bqSave = function () {
+    grab(); var e = EDIT, m = document.getElementById('bqMsg'), say = function (t) { if (m) m.textContent = t; };
+    var prix = Math.round(parseFloat(String(e.prix).replace(',', '.').replace(/[^0-9.]/g, '')) * 100);
+    if (!e.nom.trim()) return say('Donne un nom au produit.'); if (!(prix >= 50)) return say('Indique un prix valide (0,50 € minimum).');
+    if (e.type === 'numerique' && e.lien && !/^https?:\/\//i.test(e.lien.trim())) return say('Le lien du produit numérique doit commencer par https://');
+    var min = parseInt(e.minimum, 10) || 0; if (e.precommande && min < 2) return say('Indique le nombre minimum de réservations (2 ou plus).');
+    var id = e.id || db().ref('boutique/produits').push().key, old = (D.prods || {})[id] || {};
+    var rec = { nom: e.nom.trim().slice(0, 100), prix: prix, desc: e.desc.trim().slice(0, 4000), type: e.type, actif: e.actif, ordre: old.ordre || (sortedProds().length + 1), createdAt: old.createdAt || new Date().toISOString(), photos: e.photos, thumb: e.thumb || (e.photos[0] || '') };
+    if (String(e.stock).trim() !== '') rec.stock = Math.max(0, parseInt(e.stock, 10) || 0);
+    if (e.type === 'numerique' && e.lien.trim()) rec.lien = e.lien.trim();
+    if (e.precommande) { rec.precommande = true; rec.minimum = min; rec.precoInfo = e.precoInfo.trim().slice(0, 160); if (old.precoLancee) rec.precoLancee = true; }
+    say('Enregistrement…');
+    db().ref('boutique/produits/' + id).set(rec).then(function () { EDIT = null; toast('✅ Produit enregistré'); render(); }).catch(function (er) { say('Impossible d\'enregistrer : ' + ((er && er.message) || 'erreur') + (rec.thumb.length > 150000 ? ' (photos trop lourdes ?)' : '')); });
+  };
+  window.bqDel = function () { if (!EDIT || !EDIT.id) return; if (!confirm('Supprimer définitivement « ' + EDIT.nom + ' » ? Les anciennes commandes restent visibles.')) return; var id = EDIT.id; db().ref('boutique/produits/' + id).remove().then(function () { EDIT = null; toast('Produit supprimé'); render(); }); };
+
+  /* ───── commandes ───── */
+  function dateFr(iso) { try { return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+  window.bqFilt = function (f) { FILT = f; render(); };
+  function vCommandes() {
+    var C = D.cmds || {}, L = Object.keys(C).map(function (k) { return Object.assign({ id: k }, C[k]); }).sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
+    var cnt = {}; L.forEach(function (c) { cnt[c.status] = (cnt[c.status] || 0) + 1; });
+    var o = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">' + ['payee', 'expediee', 'terminee', 'attente'].map(function (s) { var on = FILT === s; return '<button onclick="bqFilt(\'' + s + '\')" style="' + btn + ';' + (on ? 'background:#E7EEE1;border-color:#3F5D46' : '') + '">' + ST[s] + ' (' + (cnt[s] || 0) + ')</button>'; }).join('') + '</div>';
+    var rows = L.filter(function (c) { return c.status === FILT; });
+    if (!rows.length) return o + '<div style="' + card + ';color:#66735F;text-align:center">' + (FILT === 'payee' ? 'Aucune commande à traiter. 🎉' : 'Rien ici pour l\'instant.') + '</div>';
+    rows.forEach(function (c) {
+      var ad = c.adresse, lignes = (c.lignes || []).map(function (l) { return esc(l.nom) + ' × ' + l.qty + (l.type === 'numerique' ? ' 💾' : l.type === 'main' ? ' 🤝' : ''); }).join('<br>');
+      o += '<div style="' + card + ';' + (c.vu === false && c.status === 'payee' ? 'border-color:#D97A52;box-shadow:0 0 0 2px rgba(217,122,82,.18)' : '') + '"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><b>' + esc(c.nom || c.payeur || 'Cliente') + '</b><span style="color:#66735F;font-size:13px">' + dateFr(c.paidAt || c.createdAt) + ' · <b style="color:#2C4432">' + eur(c.total) + '</b>' + (c.preId ? ' · précommande' : '') + '</span></div>'
+        + '<div style="font-size:13.5px;margin:8px 0">' + lignes + (c.port ? '<br><span style="color:#66735F">+ port ' + eur(c.port) + '</span>' : '') + '</div>'
+        + '<div style="font-size:13px;color:#66735F">✉️ ' + esc(c.email || '') + (c.tel ? ' · 📞 ' + esc(c.tel) : '') + '</div>';
+      if (ad) o += '<div style="font-size:13.5px;margin-top:8px;padding:8px 10px;background:#F7F1E6;border-radius:10px">📬 ' + esc(ad.nom) + '<br>' + esc(ad.ligne1) + (ad.ligne2 ? '<br>' + esc(ad.ligne2) : '') + '<br>' + esc(ad.cp) + ' ' + esc(ad.ville) + ' · ' + esc(ad.pays) + '</div>';
+      if (c.suivi) o += '<div style="font-size:13px;margin-top:6px">🚚 Suivi : ' + esc(c.suivi) + '</div>';
+      o += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">';
+      if (c.status === 'payee') o += '<button onclick="bqShip(\'' + c.id + '\')" style="' + btnP + '">' + (c.expedition ? '🚚 Marquer expédiée' : '✅ Marquer remise / traitée') + '</button>';
+      if (c.status === 'expediee') o += '<button onclick="bqSt(\'' + c.id + '\',\'terminee\')" style="' + btnP + '">✅ Terminer</button>';
+      if (ad) o += '<button onclick="bqCopy(' + esc(JSON.stringify([ad.nom, ad.ligne1, ad.ligne2, ad.cp + ' ' + ad.ville, ad.pays].filter(Boolean).join('\n'))).replace(/'/g, '&#39;') + ')" style="' + btn + '">Copier l\'adresse</button>';
+      if (c.email) o += '<a href="mailto:' + esc(c.email) + '?subject=' + encodeURIComponent('Ta commande co-NAÎTRE') + '" style="' + btn + ';text-decoration:none">✉️ Écrire</a>';
+      if (c.status !== 'payee' && c.status !== 'attente') o += '<button onclick="bqSt(\'' + c.id + '\',\'payee\')" style="' + btn + '">↩︎ Remettre à traiter</button>';
+      o += '</div></div>';
+    });
+    // les nouvelles commandes affichées sont marquées comme vues
+    var u = {}; rows.forEach(function (c) { if (c.vu === false) u['boutique/commandes/' + c.id + '/vu'] = true; }); if (Object.keys(u).length && FILT === 'payee') setTimeout(function () { try { db().ref().update(u); } catch (e) { } }, 2500);
+    return o;
+  }
+  window.bqSt = function (id, st) { var u = { status: st }; if (st === 'terminee') u.termineeAt = new Date().toISOString(); db().ref('boutique/commandes/' + id).update(u); };
+  window.bqShip = function (id) { var c = (D.cmds || {})[id]; if (!c) return; var s = ''; if (c.expedition) { s = prompt('Numéro de suivi du colis (facultatif) :', '') || ''; } db().ref('boutique/commandes/' + id).update({ status: 'expediee', suivi: s.trim(), expediAt: new Date().toISOString() }); toast('Commande marquée comme traitée'); };
+
+  /* ───── précommandes ───── */
+  function vPre() {
+    var P = D.pres || {}, L = Object.keys(P).map(function (k) { return Object.assign({ id: k }, P[k]); });
+    var by = {}; L.forEach(function (r) { (by[r.pid] = by[r.pid] || []).push(r); });
+    var pids = Object.keys(by); if (!pids.length) return '<div style="' + card + ';color:#66735F;text-align:center">Aucune précommande pour l\'instant.<br><span style="font-size:13px">Pour proposer un produit en précommande, coche « Précommande sans paiement » dans la fiche du produit.</span></div>';
+    var o = '';
+    pids.forEach(function (pid) {
+      var p = (D.prods || {})[pid] || {}, rows = by[pid].sort(function (a, b) { return String(a.createdAt).localeCompare(String(b.createdAt)); });
+      var actives = rows.filter(function (r) { return r.status !== 'annulee'; }), total = actives.reduce(function (n, r) { return n + (parseInt(r.qty, 10) || 0); }, 0), min = parseInt(p.minimum, 10) || 0, lancee = p.precoLancee === true;
+      var pc = min ? Math.min(100, Math.round(total * 100 / min)) : 0;
+      o += '<div style="' + card + '"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><b>' + esc(p.nom || rows[0].produit) + '</b><span style="color:#66735F;font-size:13px">' + total + ' réservée' + (total > 1 ? 's' : '') + (min ? ' sur ' + min : '') + '</span></div>'
+        + (min ? '<div style="height:9px;border-radius:99px;background:#E7EEE1;margin:8px 0;overflow:hidden"><i style="display:block;height:100%;width:' + pc + '%;background:' + (total >= min ? '#3F5D46' : '#D97A52') + '"></i></div>' : '');
+      if (!lancee) o += '<div style="font-size:13px;margin-bottom:10px;color:' + (total >= min ? '#2C4432' : '#66735F') + '">' + (total >= min ? '🎉 Minimum atteint ! Tu peux lancer la production : chaque cliente recevra son lien de paiement.' : 'Il manque encore ' + Math.max(0, min - total) + ' réservation' + (min - total > 1 ? 's' : '') + '.') + '</div><button onclick="bqLaunch(\'' + pid + '\')" style="' + btnP + '">🚀 Lancer la production et ouvrir les paiements</button>';
+      else o += '<div style="font-size:13px;margin-bottom:6px;color:#2C4432">✅ Production lancée. Envoie à chaque cliente son lien de paiement personnel ci-dessous.</div>';
+      o += '<div style="margin-top:10px">';
+      rows.forEach(function (r) {
+        var link = BQ_URL + '?payer=' + encodeURIComponent(r.id) + '&t=' + encodeURIComponent(r.token || ''), msg = 'Bonjour ' + String(r.nom || '').split(' ')[0] + ',\n\nBonne nouvelle : « ' + (r.produit || p.nom || '') + ' » est lancé ! Voici ton lien de paiement personnel (' + r.qty + ' × ' + eur(r.prix) + ') :\n' + link + '\n\nÀ très vite,\nAnaïs';
+        o += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 0;border-top:1px solid #EFE8D6"><div style="flex:1;min-width:200px"><b>' + esc(r.nom) + '</b> × ' + r.qty + '<div style="font-size:12.5px;color:#66735F">' + esc(r.email) + (r.tel ? ' · ' + esc(r.tel) : '') + ' · ' + esc(r.status === 'reservee' ? 'réservée' : r.status === 'ouverte' ? 'paiement ouvert' : r.status === 'paiement' ? 'paiement en cours' : r.status === 'payee' ? '✅ payée' : 'annulée') + '</div></div>';
+        if (lancee && (r.status === 'ouverte' || r.status === 'paiement')) o += '<button onclick="bqCopy(' + esc(JSON.stringify(msg)).replace(/'/g, '&#39;') + ')" style="' + btn + '">Copier le message</button><a href="mailto:' + esc(r.email) + '?subject=' + encodeURIComponent('Ton lien de paiement') + '&body=' + encodeURIComponent(msg) + '" style="' + btn + ';text-decoration:none">✉️ Écrire</a>';
+        if (r.status === 'reservee' || r.status === 'ouverte') o += '<button onclick="bqPreCancel(\'' + r.id + '\')" style="' + btn + ';color:#A4302A;border-color:#E8B4AE">Annuler</button>';
+        o += '</div>';
+      });
+      o += '</div></div>';
+    });
+    var u = {}; L.forEach(function (r) { if (r.vu === false) u['boutique/precommandes/' + r.id + '/vu'] = true; }); if (Object.keys(u).length) setTimeout(function () { try { db().ref().update(u); } catch (e) { } }, 2500);
+    return o;
+  }
+  window.bqLaunch = function (pid) {
+    var p = (D.prods || {})[pid] || {}; if (!confirm('Lancer « ' + (p.nom || '') + ' » ? Les paiements s\'ouvrent pour toutes les réservations : tu pourras alors envoyer à chaque cliente son lien personnel.')) return;
+    var u = {}; u['boutique/produits/' + pid + '/precoLancee'] = true; Object.keys(D.pres || {}).forEach(function (k) { var r = D.pres[k]; if (r && r.pid === pid && r.status === 'reservee') u['boutique/precommandes/' + k + '/status'] = 'ouverte'; });
+    db().ref().update(u).then(function () { toast('🚀 Production lancée : envoie les liens de paiement'); });
+  };
+  window.bqPreCancel = function (id) {
+    var r = (D.pres || {})[id]; if (!r || !confirm('Annuler la réservation de ' + (r.nom || '') + ' ?')) return;
+    db().ref('boutique/precommandes/' + id + '/status').set('annulee').then(function () { return db().ref('boutique/compteurs/' + r.pid).transaction(function (n) { return Math.max(0, (parseInt(n, 10) || 0) - (parseInt(r.qty, 10) || 0)); }); });
+  };
+
+  /* ───── réglages ───── */
+  function vReglages() {
+    var c = D.cfg || {}, pays = (Array.isArray(c.pays) && c.pays.length ? c.pays : ['FR']).join(', ');
+    var o = '<div style="' + card + '"><h3 style="margin:0 0 4px;color:#2C4432">Réglages de la boutique</h3>';
+    o += '<label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:14px"><input type="checkbox" id="bqr-actif"' + (c.actif === false ? '' : ' checked') + '> Boutique ouverte</label>';
+    o += '<label style="' + lab + '">Titre</label><input id="bqr-titre" value="' + esc(c.titre || 'Boutique co-NAÎTRE') + '" style="' + inp + '">';
+    o += '<label style="' + lab + '">Phrase d\'introduction (facultatif)</label><input id="bqr-intro" value="' + esc(c.intro || '') + '" style="' + inp + '">';
+    o += '<label style="' + lab + '">Frais de port (en euros)</label><input id="bqr-port" value="' + esc(((parseInt(c.fraisPort, 10) || 0) / 100).toString().replace('.', ',')) + '" style="' + inp + '" inputmode="decimal">';
+    o += '<label style="' + lab + '">Port offert à partir de (en euros — 0 = jamais)</label><input id="bqr-franco" value="' + esc(((parseInt(c.francoDes, 10) || 0) / 100).toString().replace('.', ',')) + '" style="' + inp + '" inputmode="decimal">';
+    o += '<label style="' + lab + '">Pays de livraison (codes à 2 lettres séparés par une virgule)</label><input id="bqr-pays" value="' + esc(pays) + '" style="' + inp + '" placeholder="FR, BE, CH">';
+    o += '<label style="' + lab + '">Message pour les produits remis en main propre</label><input id="bqr-retrait" value="' + esc(c.retrait || 'Anaïs te contacte pour convenir de la remise en main propre.') + '" style="' + inp + '">';
+    o += '<label style="' + lab + '">TVA</label><select id="bqr-taxe" style="' + inp + '"><option value="aucune"' + (c.taxe === 'auto' ? '' : ' selected') + '>Aucune TVA ajoutée (prix affichés = prix payés)</option><option value="auto"' + (c.taxe === 'auto' ? ' selected' : '') + '>TVA calculée automatiquement par Stripe (Stripe Tax doit être activé)</option></select>';
+    o += '<div id="bqrMsg" style="font-size:13px;color:#2C4432;min-height:18px;margin-top:8px"></div><button onclick="bqSaveCfg()" style="' + btnP + '">Enregistrer les réglages</button></div>';
+    o += '<div style="' + card + ';font-size:13px;line-height:1.55;color:#3E4A3A"><b>💳 Paiement Stripe</b><br>Le paiement du panier utilise une clé Stripe enregistrée dans Firebase (secret <code>STRIPE_SECRET_KEY</code>). Tant que cette clé n\'est pas installée, le bouton « Payer » affiche une erreur à tes clientes : ne communique pas la boutique avant de l\'avoir fait.</div>';
+    return o;
+  }
+  window.bqSaveCfg = function () {
+    var g = function (i) { var e = document.getElementById('bqr-' + i); return e ? e.value : ''; }, cents = function (v) { return Math.max(0, Math.round((parseFloat(String(v).replace(',', '.').replace(/[^0-9.]/g, '')) || 0) * 100)); };
+    var pays = g('pays').split(/[ ,;]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(function (x) { return /^[A-Z]{2}$/.test(x); });
+    var rec = { actif: !!document.getElementById('bqr-actif').checked, titre: g('titre').trim().slice(0, 60) || 'Boutique co-NAÎTRE', intro: g('intro').trim().slice(0, 200), fraisPort: cents(g('port')), francoDes: cents(g('franco')), pays: pays.length ? pays : ['FR'], retrait: g('retrait').trim().slice(0, 200), taxe: g('taxe') === 'auto' ? 'auto' : 'aucune' };
+    db().ref('boutique/config').set(rec).then(function () { toast('✅ Réglages enregistrés'); var m = document.getElementById('bqrMsg'); if (m) m.textContent = 'Enregistré.'; }).catch(function (e) { var m = document.getElementById('bqrMsg'); if (m) m.textContent = 'Impossible d\'enregistrer : ' + ((e && e.message) || 'erreur'); });
+  };
+})();
+
+</script>
 </body>
 </html>
