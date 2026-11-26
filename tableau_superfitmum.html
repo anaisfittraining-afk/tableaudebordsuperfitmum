@@ -33742,7 +33742,7 @@ function formPageEdit(fid) {
     }
     else if(a==='lock'){lock('Coffre verrouillé.');}
     else if(a==='keeplocal'){var g3=G(mode);conflict[g3]=false;setT(g3,Date.now());cloudPushVault(g3);GM[g3].forEach(function(m){render(m);});toast('☁️ Le coffre de cet appareil remplace celui du cloud.');}
-    else if(a==='usecloud'){var g4=G(mode);if(!confirm('Le coffre de cet appareil va être REMPLACÉ par celui du cloud. Continuer ?'))return;var r4=conflictR[g4];if(r4){applyRemote(g4,r4,true);relock(g4);}conflict[g4]=false;}
+    else if(a==='usecloud'){var g4=G(mode);if(!confirm('Le coffre de cet appareil va être REMPLACÉ par celui du cloud. Continuer ?'))return;var r4=conflictR[g4];if(r4){backupLocal(g4);applyRemote(g4,r4,true);relock(g4);}conflict[g4]=false;}
     else if(a==='sync'){var r=syncShortcuts(mode);await persist(mode);refreshList(mode);toast('🔄 '+r.add+' ajouté'+(r.add>1?'s':'')+(r.orph?' · '+r.orph+' raccourci(s) supprimé(s)':'')+(r.add+r.orph+r.upd===0?' — déjà à jour':''));}
     else if(a==='add'){V[mode].entries.unshift({id:newId(),nom:'Nouveau site',url:'',login:'',pwd:'',note:'',linked:false,orphan:false,nomEdited:true,at:Date.now()});await persist(mode);refreshList(mode);var f=host(mode).querySelector('.cf-name');if(f){f.focus();f.select();}}
     else if(a==='del'&&card){var e=entryOf(mode,card);if(!e)return;if(!confirm('Supprimer la fiche « '+(e.nom||'')+' » et son mot de passe ?'+(e.linked&&!e.orphan?'\n(Le raccourci reste ; la fiche reviendra au prochain « Mettre à jour ».)':'')))return;
@@ -33810,7 +33810,11 @@ function formPageEdit(fid) {
   function getT(g){return parseInt(localStorage.getItem(TK[g])||'0',10)||0;}
   function setT(g,t){try{localStorage.setItem(TK[g],String(t||Date.now()));}catch(e){}}
   function localPack(g){var m=localStorage.getItem(METAK[g]);if(!m)return null;var o={meta:m,t:getT(g)};GM[g].forEach(function(x){var v=localStorage.getItem(VKEY[x]);if(v)o[x]=v;});return o;}
+  // Seule Anaïs (propriétaire) envoie le coffre vers le cloud ; les membres de l'équipe le reçoivent, sans jamais l'écraser.
+  function canPush(){try{return typeof window.accRole!=='function'||window.accRole()==='owner';}catch(e){return false;}}
+  function backupLocal(g){try{var ts=Date.now(),m=localStorage.getItem(METAK[g]);if(!m)return;localStorage.setItem('sfm_coffre_bak_'+g+'_'+ts+'_meta',m);GM[g].forEach(function(x){var v=localStorage.getItem(VKEY[x]);if(v)localStorage.setItem('sfm_coffre_bak_'+g+'_'+ts+'_'+x,v);});}catch(e){}}
   function cloudPushVault(g,del){
+    if(!canPush())return;
     clearTimeout(pushT[g]);
     pushT[g]=setTimeout(function(){var db=dbq();if(!db)return;var o=del?{del:1,t:Date.now()}:localPack(g);if(!o)return;try{db.ref(CL[g]).set(o).catch(function(){});}catch(e){}},700);
   }
@@ -33847,6 +33851,12 @@ function formPageEdit(fid) {
     RSEEN[g]={has:!!(r&&r.meta),f:fprR(r)};
     setTimeout(function(){try{document.querySelectorAll('.cf-fpr[data-g="'+g+'"]').forEach(function(e){e.textContent=fprTxt(g);});}catch(e){}},50);
     var lt=getT(g),lm=localStorage.getItem(METAK[g]);
+    if(!canPush()){   // équipe : on adopte le coffre d'Anaïs (l'ancien coffre local est mis de côté, rien d'effacé), on n'envoie jamais rien
+      if(!r||r.del||!r.meta)return;
+      if(lm!==r.meta){if(lm)backupLocal(g);applyRemote(g,r,true);conflict[g]=false;relock(g);}
+      else if(r.t>lt){applyRemote(g,r,false);reloadData(g);}
+      return;
+    }
     if(!r){if(lm){if(!lt)setT(g,Date.now());cloudPushVault(g);}return;}
     if(r.del){if(lm&&lt<=r.t){wipeLocal(g);GM[g].forEach(function(m){render(m);});}else if(lm&&lt>r.t)cloudPushVault(g);return;}
     if(!r.meta)return;
@@ -33858,7 +33868,7 @@ function formPageEdit(fid) {
       return;
     }
     if(!lt){conflict[g]=true;conflictR[g]=r;if(!busy())GM[g].forEach(function(m){render(m);});return;}
-    if(r.t>lt){applyRemote(g,r,true);relock(g);}
+    if(r.t>lt){conflict[g]=true;conflictR[g]=r;if(!busy())GM[g].forEach(function(m){render(m);});}   // propriétaire : jamais de remplacement automatique, c'est elle qui choisit
     else if(r.t<lt)cloudPushVault(g);
   }
   function pullVault(g){
@@ -33936,7 +33946,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
         return d;}}catch(e){}
     return {enabled:false,code:null,members:[]};}
   // ── Sauvegarde cloud directe des réglages d'équipe (indépendante de la synchro générale) ──
-  var ACC_BUILD='27/11 · 1h40 · écran stable + n° coffre v14', CLOUDSEEN=null;
+  var ACC_BUILD='27/11 · 2h · coffre équipe v15', CLOUDSEEN=null;
   var CLOUD='dash_team/config', TKEY='sfm_acces_cloud_t', ST={ok:null,msg:'Vérification de la connexion au cloud…'}, pulling=false, pollN=0;
   function dbq(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
   function stTxt(){return (ST.ok===false?'⚠️ ':ST.ok?'☁️ ':'')+ST.msg;}
