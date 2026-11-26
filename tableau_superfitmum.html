@@ -32366,14 +32366,37 @@ function formPageEdit(fid) {
 
   // ── Propositions de départ (tu peux tout changer case par case) ────────────────────────────────
   var D_PRO = [
-    ['Mouvement', 'Réveil en douceur : nuque, épaules, respiration'], ['Détente', 'Respirer par le ventre'], ['Alimentation', 'Un petit-déjeuner de maman en 5 minutes'], ['Mental', 'Vider sa tête : une seule liste'],
-    ['Bilan', 'Mon bilan avec Anaïs'], ['Mouvement', 'Sentir son plancher pelvien, tout en douceur'], ['Mental', 'Poser une limite avec la famille pendant les fêtes'], ['Découverte', 'Mon espace co-NAÎTRE : ton suivi et ta coach'],
-    ['Alimentation', 'L’assiette équilibrée : un repère simple'], ['Mouvement', 'Dérouiller le dos'], ['Découverte', 'co-NAÎTRE son foyer : toute la famille participe'], ['Détente', 'La routine du soir pour mieux dormir'],
-    ['Mouvement', 'Pilates debout : grandir la colonne'], ['Découverte', 'co-NAÎTRE en mouvement : du Pilates qui s’adapte à ta vie'], ['Alimentation', 'Une recette de Noël express'], ['Détente', 'Lâcher les tensions avant les fêtes'],
-    ['Mental', 'La règle des trois priorités'], ['Mouvement', 'Fessiers en 5 minutes'], ['Comprendre', 'Ton énergie selon ton cycle'], ['Alimentation', 'Le repas de fête sans culpabilité'],
-    ['Détente', 'Cohérence cardiaque : 5 minutes pour redescendre'], ['Mouvement', 'Mini-circuit complet de 5 minutes'], ['Mental', 'Ton bilan du mois : ce que tu gardes pour janvier'], ['Cadeau', 'Ton cadeau de Noël']
+    // Parcours calqué sur la phase 1 de l'accompagnement : 4 « mois » de 6 jours. [rubrique, titre, texte]
+    // ── Mois 1 · Comprendre son épuisement (jours 1 à 6) ──
+    ['Mois 1 · Comprendre', 'Poser tes piliers : le socle de ces 24 jours', 'Avant de vouloir tout changer, on pose le socle : bouger un peu, bien manger, respirer, dormir. Aujourd’hui, choisis le pilier qui te manque le plus et note-le. Un seul, pas quatre.'],
+    ['Mois 1 · Comprendre', 'Comprendre l’épuisement des mamans', 'Ce n’est pas un manque de volonté : tu portes la charge de tout et de tous. Aujourd’hui, on met des mots sur ce qui t’use, sans te juger.'],
+    ['Mois 1 · Comprendre', 'Reprendre le contrôle de ton monde intérieur', 'Tes pensées vont vite, surtout en décembre. Aujourd’hui, un exercice simple pour poser ce qui tourne dans ta tête et retrouver un peu de place.'],
+    ['Mois 1 · Comprendre', 'Comprendre ton système nerveux', 'Pourquoi tu es sur les nerfs ou à plat, et ce que ton corps essaie de te dire. Une explication claire, sans jargon.'],
+    ['Bilan', 'Mon bilan avec Anaïs', ''],
+    ['Mois 1 · Comprendre', 'Ta première pratique de 5 minutes', 'On termine le premier bloc par une pratique courte à refaire chaque jour : respiration, étirements doux, ou pause à toi. À toi de choisir.'],
+    // ── Mois 2 · Réguler le système nerveux (jours 7 à 12) ──
+    ['Mois 2 · Réguler', 'Pourquoi le stress n’est pas ton ennemi', 'Le stress n’est pas à supprimer : il devient un problème quand il ne redescend jamais. Aujourd’hui, apprendre à le repérer pour mieux le laisser passer.'],
+    ['Découverte', 'Mon espace co-NAÎTRE : ton suivi et ta coach', ''],
+    ['Mois 2 · Réguler', 'Activer ton nerf vague', 'Un geste simple pour dire à ton corps que tu es en sécurité : souffle long, main posée sur le ventre. À tester ce soir.'],
+    ['Mois 2 · Réguler', 'L’ancrage : revenir ici et maintenant', 'Quand tout s’accélère, l’ancrage te ramène dans ton corps en une minute. On le pratique ensemble.'],
+    ['Découverte', 'co-NAÎTRE son foyer : toute la famille participe', ''],
+    ['Mois 2 · Réguler', 'Sommeil et récupération', 'Récupérer, ce n’est pas juste dormir plus : c’est créer les conditions pour que ton corps se repose vraiment. Trois repères pour tes soirées de décembre.'],
+    // ── Mois 3 · Sortir du pilotage automatique (jours 13 à 18) ──
+    ['Mois 3 · Pilote auto', 'Sortir des pensées limitantes', '« Je n’y arriverai pas », « je n’ai pas le temps » : ces phrases te freinent sans que tu t’en rendes compte. On les repère pour pouvoir les remettre en question.'],
+    ['Découverte', 'co-NAÎTRE en mouvement : du Pilates qui s’adapte à ta vie', ''],
+    ['Mois 3 · Pilote auto', 'Désamorcer les déclencheurs émotionnels', 'Ce qui te fait monter d’un coup n’est pas un hasard. Aujourd’hui, repérer tes déclencheurs et préparer une réponse plus douce.'],
+    ['Mois 3 · Pilote auto', 'Reprendre conscience de tes choix', 'Tu choisis plus souvent que tu ne le crois. Aujourd’hui, un petit tri entre ce que tu fais par habitude et ce que tu veux vraiment.'],
+    ['Mois 3 · Pilote auto', 'Gestion du temps : arrête de courir', 'Moins de listes interminables, plus de priorités. Trois questions pour alléger ton quotidien avant les fêtes.'],
+    ['Masterclass', 'Ma masterclass offerte', 'Une heure avec moi pour aller plus loin, à ton rythme. Clique sur le bouton pour t’inscrire.'],
+    // ── Mois 4 · Reconnexion au corps (jours 19 à 24) ──
+    ['Mois 4 · Corps', 'Reprendre possession de ton corps', 'Ton corps travaille pour toi toute l’année. Aujourd’hui, on le remercie : une pratique douce pour le sentir à nouveau.'],
+    ['Mois 4 · Corps', 'Faire la paix avec ton corps', 'Moins de comparaison, plus de bienveillance. Un exercice pour poser un regard plus doux sur toi.'],
+    ['Mois 4 · Corps', 'Transformer la culpabilité corporelle', 'Les repas de fête, les kilos, le miroir : la culpabilité ne t’aide pas. Aujourd’hui, comment la remplacer par quelque chose d’utile.'],
+    ['Mois 4 · Corps', 'Vision board : ta nouvelle direction', 'Qu’est-ce que tu veux pour toi en janvier ? Aujourd’hui, on le dessine ou on le colle, simplement.'],
+    ['Mois 4 · Corps', 'Ton bilan de ces 24 jours', 'Ce que tu as compris, ce qui t’a fait du bien, ce que tu gardes pour janvier. Prends cinq minutes pour l’écrire.'],
+    ['Cadeau', 'Ton cadeau de Noël', '']
   ];
-  var D_PRO_EXTRA = { 11: { video: VID + 'presentation_foyer.mp4', lien: TUN + '?f=foyer', lienLabel: 'Voir l’offre co-NAÎTRE son foyer' }, 14: { video: VID + 'presentation_mouvement.mp4', lien: TUN + '?f=mouvement', lienLabel: 'Voir l’offre co-NAÎTRE en mouvement' }, 8: { video: VID + 'presentation_espace.mp4', lien: TUN + '?f=bilan', lienLabel: 'Réserver mon Bilan Forme Santé offert' } };
+  var D_PRO_EXTRA = { 18: { lienLabel: 'Je m’inscris à la masterclass' }, 11: { video: VID + 'presentation_foyer.mp4', lien: TUN + '?f=foyer', lienLabel: 'Voir l’offre co-NAÎTRE son foyer' }, 14: { video: VID + 'presentation_mouvement.mp4', lien: TUN + '?f=mouvement', lienLabel: 'Voir l’offre co-NAÎTRE en mouvement' }, 8: { video: VID + 'presentation_espace.mp4', lien: TUN + '?f=bilan', lienLabel: 'Réserver mon Bilan Forme Santé offert' } };
   var D_CLI = [
     ['Mission', 'Vider sa tête : une seule liste de tout ce qu’il reste à faire'], ['Pour moi', '5 minutes pour tout poser : respiration guidée'], ['Mission', 'Traditions : ce qu’on garde, ce qu’on laisse tomber'], ['Mission', 'Les cadeaux : qui, quoi, combien, et on s’arrête là'],
     ['En famille', 'La liste de souhaits des enfants : trois choses, pas plus'], ['Mission', 'Répartir : qui fait quoi dans le foyer'], ['Pour moi', '10 minutes à soi, bloquées dans l’agenda'], ['Mission', 'Dire non sans culpabiliser : invitations et attentes de la famille'],
@@ -32686,7 +32709,7 @@ function formPageEdit(fid) {
   };
   window.avPrefill = function () {
     var par = AV.par, src = par === 'prospect' ? D_PRO : D_CLI, cur = AV.cases[par] || {}, upd = {}, k = 0;
-    src.forEach(function (x, i) { var n = i + 1; if (cur[n] && (cur[n].titre || cur[n].texte)) return; var r = { rubrique: x[0], titre: x[1] }; if (par === 'prospect' && D_PRO_EXTRA[n]) Object.keys(D_PRO_EXTRA[n]).forEach(function (q) { r[q] = D_PRO_EXTRA[n][q]; }); upd[n] = r; k++; });
+    src.forEach(function (x, i) { var n = i + 1; if (cur[n] && (cur[n].titre || cur[n].texte)) return; var r = { rubrique: x[0], titre: x[1] }; if (par === 'prospect' && x[2]) r.texte = x[2]; if (par === 'prospect' && D_PRO_EXTRA[n]) Object.keys(D_PRO_EXTRA[n]).forEach(function (q) { r[q] = D_PRO_EXTRA[n][q]; }); upd[n] = r; k++; });
     if (!k) { showToast('Toutes les cases ont déjà un titre'); return; }
     if (!window.confirm('Remplir ' + k + ' case(s) vide(s) avec les titres proposés ? Les cases déjà remplies ne changent pas.')) return;
     R(BP + '/cases/' + par).update(upd).then(function () { showToast('✨ ' + k + ' titres ajoutés'); });
@@ -32705,6 +32728,7 @@ function formPageEdit(fid) {
       pp[1].forEach(function (x, i) {
         var k = i + 1; if (cur[k] && (cur[k].titre || cur[k].texte)) return;
         var r = { rubrique: x[0], titre: x[1] };
+        if (par === 'prospect' && x[2]) r.texte = x[2];
         if (par === 'prospect' && D_PRO_EXTRA[k]) Object.keys(D_PRO_EXTRA[k]).forEach(function (q) { r[q] = D_PRO_EXTRA[k][q]; });
         caseUpd[par][k] = r; cn++;
       });
@@ -33806,7 +33830,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     var d=get();d.members=d.members||[];var id=uid();d.members.push({id:id,name:n.slice(0,40),code:null,perms:{}});save(d);OPEN[id]=1;toast('👤 '+n+' ajoutée : définis son code');render();
   };
   window.accRename=function(id,v){var d=get();(d.members||[]).forEach(function(m){if(m.id===id&&String(v).trim())m.name=String(v).trim().slice(0,40);});save(d);render();};
-  window.accDelMember=function(id){var m=member(id);if(!m||!confirm('Supprimer '+m.name+' de l\'équipe ? Son code ne fonctionnera plus.'))return;var d=get();d.members=(d.members||[]).filter(function(x){return x.id!==id;});if(!d.members.some(function(x){return x.code;}))d.enabled=false;save(d);toast('Supprimée');render();};
+  window.accDelMember=function(id){var m=member(id);if(!m||!twice('del'+id,'⚠️ Clique encore une fois sur la corbeille pour supprimer '+m.name+' (son code ne fonctionnera plus).'))return;var d=get();d.members=(d.members||[]).filter(function(x){return x.id!==id;});if(!d.members.some(function(x){return x.code;}))d.enabled=false;save(d);toast('Supprimée');render();};
   window.accSetCode=async function(w){
     var a=document.getElementById('accN_'+w).value,b=document.getElementById('accN2_'+w).value,er=document.getElementById('accSetErr_'+w);
     if(a.length<6){er.textContent='6 caractères minimum.';return;}if(a!==b){er.textContent='Les deux codes diffèrent.';return;}
@@ -33816,8 +33840,10 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     d=get();if(w==='owner')d.code=rec;else(d.members||[]).forEach(function(m){if(m.id===w)m.code=rec;});save(d);toast('🔑 Code enregistré');render();
   };
   window.accSetPerm=function(mid,id,p){var d=get();(d.members||[]).forEach(function(m){if(m.id===mid){m.perms=m.perms||{};m.perms[id]=p;}});save(d);render();};
+  var ARM={};
+  function twice(k,msg,errId){var n=Date.now();if(ARM[k]&&n-ARM[k]<8000){ARM[k]=0;return true;}ARM[k]=n;try{toast(msg);}catch(e){}try{var e=errId&&document.getElementById(errId);if(e)e.textContent=msg;}catch(x){}return false;}
   window.accToggle=function(on){var d=get();if(on&&!(d.code&&(d.members||[]).some(function(m){return m.code;}))){document.getElementById('accTogErr').textContent='Définis ton code et celui d\'au moins une personne.';return;}
-    if(!on&&!confirm('Désactiver la protection ? Tout le monde aura de nouveau accès à tout.'))return;
+    if(!on&&!twice('toggle','⚠️ Clique encore une fois sur « Désactiver la protection » pour confirmer : tout le monde aura de nouveau accès à tout.','accTogErr'))return;
     d.enabled=!!on;save(d);if(on){sset('owner');}toast(on?'🛡️ Protection activée':'Protection désactivée');render();};
   window.accPreview=function(mid){var m=member(mid);if(!m)return;try{sessionStorage.setItem(PKEY,mid);}catch(e){}sset('m:'+mid);enforce(true);window.showView('accueil',document.querySelector('.nav-tab[data-view=accueil]'));toast('👁 Aperçu : voici ce que voit '+m.name+' (clique « Accès Anaïs » en haut pour revenir)');};
 
@@ -33840,14 +33866,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
   // Anaïs choisit ensuite un nouveau code dans l'onglet Équipe et réactive la protection.
   // v2 : le déblocage attend d'avoir LU les réglages d'équipe dans le cloud (sinon, sur un appareil neuf, il se consommait avant de les recevoir).
   // Valable une seule fois par appareil et seulement jusqu'au 29/11/2026.
-  function rescueOnce(){try{
-    if(localStorage.getItem('sfm_acces_rescue_v2'))return;
-    if(Date.now()>Date.parse('2026-11-29T23:59:59')){localStorage.setItem('sfm_acces_rescue_v2','x');return;}
-    localStorage.setItem('sfm_acces_rescue_v2','1');
-    var d=get();
-    if(d&&d.rescue2)return;   // déjà fait une fois (sur n'importe quel appareil) : on ne désactive plus jamais
-    if(d&&(d.enabled||d.code)){d.enabled=false;d.code=null;d.rescue2=true;save(d);try{sessionStorage.removeItem(PKEY);}catch(e){}sset('owner');try{removeGate();}catch(e){}try{enforce(true);}catch(e){}setTimeout(function(){toast('🔓 Protection désactivée : choisis un nouveau code propriétaire dans l\'onglet Équipe, puis réactive-la.');},800);}
-  }catch(e){}}
+  function rescueOnce(){/* Désactivé : la remise à zéro a déjà servi. Elle ne doit plus jamais couper la protection (elle se redéclenchait après une synchro qui vide le stockage local). */}
   function start(){resetOnce();guard();enforce();coachFlag();whoChip();setTimeout(cloudLoop,800);}
   if(document.readyState==='complete')setTimeout(start,50);else window.addEventListener('load',function(){setTimeout(start,50);});
   setInterval(function(){guard();enforce();coachFlag();whoChip();},2500);
