@@ -33885,6 +33885,7 @@ function renderF(){
   h.innerHTML=head+cfgHtml()+autoHtml()+statsHtml(P)
    +'<div class="fa-note" style="margin:0 0 14px">Paiements Stripe lus au <b>'+fdate(STR.generatedAt)+'</b> (lecture seule). Pour les actualiser, demande-moi « mets à jour les paiements Stripe ».</div>'
    +'<div class="fa-bar"><button class="fa-btn" onclick="faApplyAll()"'+(upd?'':' disabled')+'>✅ Mettre à jour toutes les fiches ('+upd+')</button><button class="fa-btn sec" onclick="faGenAll()">🧾 Créer les factures manquantes</button></div>'
+   +'<div class="fa-bar"><button class="fa-btn sec" onclick="faPublishAll(true)">📤 Publier les factures dans les applis des clientes</button><span id="faPubSt" class="fa-note" style="margin:0">'+esc(FP_LAST)+'</span></div>'
    +'<div class="fa-bar"><input class="fa-in" id="faQ" type="search" placeholder="Chercher une adhérente…" value="'+esc(QUERY)+'" oninput="faSetQuery(this.value)"></div>'
    +'<div class="fa-bar">'+chips()+'</div><div id="faList">'+listHtml(P)+'</div></div>';
 }
@@ -34602,6 +34603,141 @@ setInterval(function(){try{vtRemind();}catch(e){}},600000);
 
 setTimeout(function(){try{window.faAutoScan();}catch(e){}},4000);
 setTimeout(function(){try{vtLoad(function(){setTimeout(vtAutoApply,800);});}catch(e){}},7000);
+// ─────────── 📤 Publier les factures dans les applis des clientes ───────────
+// Chaque facture est publiée en PDF dans l'appli de la cliente (onglet « Tes factures »).
+// Règle : si la cliente a « Mon espace co-NAÎTRE », TOUTES ses factures (globale comprise) sont dans co-NAÎTRE uniquement ;
+// sinon elles sont dans l'appli « en mouvement » et/ou dans le foyer, selon ce qu'elle possède.
+// Emplacements Firebase : liste = <racine>/factures/<id>, fichier PDF = <racine>/factures_f/<id> (listes légères, PDF lu à la demande).
+var FP_HASH_KEY='sfm_fact_pub_hash_v1', FP_BUSY=false, FP_LAST='';
+function fpN(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();}
+function fpId(s){return String(s||'').replace(/[.#$\/\[\]\s]/g,'_').slice(0,80);}
+function fpHash(s){var h=5381,i=s.length;while(i)h=(h*33)^s.charCodeAt(--i);return String(h>>>0)+':'+s.length;}
+function fpEur(c){var v=(Math.abs(c)/100).toFixed(2).replace('.',',').replace(/\B(?=(\d{3})+(?!\d))/g,' ');return (c<0?'-':'')+v+' €';}
+function fpInvoicePdf(inv){
+  var J=window.jspdf&&window.jspdf.jsPDF; if(!J)return null;
+  var d=new J({unit:'mm',format:'a4'}), e=inv.em||emitter(), L=18, R=192, y=16, G=[63,93,70];
+  try{d.addImage(LOGO,'PNG',L,y-4,40,25);}catch(x){}
+  d.setFont('helvetica','normal');d.setFontSize(7.5);d.setTextColor(92,122,88);d.text('BY ANAIS FIT TRAINING',L,y+25);
+  d.setFont('helvetica','bold');d.setFontSize(22);d.setTextColor(G[0],G[1],G[2]);d.text('FACTURE',R,y+4,{align:'right'});
+  d.setFontSize(10);d.setTextColor(60,70,62);d.setFont('helvetica','normal');
+  d.text('N° '+inv.num,R,y+12,{align:'right'});d.text('Date : '+fdate(inv.date),R,y+18,{align:'right'});
+  y=48;d.setDrawColor(G[0],G[1],G[2]);d.setLineWidth(0.6);d.line(L,y,R,y);
+  y+=9;d.setFontSize(8);d.setTextColor(92,122,88);d.setFont('helvetica','bold');d.text('ÉMETTEUR',L,y);d.text('FACTURÉ À',112,y);
+  d.setFont('helvetica','normal');d.setFontSize(10);d.setTextColor(38,49,42);
+  var em=[e.nom||'','Association loi 1901'];if(e.rna)em.push('N° RNA : '+e.rna);if(e.siret)em.push('SIRET : '+e.siret);
+  String(e.adresse||'').split(/\n/).forEach(function(l){if(l.trim())em.push(l.trim());});if(e.email)em.push(e.email);if(e.tel)em.push(e.tel);
+  var cl=[inv.nom||''];if(inv.email)cl.push(inv.email);if(inv.tel)cl.push(inv.tel);
+  var y1=y+6,y2=y+6;
+  em.forEach(function(l,i){d.setFont('helvetica',i===0?'bold':'normal');d.text(String(l),L,y1);y1+=5;});
+  cl.forEach(function(l,i){d.setFont('helvetica',i===0?'bold':'normal');d.text(String(l),112,y2);y2+=5;});
+  y=Math.max(y1,y2)+6;
+  d.setFillColor(244,239,226);d.rect(L,y,R-L,8,'F');d.setFont('helvetica','bold');d.setFontSize(8);d.setTextColor(74,90,77);
+  d.text('DÉSIGNATION',L+2,y+5.3);d.text('QTÉ',128,y+5.3,{align:'center'});d.text('PRIX UNITAIRE',162,y+5.3,{align:'right'});d.text('TOTAL',R-2,y+5.3,{align:'right'});
+  y+=8;d.setFont('helvetica','normal');d.setFontSize(10);d.setTextColor(38,49,42);
+  inv.lines.forEach(function(l){
+    var t=l.unit*l.qty, parts=d.splitTextToSize(String(l.label||''),95), h=Math.max(9,parts.length*5+4);
+    d.text(parts,L+2,y+6);d.text(String(l.qty),128,y+6,{align:'center'});d.text(fpEur(l.unit),162,y+6,{align:'right'});d.text(l.unit===0?'Offert':fpEur(t),R-2,y+6,{align:'right'});
+    d.setDrawColor(236,230,214);d.setLineWidth(0.2);d.line(L,y+h,R,y+h);y+=h;
+  });
+  y+=8;d.setFillColor(G[0],G[1],G[2]);d.roundedRect(R-80,y,80,10,2,2,'F');d.setTextColor(255,255,255);d.setFont('helvetica','bold');d.setFontSize(11);
+  d.text('Total à payer',R-76,y+6.6);d.text(fpEur(inv.total),R-4,y+6.6,{align:'right'});
+  y+=18;d.setFont('helvetica','normal');d.setFontSize(10);d.setTextColor(44,68,50);d.text('✓ Payée le '+fdate(inv.date)+' par carte bancaire',L,y);
+  y=Math.max(y+22,262);d.setDrawColor(236,230,214);d.line(L,y,R,y);d.setFontSize(8.5);d.setTextColor(102,115,95);
+  var ft=[];if(e.tva)ft.push(e.tva+'.');if(e.pied)ft.push(e.pied);ft.push((e.nom||'')+(e.rna?' — RNA '+e.rna:''));
+  d.text(d.splitTextToSize(ft.join('\n'),R-L),L,y+5);
+  return d.output('datauristring',{filename:'Facture_'+inv.num+'.pdf'});
+}
+function fpPeople(){
+  var P={};
+  function get(n){n=fpN(n);if(!n)return null;return P[n]||(P[n]={name:n,ep:[],fo:[],resa:[],emails:{},docs:[]});}
+  try{var L=getClientLinks()||{};Object.keys(L).forEach(function(k){var p=get(k);if(p&&L[k]&&L[k].code&&p.ep.indexOf(L[k].code)<0)p.ep.push(L[k].code);});}catch(e){}
+  try{var M=getMenageLinks()||{};Object.keys(M).forEach(function(k){var p=get(k);if(p&&M[k]&&M[k].code&&p.fo.indexOf(M[k].code)<0)p.fo.push(M[k].code);});}catch(e){}
+  try{(getAssoAdherents().concat(getFpClients())).forEach(function(a){var p=get(a.nom);if(!p)return;if(a.resaCode&&p.resa.indexOf(a.resaCode)<0)p.resa.push(a.resaCode);var m=String(a.email||'').trim().toLowerCase();if(m)p.emails[m]=1;});}catch(e){}
+  return P;
+}
+function fpTargets(p){
+  var out=[];
+  if(p.ep.length){p.ep.forEach(function(c){out.push({m:'epanouissement/'+c+'/factures',f:'epanouissement/'+c+'/factures_f'});});return out;}
+  p.resa.forEach(function(c){out.push({m:'reservations/factures/'+c,f:'reservations/factures_f/'+c});});
+  p.fo.forEach(function(c){out.push({m:'clients/'+c+'/factures',f:'clients/'+c+'/factures_f'});});
+  return out;
+}
+function fpStale(p){
+  var out=[];
+  if(!p.ep.length)return out;
+  p.resa.forEach(function(c){out.push('reservations/factures/'+c,'reservations/factures_f/'+c);});
+  p.fo.forEach(function(c){out.push('clients/'+c+'/factures','clients/'+c+'/factures_f');});
+  return out;
+}
+function fpFileOf(clientKey,id){return new Promise(function(res){try{getClientFile(clientKey,'invoice_'+id,function(f){res(f||null);});}catch(e){res(null);}});}
+window.faPublishAll=function(manual){
+  if(FP_BUSY)return;
+  var say=function(m){FP_LAST=m;var el=$('faPubSt');if(el)el.textContent=m;if(manual){try{showToast(m);}catch(e){}}};
+  try{if(!initSyncFirebase()||!window.dashFbDB){say('Connexion cloud indisponible : réessaie dans un instant.');return;}}catch(e){say('Connexion cloud indisponible.');return;}
+  if(!window.jspdf){say('Le générateur de PDF charge encore : réessaie dans un instant.');return;}
+  FP_BUSY=true;
+  var db=window.dashFbDB, People=fpPeople(), byEmail={};
+  Object.keys(People).forEach(function(n){Object.keys(People[n].emails).forEach(function(m){byEmail[m]=People[n];});});
+  var jobs=[], orphans=[];
+  // 1) factures de l'association (générées dans Facturation)
+  invs().forEach(function(inv){
+    var p=byEmail[String(inv.email||'').trim().toLowerCase()]||People[fpN(inv.nom)];
+    if(!p){orphans.push(inv.nom||inv.num);return;}
+    p.docs.push({id:fpId('as_'+inv.id),meta:{nom:'Facture '+inv.num,date:String(inv.date||'').slice(0,10),montant:inv.total,ref:inv.num,kind:'asso'},inv:inv});
+  });
+  // 2) factures déposées dans la fiche cliente (PDF, images…)
+  var allMeta=getInvoicesMetaAll(), clientDocs=[];
+  Object.keys(allMeta).forEach(function(ck){
+    var p=People[fpN(ck)]; var m=allMeta[ck]||{};
+    (m.docs||[]).forEach(function(dc){
+      var fold=(m.folders||[]).filter(function(f){return f.id===dc.folderId;})[0];
+      var dt=dc.addedAt?new Date(dc.addedAt).toISOString().slice(0,10):'';
+      if(!p){orphans.push(ck+' / '+(dc.name||dc.id));return;}
+      p.docs.push({id:fpId('cl_'+dc.id),meta:{nom:dc.name||dc.fileName||'Facture',date:dt,montant:null,ref:'',kind:'pdf',dossier:fold?fold.name:'',fileName:dc.fileName||''},clientKey:ck,docId:dc.id,size:dc.sizeBytes||0});
+    });
+  });
+  var hashes=lsGet(FP_HASH_KEY,{}), nPub=0, nCl=0, nSkip=0, nNo=0, writes=[];
+  Object.keys(People).forEach(function(n){
+    var p=People[n]; if(!p.docs.length)return;
+    var tg=fpTargets(p);
+    if(!tg.length){nNo+=p.docs.length;orphans.push(p.name+' (aucune appli)');return;}
+    nCl++;
+    p.docs.forEach(function(dc){
+      tg.forEach(function(t){
+        writes.push(function(){
+          var hk=t.m+'/'+dc.id;
+          var preH=dc.inv?fpHash(JSON.stringify([dc.meta,dc.inv])):null;
+          if(preH&&hashes[hk]===preH)return Promise.resolve();
+          return Promise.resolve().then(function(){
+            if(dc.inv){var u=fpInvoicePdf(dc.inv);return u?{dataUrl:u,name:'Facture_'+dc.inv.num+'.pdf',size:Math.round(u.length*0.75)}:null;}
+            return fpFileOf(dc.clientKey,dc.docId).then(function(f){return f?{dataUrl:f.dataUrl,name:f.fileName||'facture',size:Math.round(String(f.dataUrl).length*0.75)}:null;});
+          }).then(function(file){
+            if(!file||!file.dataUrl)return;
+            if(file.size>3200000){nSkip++;return;}
+            var meta=Object.assign({},dc.meta,{fileName:file.name,size:file.size});
+            var h=preH||fpHash(JSON.stringify(meta)+file.dataUrl.length+file.dataUrl.slice(-60));
+            if(hashes[hk]===h)return;
+            return db.ref(t.f+'/'+dc.id).set({dataUrl:file.dataUrl,name:file.name}).then(function(){return db.ref(t.m+'/'+dc.id).set(meta);}).then(function(){hashes[hk]=h;nPub++;});
+          });
+        });
+      });
+    });
+  });
+  // nettoyage (manuel seulement) : un client qui a Mon espace ne garde pas de doublon dans les autres applis
+  var stale=[];if(manual)Object.keys(People).forEach(function(n){fpStale(People[n]).forEach(function(s){stale.push(s);});});
+  say('Publication en cours…');
+  var chain=Promise.resolve();
+  writes.forEach(function(w){chain=chain.then(w).catch(function(e){nSkip++;});});
+  chain.then(function(){return Promise.all(stale.map(function(s){return db.ref(s).remove().catch(function(){});}));}).then(function(){
+    lsSet(FP_HASH_KEY,hashes);FP_BUSY=false;
+    var msg=(nPub?('✅ '+nPub+' facture'+(nPub>1?'s':'')+' publiée'+(nPub>1?'s':'')+' dans les applis'):'✅ Factures déjà à jour')+' ('+nCl+' cliente'+(nCl>1?'s':'')+')'+(nSkip?(' · '+nSkip+' non publiée(s) (trop lourde ou erreur)'):'')+(orphans.length?(' · '+orphans.length+' sans appli : '+orphans.slice(0,4).join(', ')+(orphans.length>4?'…':'')):'');
+    say(msg);
+  }).catch(function(e){FP_BUSY=false;say('Erreur de publication : '+(e&&e.message||'inconnue'));});
+};
+window.faPubLast=function(){return FP_LAST;};
+setTimeout(function(){try{window.faPublishAll(false);}catch(e){}},30000);
+setInterval(function(){try{window.faPublishAll(false);}catch(e){}},1800000);
+
 window.faInit=function(which){
   if(which==='billimport'){HOST_B=$('faHost_billimport');if(!HOST_B)return;if(!$('faHost_vt')){var hv=document.createElement('div');hv.id='faHost_vt';HOST_B.parentNode.insertBefore(hv,HOST_B.nextSibling);}HOST_V=$('faHost_vt');vtLoad(renderV);var open=$('faBillBox')&&$('faBillBox').open;renderB();ensureStripe(function(){var o=$('faBillBox')&&$('faBillBox').open;renderB();if(o||open){var b=$('faBillBox');if(b)b.open=true;}});return;}
   if(which==='transfert'){HOST_T=$('faHost_transfert');if(!HOST_T)return;renderT();ensureStripe(renderT);}
