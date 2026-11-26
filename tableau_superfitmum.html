@@ -20352,6 +20352,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
 
   function syncLockApp() {
     try { sessionStorage.removeItem(SYNC_PW_SESSION_KEY); } catch (e) {}
+    try { sessionStorage.removeItem('sfm_acces_role'); } catch (e) {}   // le profil choisi (Anaïs / équipe) est oublié aussi : on redemande « Qui utilise le tableau de bord ? »
     location.reload();
   }
 
@@ -33566,9 +33567,21 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
   window.accRole=role;
   // démarrage
   function coachFlag(){try{if(role()==='owner')localStorage.setItem('sfm_coach_device','1');else localStorage.removeItem('sfm_coach_device');}catch(e){}}
-  function start(){guard();enforce();coachFlag();setTimeout(cloudLoop,800);}
+  // Une seule fois (cette version) : on oublie le profil retenu sur cet appareil, pour que « Qui utilise le tableau de bord ? » réapparaisse.
+  function resetOnce(){try{if(!localStorage.getItem('sfm_acces_reset_v2')){localStorage.setItem('sfm_acces_reset_v2','1');localStorage.removeItem(DKEY);sessionStorage.removeItem(RKEY);}}catch(e){}}
+  // Pastille « qui est connecté » à côté du bouton Verrouiller : cliquer dessus = changer de profil.
+  function whoChip(){
+    var b=document.querySelector('header .header-btn[onclick="syncLockApp()"]');if(!b)return;
+    var c=document.getElementById('accWho'),d=get();
+    if(!ready(d)){if(c)c.remove();return;}
+    var r=role(),m=isR(r)?member(String(r).slice(2)):null,txt=r==='owner'?'🛡️ Anaïs · changer de profil':(m?'👤 '+m.name+' · changer de profil':'');
+    if(!txt){if(c)c.remove();return;}
+    if(!c){c=document.createElement('button');c.id='accWho';c.className='header-btn';c.title='Changer de profil : le tableau de bord redemande qui se connecte';c.onclick=function(){window.accLogout();};b.parentNode.insertBefore(c,b);}
+    if(c.textContent!==txt)c.textContent=txt;
+  }
+  function start(){resetOnce();guard();enforce();coachFlag();whoChip();setTimeout(cloudLoop,800);}
   if(document.readyState==='complete')setTimeout(start,50);else window.addEventListener('load',function(){setTimeout(start,50);});
-  setInterval(function(){guard();enforce();coachFlag();},2500);
+  setInterval(function(){guard();enforce();coachFlag();whoChip();},2500);
 })();
 </script>
 
