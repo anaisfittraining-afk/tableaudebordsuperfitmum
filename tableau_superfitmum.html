@@ -1454,7 +1454,7 @@ window.EXERCISE_LIBRARY = [
     </div>
   </div>
   <div class="header-right">
-    <span id="syncStatusIndicator"></span>
+    <span id="syncStatusIndicator" onclick="sfmSaveNow()" style="cursor:pointer" title="Cliquer pour tout enregistrer maintenant"></span>
     <span id="dashAuthBadge" style="font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:#FFF1D6;color:#7A5A12;white-space:nowrap;cursor:pointer" title="" onclick="dashAuthActivate()"></span><style>@media (max-width:700px){#dashAuthBadge .dab-t{display:none}}</style>
     <button class="header-btn" onclick="inboxOpenFromBtn()" title="Ouvre la boîte de réception de ta page pro (Meta Business Suite) dans un nouvel onglet">📬 Messages page pro</button>
     <button class="header-btn" onclick="waWebOpen()" title="Ouvre WhatsApp Web (tes groupes et conversations) dans un nouvel onglet">💬 WhatsApp</button>
@@ -1482,6 +1482,7 @@ window.EXERCISE_LIBRARY = [
   <div class="nav-tab" data-view="daily_overview" onclick="showView('daily_overview', this)"><span class="nav-tab-ic">📅</span><span class="nav-tab-lb">Aujourd'hui</span><span id="acqNavBadge" style="display:none;margin-left:6px;color:#fff;background:#B96A46;border-radius:999px;font-size:11px;padding:1px 7px;font-weight:700"></span></div>
   <div class="nav-tab" data-view="grand_chantier" onclick="showView('grand_chantier', this)"><span class="nav-tab-ic">🧱</span><span class="nav-tab-lb">Grand chantier</span></div>
   <div class="nav-tab" data-mode="pro" data-view="coffre_pro" onclick="showView('coffre_pro', this)"><span class="nav-tab-ic">🔐</span><span class="nav-tab-lb">Coffre-fort</span></div>
+  <div class="nav-tab" data-mode="pro" data-view="coffre_equipe" onclick="showView('coffre_equipe', this)"><span class="nav-tab-ic">🗝️</span><span class="nav-tab-lb">Coffre équipe</span></div>
   <div class="nav-tab" data-mode="pro" data-view="pole_marketing" onclick="showView('pole_marketing', this)"><span class="nav-tab-ic">📣</span><span class="nav-tab-lb">Marketing</span></div>
   <div class="nav-tab" data-mode="pro" data-view="pole_acquisition" onclick="showView('pole_acquisition', this)"><span class="nav-tab-ic">🎯</span><span class="nav-tab-lb">Acquisition</span></div>
   <div class="nav-tab" data-mode="pro" data-view="pole_vente" onclick="showView('pole_vente', this)"><span class="nav-tab-ic">📞</span><span class="nav-tab-lb">Vente</span></div>
@@ -2500,6 +2501,50 @@ window.EXERCISE_LIBRARY = [
       #subview-livraison_avent .avst.ok{background:#E3F0DA;color:#2E6E4E}
       #subview-livraison_avent .avst.mid{background:#F3E6C0;color:#5A4511}
     </style>
+<style>
+      #avCodesHost .avbox{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:14px;padding:14px 16px;margin-bottom:14px;max-width:900px}
+      #avCodesHost .avbox.on{background:#EEF6EC;border:1.5px solid #9ae6b4}
+      #avCodesHost .avbox.off{background:#FFF6E5;border:1.5px solid #F0D9A6}
+      #avCodesHost .avs{font-size:12.5px;color:#66735F;margin:4px 0 0}
+      #avCodesHost .avtabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;max-width:900px;padding-bottom:4px}
+      #avCodesHost .avtab{flex:0 0 auto;border:1.5px solid #E2DCC8;background:#fff;color:#55584F;border-radius:10px;padding:9px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+      #avCodesHost .avtab.on{background:#3F5D46;color:#fff;border-color:#3F5D46}
+      #avCodesHost .avcard{background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px;margin-bottom:14px;max-width:900px}
+      #avCodesHost .avcard h3{font-family:'Fraunces',serif;font-size:17px;margin:0 0 6px;color:#26312A}
+      #avCodesHost .avb{border:1.5px solid #3F5D46;background:#fff;color:#3F5D46;border-radius:10px;padding:8px 14px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+      #avCodesHost .avb.main{background:#3F5D46;color:#fff}
+      #avCodesHost .avb.line{border-color:#D6CFB8;color:#66735F}
+      #avCodesHost .avrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+      #avCodesHost .avgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:8px}
+      #avCodesHost .avf{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#55584F;margin-top:6px}
+      #avCodesHost .avf input,#avCodesHost .avf textarea,#avCodesHost select{font:inherit;font-size:14px;font-weight:500;padding:9px 10px;border:1.5px solid #E2DCC8;border-radius:9px;background:#fff;box-sizing:border-box;width:100%}
+      #avCodesHost .avrow select{width:auto;min-width:240px;flex:1}
+      #avCodesHost .avlk{display:flex;gap:10px;justify-content:space-between;align-items:center;border-top:1px solid #EEE7D4;padding:10px 0;flex-wrap:wrap}
+      #avCodesHost .avurl{font-size:12px;color:#66735F;word-break:break-all;max-width:620px}
+      #avCodesHost .avcode{font-family:ui-monospace,Menlo,monospace;font-size:26px;font-weight:700;letter-spacing:2px;color:#2C4432;background:#F3EFE3;border-radius:10px;padding:10px 14px;display:inline-block;margin:6px 0}
+      #avCodesHost .avol{margin:6px 0 0;padding-left:20px;font-size:14px;line-height:1.7}
+      #avCodesHost .avlist{display:grid;gap:6px;max-width:900px;margin-bottom:14px}
+      #avCodesHost .avcase{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #E2DCC8;border-radius:10px;padding:8px 12px;cursor:pointer}
+      #avCodesHost .avcase.sel{border-color:#3F5D46;background:#F1F6EE}
+      #avCodesHost .avn{flex:none;width:30px;height:30px;border-radius:50%;background:#3F5D46;color:#F7F1E6;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+      #avCodesHost .avt{flex:1;min-width:0;font-size:14px;font-weight:600}
+      #avCodesHost .avt i{color:#A8A38F;font-weight:500}
+      #avCodesHost .avtag{font-size:11px;font-weight:700;background:#F3E6C0;color:#5A4511;border-radius:99px;padding:2px 9px;white-space:nowrap}
+      #avCodesHost .avtag.p{background:#E3F0DA;color:#2E6E4E}
+      #avCodesHost .avok{width:18px;color:#2E6E4E;font-weight:800}
+      #avCodesHost .avprog{background:#F3F8EF;border:1.5px dashed #BFD0B8;border-radius:12px;padding:12px;margin-top:12px}
+      #avCodesHost .avstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;max-width:900px;margin-bottom:10px}
+      #avCodesHost .avstats div{background:#fff;border:1px solid #E2DCC8;border-radius:12px;padding:12px;text-align:center}
+      #avCodesHost .avstats b{display:block;font-family:'Fraunces',serif;font-size:24px;color:#3F5D46}
+      #avCodesHost .avstats span{font-size:11.5px;color:#66735F}
+      #avCodesHost .avtw{overflow-x:auto;max-width:100%;background:#fff;border:1px solid #E2DCC8;border-radius:12px}
+      #avCodesHost .avtb{border-collapse:collapse;width:100%;font-size:13px}
+      #avCodesHost .avtb th{text-align:left;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:#8C9686;padding:9px 10px;border-bottom:1px solid #E2DCC8;white-space:nowrap}
+      #avCodesHost .avtb td{padding:8px 10px;border-bottom:1px solid #F1EBD9;vertical-align:top}
+      #avCodesHost .avst{font-size:11.5px;font-weight:700;border-radius:99px;padding:3px 10px;background:#EEE7D4;color:#66735F;white-space:nowrap}
+      #avCodesHost .avst.ok{background:#E3F0DA;color:#2E6E4E}
+      #avCodesHost .avst.mid{background:#F3E6C0;color:#5A4511}
+    </style>
     <div class="section-title" style="margin-bottom:6px"><h2>📅 Calendrier de l'Avent 2026</h2></div>
     <p style="color:#66735F;font-size:14px;margin-bottom:14px;max-width:780px">Règle ici le calendrier de l'Avent des mamans : prix, paiement, contenu des 24 cases pour les prospectes (anciennes clientes comprises) et pour les clientes, dossier des prospectes et cadeaux. Rien n'est visible tant que tu n'as pas publié la page et ouvert les ventes.</p>
     <div id="avRoot"></div>
@@ -3275,6 +3320,10 @@ window.EXERCISE_LIBRARY = [
   <div class="view" id="view-coffre_pro">
     <div class="section-title" style="margin-bottom:6px"><h2>🔐 Coffre-fort pro</h2></div>
     <div id="coffreHost_pro"></div>
+  </div>
+  <div class="view" id="view-coffre_equipe">
+    <div class="section-title" style="margin-bottom:6px"><h2>🗝️ Coffre-fort équipe</h2></div>
+    <div id="coffreHost_equipe"></div>
   </div>
   <div class="view" id="view-coffre_perso">
     <div class="section-title" style="margin-bottom:6px"><h2>🔐 Coffre-fort perso</h2></div>
@@ -5701,7 +5750,7 @@ window.EXERCISE_LIBRARY = [
       if (homeGrid) homeGrid.style.display = 'none';
     }
     if (id === 'raccourcis') setTimeout(renderRaccourcis, 50);
-    if (id === 'coffre_pro' || id === 'coffre_perso') setTimeout(function(){ if (window.coffreInit) coffreInit(id === 'coffre_pro' ? 'pro' : 'perso'); }, 50);
+    if (id === 'coffre_pro' || id === 'coffre_perso' || id === 'coffre_equipe') setTimeout(function(){ if (window.coffreInit) coffreInit(id === 'coffre_pro' ? 'pro' : (id === 'coffre_perso' ? 'perso' : 'equipe')); }, 50);
     else if (window.coffreLock) coffreLock();
     if (id === 'raccourcis_perso') setTimeout(renderRaccourcisPerso, 50);
     if (id === 'gestion_finances') setTimeout(renderGestionFinances, 50);
@@ -19926,6 +19975,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (!snap) return { ok: true };
     var incomplete = false;
     if (snap.localStorage) {
+      try { window.sfmSafetyPut && window.sfmSafetyPut('avant remplacement par la copie du cloud'); } catch (e) {}
       // La capture cloud est un instantané complet (pas un journal de modifications) : on remplace
       // entièrement le stockage local par son contenu, pour que les suppressions faites sur un autre
       // ordinateur (ex. réinitialisation d'une grille) se répercutent bien ici aussi, et pas seulement
@@ -19989,7 +20039,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (!el) return;
     var map = { idle: '☁️ Synchronisé', pushing: '☁️ Envoi…', pulling: '☁️ Réception…', error: '⚠️ Sync en erreur', off: '' };
     el.textContent = (map[s] || '') + (extra ? ' ' + extra : '');
-    el.title = s === 'idle' ? 'Toutes les données sont sauvegardées dans le cloud (chiffrées)' : '';
+    el.title = s === 'idle' ? 'Toutes les données sont sauvegardées dans le cloud (chiffrées). Clic = enregistrer maintenant.' : 'Cliquer pour tout enregistrer maintenant';
   }
 
   function syncScheduleUpload() {
@@ -28676,7 +28726,10 @@ function coMailBrand(o) {
       });
       out += '</div>';
     }
+    var avKeep = document.getElementById('avCodesHost'); if (avKeep) avKeep.remove();
     el.innerHTML = out;
+    var avFresh = !avKeep; if (!avKeep) { avKeep = document.createElement('div'); avKeep.id = 'avCodesHost'; }
+    el.appendChild(avKeep); if (avFresh) setTimeout(function () { if (window.avAccInit) avAccInit(); }, 60);
     // Ce sous-onglet se re-rend en direct très souvent (listeners Firebase dash_client_links,
     // dash_menage_links, DASH_ACCESS_REGISTRY — à chaque connexion/déconnexion d'une cliente), et
     // el.innerHTML= efface le bouton "← Retour" ajouté par showSubView à chaque fois. Comme ce pôle
@@ -29653,13 +29706,27 @@ function coMailBrand(o) {
   // En dernier recours, si un envoi est toujours en attente au moment de fermer, on prévient
   // explicitement (l'alerte native du navigateur laisse quelques instants à l'envoi en arrière-plan
   // de se terminer pendant que la personne décide de rester ou de partir).
+  // Quitter l'appli : on lance l'enregistrement tout de suite, et on n'affiche l'alerte du navigateur
+  // QUE si un envoi traîne depuis plus de 6 secondes (connexion coupée, par exemple). Sinon, fermeture
+  // sans question : tout reste de toute façon enregistré sur cet appareil et repart au cloud à la prochaine ouverture.
   window.addEventListener('beforeunload', function(e) {
     if (syncDirtySince !== null && syncCryptoKey) {
-      e.preventDefault();
-      e.returnValue = '';
-      return '';
+      syncFlushIfDirty();
+      if (Date.now() - syncDirtySince > 6000) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
     }
   });
+  // « Enregistrer maintenant » : un clic sur la pastille « Synchronisé » en haut envoie tout au cloud tout de suite.
+  window.sfmSaveNow = async function() {
+    if (!syncCryptoKey) { showToast('Déverrouille d\'abord le tableau de bord.'); return; }
+    if (syncDirtySince === null) { showToast('✅ Tout est déjà enregistré dans ton cloud.'); return; }
+    clearTimeout(syncPushTimer);
+    try { await syncPushNow(); showToast(syncDirtySince === null ? '✅ Enregistré dans ton cloud.' : '⚠️ Envoi en cours, réessaie dans un instant.'); }
+    catch (e) { showToast('⚠️ Enregistrement impossible pour le moment.'); }
+  };
 
   // ── 🛡️ SAUVEGARDES : sauvegarde complète en un clic, rappel sur l'accueil, copies automatiques chaque jour, restauration ──
   // 1) Sauvegarde COMPLÈTE : un seul fichier avec tout ce qui est sur cet appareil (localStorage) ET tout ce qui est en ligne
@@ -29843,6 +29910,55 @@ function coMailBrand(o) {
     };
     rd.readAsText(f); input.value = '';
   }
+
+  // ── 🛟 Copies de sécurité de cet appareil (avant tout remplacement par le cloud) ──
+  // Stockées à part (IndexedDB), les 5 dernières : si une copie plus ancienne du cloud remplace ce que tu avais fait, tu peux le retrouver ici.
+  function sfmSafetyDb() {
+    return new Promise(function(res, rej) {
+      var r = indexedDB.open('sfm_safety', 1);
+      r.onupgradeneeded = function() { r.result.createObjectStore('copies', { keyPath: 'id' }); };
+      r.onsuccess = function() { res(r.result); }; r.onerror = function() { rej(r.error); };
+    });
+  }
+  function sfmSafetyPut(reason) {
+    var o = {}, i, k;
+    for (i = 0; i < localStorage.length; i++) { k = localStorage.key(i); o[k] = localStorage.getItem(k); }
+    var n = Object.keys(o).length; if (n < 5) return;
+    var rec = { id: Date.now(), at: new Date().toISOString(), reason: reason, n: n, data: JSON.stringify(o) };
+    sfmSafetyDb().then(function(db) {
+      var tx = db.transaction('copies', 'readwrite'), st = tx.objectStore('copies'); st.put(rec);
+      st.getAllKeys().onsuccess = function(ev) { var ks = ev.target.result.sort(function(a, b) { return b - a; }); ks.slice(5).forEach(function(x) { st.delete(x); }); };
+    }).catch(function() {});
+  }
+  window.sfmSafetyPut = sfmSafetyPut;
+  window.sfmSafetyRender = function() {
+    var box = document.getElementById('sfmSafetyBox'); if (!box) return;
+    sfmSafetyDb().then(function(db) {
+      var rq = db.transaction('copies').objectStore('copies').getAll();
+      rq.onsuccess = function() {
+        var l = rq.result.sort(function(a, b) { return b.id - a.id; });
+        if (!l.length) { box.innerHTML = '<div style="font-size:12px;color:#66735F">Aucune copie de sécurité pour l\u2019instant. Une copie est faite automatiquement avant que le cloud remplace ce que tu as sur cet appareil.</div>'; return; }
+        box.innerHTML = l.map(function(c) { var d = new Date(c.at); return '<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;border-top:1px solid #EFEBDD;padding:6px 0;font-size:12px"><span>' + d.toLocaleDateString('fr-FR') + ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '<br><span style="color:#66735F">' + c.reason + '</span></span><button onclick="sfmSafetyRestore(' + c.id + ')" style="padding:6px 10px;border:1px solid #66735F;background:#fff;border-radius:8px;cursor:pointer;font-weight:700;color:#3E4A3A">Restaurer</button></div>'; }).join('');
+      };
+    }).catch(function() { box.textContent = 'Copies de sécurité indisponibles dans ce navigateur.'; });
+  };
+  window.sfmSafetyRestore = function(id) {
+    if (!window.confirm('Remettre sur cet appareil la copie de sécurité choisie ? (L\u2019état actuel est lui aussi gardé en copie de sécurité avant.) La page va se recharger.')) return;
+    sfmSafetyDb().then(function(db) {
+      var rq = db.transaction('copies').objectStore('copies').get(id);
+      rq.onsuccess = function() {
+        var c = rq.result; if (!c) return;
+        try { sfmSafetyPut('avant restauration d\u2019une copie de sécurité'); } catch (e) {}
+        setTimeout(function() {
+          var o = JSON.parse(c.data);
+          try { localStorage.clear(); } catch (e) {}
+          Object.keys(o).forEach(function(k) { try { localStorage.setItem(k, o[k]); } catch (e) {} });
+          try { localStorage.setItem('sfm_sync_last_applied_at', String(Date.now())); } catch (e) {}
+          location.reload();
+        }, 400);
+      };
+    });
+  };
   function bkOpenPanel() { if (!document.getElementById('sfmBkPanel')) { var bt = document.getElementById('sfmBkBtn'); if (bt) bt.click(); } }
   function bkPanelHtml() {
     return '<div id="bkStatus" style="margin-bottom:8px">' + bkStatusHtml() + '</div>'
@@ -30049,8 +30165,10 @@ function coMailBrand(o) {
       + '<div style="border-top:1px solid #EFEBDD;padding-top:8px"></div>'
       + '<button onclick="sfmFullBackup()" style="width:100%;padding:9px;background:#66735F;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;margin-bottom:8px">💾 Cet appareil seulement (rapide)</button>'
       + '<button onclick="sfmRecoverMealPlans(true)" style="width:100%;padding:9px;background:#F7E4D8;color:#8A4E2F;border:none;border-radius:10px;font-weight:700;cursor:pointer;margin-bottom:8px">🥗 Récupérer les plans alimentaires envoyés</button>'
-      + '<label style="display:block;text-align:center;padding:9px;border:1px dashed #cbd5e0;border-radius:10px;cursor:pointer;color:#3E4A3A;font-weight:600">Restaurer depuis un fichier…<input type="file" accept=".json,application/json" style="display:none" onchange="sfmRestoreBackup(this)"></label>';
+      + '<label style="display:block;text-align:center;padding:9px;border:1px dashed #cbd5e0;border-radius:10px;cursor:pointer;color:#3E4A3A;font-weight:600">Restaurer depuis un fichier…<input type="file" accept=".json,application/json" style="display:none" onchange="sfmRestoreBackup(this)"></label>'
+      + '<div style="border-top:1px solid #EFEBDD;margin-top:10px;padding-top:8px"><div style="font-weight:700;margin-bottom:4px">🛟 Copies de sécurité de cet appareil</div><div id="sfmSafetyBox"></div></div>';
     document.body.appendChild(p);
+    setTimeout(function() { if (window.sfmSafetyRender) sfmSafetyRender(); }, 50);
     if (window.sfmBkPlace) window.sfmBkPlace();
   }
   function mount() {
@@ -32306,15 +32424,20 @@ function formPageEdit(fid) {
   // ── Rendu général ──────────────────────────────────────────────────────────────────────────────
   function avRender() {
     var root = $a('avRoot'); if (!root) return;
-    var c = cfg(), on = c.publie === true, auto = c.ouvertureAuto ? Date.parse(c.ouvertureAuto) : NaN, autoOn = !on && !isNaN(auto) && Date.now() >= auto, sched = !on && !isNaN(auto) && Date.now() < auto, tabs = [['liens', '🔗 Liens et aperçu'], ['reglages', '⚙️ Réglages'], ['cases', '🗓️ Les 24 cases'], ['dossier', '📁 Dossier prospectes'], ['cadeaux', '🎁 Cadeaux'], ['codes', '🔑 Codes et appareils']];
+    var c = cfg(), on = c.publie === true, auto = c.ouvertureAuto ? Date.parse(c.ouvertureAuto) : NaN, autoOn = !on && !isNaN(auto) && Date.now() >= auto, sched = !on && !isNaN(auto) && Date.now() < auto, tabs = [['liens', '🔗 Liens et aperçu'], ['reglages', '⚙️ Réglages'], ['cases', '🗓️ Les 24 cases'], ['dossier', '📁 Dossier prospectes'], ['cadeaux', '🎁 Cadeaux']];
     var dOpen = on || autoOn, fmt = function (t) { return new Date(t).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); };
     var h = '<div class="avbox ' + (dOpen ? 'on' : 'off') + '"><div><b>' + (dOpen ? '✅ Calendrier ouvert' : sched ? '🕒 Ouverture programmée : ' + esc(fmt(auto)) : '🚧 Calendrier fermé') + '</b><div class="avs">' + (dOpen ? 'Les mamans qui cliquent sur le lien peuvent payer et ouvrir leur calendrier, et les clientes entrer avec leur code.' : 'Tant que c’est fermé, personne ne peut payer ni entrer (clientes comprises) : les mamans voient « Préviens-moi de l’ouverture » et sont enregistrées. Toi, tu peux toujours voir le calendrier avec les aperçus.') + '</div></div>' + btn(dOpen ? 'Fermer le calendrier' : '🚀 Ouvrir maintenant', 'avTogglePublie(' + (dOpen ? 'false' : 'true') + ')', dOpen ? 'line' : 'main') + '</div>';
     h += '<div class="avcard"><h3>Ouverture automatique <span class="avs">(facultatif)</span></h3><p class="avs">Publie tout à l’avance, puis choisis le jour et l’heure (heure de France) : le calendrier s’ouvrira tout seul, sans que tu aies à revenir ici.</p><div class="avrow"><input type="datetime-local" id="avAutoDt" value="' + esc(c.ouvertureAuto || '') + '" style="padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:14px">' + btn('Programmer', 'avSetAuto()', 'main') + (c.ouvertureAuto ? btn('Annuler la programmation', 'avClearAuto()', 'line') : '') + '</div></div>';
+    var nbCases = Object.keys((AV.cases && AV.cases.prospect) || {}).length + Object.keys((AV.cases && AV.cases.cliente) || {}).length;
+    if (AV.loaded && (!Object.keys(c).length || !nbCases)) h += '<div class="avcard" style="border:1.5px solid #E9C46A;background:#FFFAF0"><h3>🔁 Remettre le calendrier en place</h3><p class="avs">Les réglages ou les cases semblent vides. Ce bouton remet les 24 cases (titres, vidéos et liens des présentations), les 3 essais offerts, le bon de 89 € et la guidance du jour 24, <b>sans rien écraser de ce qui est déjà rempli</b>. Tu n\'auras plus qu\'à saisir ton lien Stripe, ton numéro WhatsApp, ton code promo et ton lien de guidance.</p><div class="avrow">' + btn('🔁 Tout remettre en place', 'avRestoreAll()', 'main') + '</div></div>';
     h += '<div class="avtabs">' + tabs.map(function (t) { return '<button class="avtab' + (AV.tab === t[0] ? ' on' : '') + '" onclick="avTab(\'' + t[0] + '\')">' + t[1] + '</button>'; }).join('') + '</div>';
-    h += '<div id="avBody">' + ({ liens: avLiens, reglages: avReglages, cases: avCases, dossier: avDossier, cadeaux: avCadeaux, codes: avCodes }[AV.tab] || avLiens)() + '</div>';
+    h += '<div id="avBody">' + ({ liens: avLiens, reglages: avReglages, cases: avCases, dossier: avDossier, cadeaux: avCadeaux }[AV.tab] || avLiens)() + '</div>';
     root.innerHTML = h;
+    avAccRender();
   }
-  window.avTab = function (t) { AV.tab = t; AV.sel = null; if (t === 'codes') AV.secLoaded = false; avRender(); };
+  function avAccRender() { var host = $a('avCodesHost'); if (!host || !dashFbDB) return; host.innerHTML = '<div class="section-title" style="margin:26px 0 6px"><h2>📅 Calendrier de l’Avent : codes et appareils</h2></div>' + avCodes(); }
+  window.avAccInit = function () { try { if (!AV.listening && window.avInit) avInit(); } catch (e) {} avAccRender(); };
+  window.avTab = function (t) { AV.tab = t; AV.sel = null; avRender(); };
   function avChecks() {
     var c = cfg(), pb = [];
     if (!c.lienPaiement) pb.push('le lien de paiement Stripe n’est pas encore enregistré (Réglages)');
@@ -32393,7 +32516,7 @@ function formPageEdit(fid) {
     h += '<div class="avcard"><h3>Case du 24 : réduction (prospectes) et guidance (clientes)</h3><div class="avgrid">'
       + fld('avPJ', 'Jour de la case', c.promoJour || 24, '24') + fld('avPM', 'Montant de la réduction (€)', c.promoMontant || '89', '89') + fld('avPC', 'Code promo à afficher', c.promoCode || '', 'NOEL89') + fld('avPD', 'Valable jusqu’au', c.promoJusqu || '', '31 janvier 2027')
       + fld('avPU', 'Lien de l’offre (premier mois co-NAÎTRE)', c.promoUrl || (TUN + '?f=bilan'), '') + fld('avGU', 'Lien de réservation de la guidance (clientes)', c.guidanceUrl || '', 'https://…') + fld('avGL', 'Texte du bouton guidance', c.guidanceLabel || 'Réserver ma guidance', '') + '</div></div>';
-    return h + '<div class="avrow">' + btn('💾 Enregistrer les réglages', 'avSaveCfg()', 'main') + '</div>';
+    return h + '<div class="avrow">' + btn('💾 Enregistrer les réglages', 'avSaveCfg()', 'main') + btn('🔁 Remettre ce qui manque', 'avRestoreAll()', 'line') + '</div>';
   }
   window.avSaveCfg = function () {
     var upd = { prix: val('avPrix') || '19,90', lienPaiement: val('avPay'), lienCadeau: val('avGift'), contactMail: val('avMail'), debut: val('avDebut') || '2026-12-01', titre: val('avTitre'), accroche: val('avAcc'), sousAccroche: val('avSous'), whatsappTel: val('avWa'),
@@ -32422,14 +32545,14 @@ function formPageEdit(fid) {
   var SEC_APPS = { conaitre: 'co-NAÎTRE', foyer: 'co-NAÎTRE son foyer', mouvement: 'co-NAÎTRE en mouvement' };
   function avLoadSecure() {
     if (AV.secLoading) return; AV.secLoading = true;
-    R('avent_secure').once('value').then(function (sn) { AV.sec = sn.val() || {}; AV.secLoaded = true; AV.secLoading = false; AV.secErr = ''; if (AV.tab === 'codes') avRender(); })
-      .catch(function (e) { AV.secLoading = false; AV.secLoaded = true; AV.secErr = (e && e.message) || 'lecture impossible'; if (AV.tab === 'codes') avRender(); });
+    R('avent_secure').once('value').then(function (sn) { AV.sec = sn.val() || {}; AV.secLoaded = true; AV.secLoading = false; AV.secErr = ''; avAccRender(); })
+      .catch(function (e) { AV.secLoading = false; AV.secLoaded = true; AV.secErr = (e && e.message) || 'lecture impossible'; avAccRender(); });
   }
   function secDevs(o) { var k = Object.keys(o || {}); return k.map(function (d) { return o[d] || {}; }); }
   function uaTxt(ua) { ua = String(ua || ''); var m = /(iPhone|iPad|Android|Macintosh|Windows|Linux)/.exec(ua), b = /(Edg|Chrome|Firefox|Safari)/.exec(ua); return (m ? m[1] : 'appareil') + (b ? ' · ' + b[1] : ''); }
   function avCodes() {
     if (!AV.secLoaded) { avLoadSecure(); return '<div class="avcard"><p class="avs">Chargement…</p></div>'; }
-    if (AV.secErr) return '<div class="avcard"><p class="avs">Lecture impossible : ' + esc(AV.secErr) + '. Vérifie que les règles Firebase sont publiées et que tu es connectée.</p><div class="avrow">' + btn('Réessayer', 'avTab(\'codes\')', 'main') + '</div></div>';
+    if (AV.secErr) return '<div class="avcard"><p class="avs">Lecture impossible : ' + esc(AV.secErr) + '. Vérifie que les règles Firebase sont publiées et que tu es connectée.</p><div class="avrow">' + btn('Réessayer', 'AV_retry()', 'main') + '</div></div>';
     var sec = AV.sec || {}, ach = sec.achats || {}, cf = sec.config || {}, h = '';
     var rows = Object.keys(ach).map(function (k) { return Object.assign({ id: k }, ach[k]); }).sort(function (a, b) { return String(b.createdAt || '').localeCompare(String(a.createdAt || '')); });
     h += '<div class="avcard"><h3>Codes uniques du calendrier</h3><p class="avs">Chaque paiement Stripe crée un code. Il s’affiche à la maman sur la page de remerciement ; tu le retrouves ici pour le lui renvoyer si besoin. Il ne marche que sur ' + (parseInt(cf.maxCalendrier, 10) || 1) + ' appareil(s). Si elle change de téléphone, clique sur « Libérer ».</p>';
@@ -32456,7 +32579,8 @@ function formPageEdit(fid) {
     h += '<div class="avcard"><h3>Nombre d’appareils autorisés</h3><div class="avgrid">' + fld('avMaxC', 'Calendrier : appareils par code', parseInt(cf.maxCalendrier, 10) || 1, '1') + fld('avMaxA', 'Applis : appareils par cliente', parseInt(cf.maxApps, 10) || 2, '2') + '</div><div class="avrow">' + btn('Enregistrer', 'avSaveMax()', 'main') + '</div></div>';
     return h;
   }
-  window.avSecSearch = function (v) { AV.secQ = v; var b = $a('avBody'); if (b) { b.innerHTML = avCodes(); var i = $a('avSecQ'); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } } };
+  window.AV_retry = function () { AV.secLoaded = false; avAccRender(); };
+  window.avSecSearch = function (v) { AV.secQ = v; var b = $a('avCodesHost'); if (b) { avAccRender(); var i = $a('avSecQ'); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } } };
   window.avCopyMsg = function (t) { copyTxt(t, '📋 Message copié'); };
   window.avFree = function (id) {
     if (!window.confirm('Libérer le code de cette maman ? Son appareil actuel sera oublié : le prochain appareil qui entre le code sera enregistré à sa place.')) return;
@@ -32483,7 +32607,7 @@ function formPageEdit(fid) {
     secHash(c).then(function (h) {
       var upd = {}; upd['avent_secure/achats/' + id] = { type: 'achat', manuel: true, nom: nom, email: em, code: c, createdAt: new Date().toISOString(), max: parseInt((AV.sec && AV.sec.config && AV.sec.config.maxCalendrier), 10) || 1 }; upd['avent_secure/codes/' + h] = id;
       return dashFbDB.ref().update(upd);
-    }).then(function () { showToast('✅ Code créé : ' + c); AV.secLoaded = false; AV.tab = 'codes'; avRender(); }).catch(function (e) { out.innerHTML = '<p class="avs" style="color:#B23B3B">Erreur : ' + esc((e && e.message) || 'inconnue') + '</p>'; });
+    }).then(function () { showToast('✅ Code créé : ' + c); AV.secLoaded = false; avRender(); }).catch(function (e) { out.innerHTML = '<p class="avs" style="color:#B23B3B">Erreur : ' + esc((e && e.message) || 'inconnue') + '</p>'; });
   };
 
   // ── Onglet Les 24 cases ────────────────────────────────────────────────────────────────────────
@@ -32568,10 +32692,36 @@ function formPageEdit(fid) {
     R(BP + '/cases/' + par).update(upd).then(function () { showToast('✨ ' + k + ' titres ajoutés'); });
   };
 
+  // ── Remise en place complète (n'écrase JAMAIS ce qui est déjà rempli) ──
+  window.avRestoreAll = function () {
+    var c = cfg(), ec = c.essais || {}, cu = {}, n = 0, cn = 0, upd = {};
+    function set(k, v) { if (c[k] == null || c[k] === '') { upd[k] = v; n++; } }
+    set('prix', '19,90'); set('debut', '2026-12-01'); set('rdvJour', 5); set('rdvUrl', TUN + '?f=bilan'); set('rdvLabel', 'Réserver mon Bilan Forme Santé offert');
+    set('promoJour', 24); set('promoMontant', '89'); set('promoUrl', TUN + '?f=bilan'); set('guidanceLabel', 'Réserver ma guidance');
+    Object.keys(AV_ESSAIS_DEF).forEach(function (a) { if (!ec[a]) { upd['essais/' + a] = Object.assign({}, AV_ESSAIS_DEF[a].def); n++; } });
+    var caseUpd = { prospect: {}, cliente: {} };
+    [['prospect', D_PRO], ['cliente', D_CLI]].forEach(function (pp) {
+      var par = pp[0], cur = (AV.cases && AV.cases[par]) || {};
+      pp[1].forEach(function (x, i) {
+        var k = i + 1; if (cur[k] && (cur[k].titre || cur[k].texte)) return;
+        var r = { rubrique: x[0], titre: x[1] };
+        if (par === 'prospect' && D_PRO_EXTRA[k]) Object.keys(D_PRO_EXTRA[k]).forEach(function (q) { r[q] = D_PRO_EXTRA[k][q]; });
+        caseUpd[par][k] = r; cn++;
+      });
+    });
+    if (!n && !cn) { showToast('Tout est déjà en place : rien à remettre.'); return; }
+    if (!window.confirm('Remettre en place : ' + n + ' réglage(s) manquant(s) et ' + cn + ' case(s) vide(s) (titres, essais offerts des cases 8, 11 et 14, bon de 89 € et guidance du jour 24) ?\n\nRien de ce qui est déjà rempli ne sera modifié.')) return;
+    var jobs = [];
+    if (Object.keys(upd).length) jobs.push(R(BP + '/config').update(upd));
+    ['prospect', 'cliente'].forEach(function (par) { if (Object.keys(caseUpd[par]).length) jobs.push(R(BP + '/cases/' + par).update(caseUpd[par])); });
+    Promise.all(jobs).then(function () { showToast('✅ Calendrier remis en place. Il reste à saisir : lien Stripe, WhatsApp, code promo, lien guidance.'); })
+      .catch(function (e) { alert('Erreur : ' + (e && e.message || 'inconnue') + '. Vérifie que les règles Firebase du calendrier sont publiées.'); });
+  };
+
   // ── Onglet Dossier prospectes ──────────────────────────────────────────────────────────────────
   function avRows() {
     var a = Object.keys(AV.prospects).map(function (k) { return Object.assign({ _k: k }, AV.prospects[k]); });
-    a.sort(function (x, y) { return String(y.createdAt || '').localeCompare(String(x.createdAt || '')); });
+    a.sort(function (x, y) { return String(y.lastClickAt || y.createdAt || '').localeCompare(String(x.lastClickAt || x.createdAt || '')); });
     return a;
   }
   var AV_ES_LBL = { conaitre: 'co-NAÎTRE', foyer: 'Foyer', mouvement: 'Mouvement' };
@@ -32591,6 +32741,7 @@ function formPageEdit(fid) {
     dashFbDB.ref().update(ups).then(function () { showToast('✂️ Essai coupé'); }).catch(function (e) { alert('Impossible : ' + (e && e.message || 'erreur')); });
   };
   function avStatut(v) { return v.paye === true ? 'payée' : (v.consent ? 'inscrite' : 'a cliqué'); }
+  function avDt(iso) { if (!iso) return '—'; var d = new Date(iso); if (isNaN(d)) return '—'; return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); }
   function avDossier() {
     var rows = avRows(), clics = 0, pay = rows.filter(function (v) { return v.paye === true && v.via !== 'cadeau'; }).length, ins = rows.length;
     Object.keys((AV.stats && AV.stats.clics) || {}).forEach(function (k) { clics += AV.stats.clics[k] || 0; });
@@ -32599,15 +32750,16 @@ function formPageEdit(fid) {
     var shown = rows.filter(function (v) { var s = avStatut(v); if (f === 'paye' && s !== 'payée') return false; if (f === 'np' && s === 'payée') return false; return !q || (v.email + ' ' + (v.prenom || '') + ' ' + (v.tel || '') + ' ' + (v.source || '')).toLowerCase().indexOf(q) >= 0; });
     AV.rows = shown;
     var h = '<div class="avstats">' + [['Clics', clics], ['Inscrites', ins], ['Payées', pay], ['Cadeaux payés', gp], ['Chiffre d’affaires estimé', ca.toFixed(2).replace('.', ',') + ' €']].map(function (x) { return '<div><b>' + x[1] + '</b><span>' + x[0] + '</span></div>'; }).join('') + '</div>';
+    h += '<p class="avs" style="margin-bottom:6px">ℹ️ Le compteur « Clics » ci-dessus compte les visites de la page, <b>sans savoir qui</b> : une maman n\'a un nom que lorsqu\'elle laisse son e-mail. Le tableau ci-dessous liste toutes celles qui l\'ont fait, avec leur nombre de clics et leur dernier clic (les plus récentes en premier).</p>';
     var bySrc = (AV.stats && AV.stats.clics) || {}, srcs = Object.keys(bySrc); if (srcs.length) h += '<p class="avs">Clics par lien : ' + srcs.map(function (s) { return '<b>' + esc(s) + '</b> ' + bySrc[s]; }).join(' · ') + '</p>';
     h += '<div class="avrow" style="margin:10px 0"><input type="text" id="avQ" placeholder="Rechercher (nom, mail, source)…" value="' + esc(AV.q) + '" oninput="avSearch(this.value)" style="flex:1;min-width:180px;padding:9px 10px;border:1.5px solid #E2DCC8;border-radius:8px">'
       + '<select onchange="avFilter(this.value)" style="padding:9px;border:1.5px solid #E2DCC8;border-radius:8px"><option value="all"' + (f === 'all' ? ' selected' : '') + '>Toutes</option><option value="np"' + (f === 'np' ? ' selected' : '') + '>Pas encore payées</option><option value="paye"' + (f === 'paye' ? ' selected' : '') + '>Payées</option></select>'
       + btn('Exporter CSV', 'avCsv()') + btn('Copier les mails affichés', 'avCopyMails()') + '</div>';
-    h += '<div class="avtw"><table class="avtb"><thead><tr><th>Prénom</th><th>Mail</th><th>Tél.</th><th>Lien</th><th>Date</th><th>Statut</th><th>Essais</th><th></th></tr></thead><tbody>';
-    if (!shown.length) h += '<tr><td colspan="8" style="text-align:center;color:#66735F;padding:18px">Aucune prospecte pour l’instant.</td></tr>';
+    h += '<div class="avtw"><table class="avtb"><thead><tr><th>Prénom</th><th>Mail</th><th>Tél.</th><th>Lien</th><th>Inscrite le</th><th>Clics</th><th>Dernier clic</th><th>Statut</th><th>Essais</th><th></th></tr></thead><tbody>';
+    if (!shown.length) h += '<tr><td colspan="10" style="text-align:center;color:#66735F;padding:18px">Aucune prospecte pour l’instant.</td></tr>';
     shown.forEach(function (v, i) {
       var s = avStatut(v);
-      h += '<tr><td>' + esc(v.prenom || '') + '</td><td>' + esc(v.email || '') + '</td><td>' + esc(v.tel || '') + '</td><td>' + esc(v.source || '') + (v.via ? ' <span class="avtag">' + esc(v.via) + '</span>' : '') + '</td><td>' + esc(dFr(v.createdAt)) + '</td><td><span class="avst ' + (s === 'payée' ? 'ok' : s === 'inscrite' ? 'mid' : '') + '">' + s + '</span></td>'
+      h += '<tr><td>' + esc(v.prenom || '') + '</td><td>' + esc(v.email || '') + '</td><td>' + esc(v.tel || '') + '</td><td>' + esc(v.source || '') + (v.via ? ' <span class="avtag">' + esc(v.via) + '</span>' : '') + '</td><td>' + esc(dFr(v.createdAt)) + '</td><td style="text-align:center"><b>' + (v.clics || 0) + '</b></td><td style="white-space:nowrap">' + esc(avDt(v.lastClickAt)) + '</td><td><span class="avst ' + (s === 'payée' ? 'ok' : s === 'inscrite' ? 'mid' : '') + '">' + s + '</span></td>'
         + '<td>' + avEssaisCell(v, i) + '</td>'
         + '<td style="white-space:nowrap">' + btn(v.paye === true ? 'Annuler paiement' : 'Marquer payée', 'avPay(' + i + ')', 'line') + ' ' + btn('✕', 'avDel(' + i + ')', 'line') + '</td></tr>';
     });
@@ -33007,10 +33159,12 @@ function formPageEdit(fid) {
 </style>
 <script id="cf-script">
 (function(){
-  var META_KEY='sfm_coffre_meta_v1';
-  var VKEY={pro:'sfm_coffre_pro_v1',perso:'sfm_coffre_perso_v1'};
+  var METAK={main:'sfm_coffre_meta_v1',equipe:'sfm_coffre_meta_eq_v1'}, TK={main:'sfm_coffre_t_v1',equipe:'sfm_coffre_t_eq_v1'};
+  var CL={main:'dash_team/coffre_main',equipe:'dash_team/coffre_equipe'}, GM={main:['pro','perso'],equipe:['equipe']}, conflict={}, conflictR={}, pushT={}, pulling2={};
+  function G(m){return m==='equipe'?'equipe':'main';}
+  var VKEY={pro:'sfm_coffre_pro_v1',perso:'sfm_coffre_perso_v1',equipe:'sfm_coffre_equipe_v1'};
   var ITER=600000, IDLE_MS=3*60*1000, HIDE_MS=60*1000, CLIP_MS=20*1000;
-  var key=null, V={pro:null,perso:null}, idleT=null, hiddenAt=0, fails=0, lockedUntil=0, saveT={}, clipT=null, filterTodo={pro:false,perso:false}, search={pro:'',perso:''};
+  var K={main:null,equipe:null}, V={pro:null,perso:null,equipe:null}, idleT=null, hiddenAt=0, fails=0, lockedUntil=0, saveT={}, clipT=null, filterTodo={pro:false,perso:false,equipe:false}, search={pro:'',perso:'',equipe:''};
   var enc=new TextEncoder(), dec=new TextDecoder();
 
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -33018,7 +33172,7 @@ function formPageEdit(fid) {
   function unb64(s){var b=atob(s),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a;}
   function rnd(n){return crypto.getRandomValues(new Uint8Array(n));}
   function rndInt(max){var a=new Uint32Array(1),lim=Math.floor(4294967296/max)*max;do{crypto.getRandomValues(a);}while(a[0]>=lim);return a[0]%max;}
-  function getMeta(){try{return JSON.parse(localStorage.getItem(META_KEY)||'null');}catch(e){return null;}}
+  function getMeta(g){try{return JSON.parse(localStorage.getItem(METAK[g||'main'])||'null');}catch(e){return null;}}
   async function derive(pw,salt,iter){
     var base=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveKey']);
     return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:iter,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
@@ -33051,52 +33205,56 @@ function formPageEdit(fid) {
   function newId(){return 'e'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 
   // ── Verrouillage ──
-  function touch(){clearTimeout(idleT);if(key)idleT=setTimeout(function(){lock('Verrouillé automatiquement (inactivité).');},IDLE_MS);}
+  function touch(){clearTimeout(idleT);if(K.main||K.equipe)idleT=setTimeout(function(){lock('Verrouillé automatiquement (inactivité).');},IDLE_MS);}
   function lock(msg){
-    key=null;V={pro:null,perso:null};clearTimeout(idleT);
+    K={main:null,equipe:null};V={pro:null,perso:null,equipe:null};clearTimeout(idleT);
     try{navigator.clipboard&&clipT&&navigator.clipboard.writeText('');}catch(e){}
-    ['pro','perso'].forEach(function(m){if(host(m)&&host(m).offsetParent!==null||host(m))render(m,msg);});
+    ['pro','perso','equipe'].forEach(function(m){if(host(m))render(m,msg);});
   }
   document.addEventListener('visibilitychange',function(){
     if(document.hidden){hiddenAt=Date.now();}
-    else if(key&&hiddenAt&&Date.now()-hiddenAt>HIDE_MS){lock('Verrouillé : tu avais quitté la page.');}
+    else if((K.main||K.equipe)&&hiddenAt&&Date.now()-hiddenAt>HIDE_MS){lock('Verrouillé : tu avais quitté la page.');}
   });
-  ['pointerdown','keydown'].forEach(function(ev){document.addEventListener(ev,function(e){if(key&&e.target&&e.target.closest&&e.target.closest('.cf-wrap'))touch();},true);});
+  ['pointerdown','keydown'].forEach(function(ev){document.addEventListener(ev,function(e){if((K.main||K.equipe)&&e.target&&e.target.closest&&e.target.closest('.cf-wrap'))touch();},true);});
 
   // ── Persistance ──
   async function persist(mode){
-    if(!key||!V[mode])return;
-    var box=await encJSON(key,V[mode]);
+    var g=G(mode);
+    if(!K[g]||!V[mode])return;
+    var box=await encJSON(K[g],V[mode]);
     localStorage.setItem(VKEY[mode],JSON.stringify(box));
+    setT(g,Date.now());cloudPushVault(g);
     var h=host(mode),s=h&&h.querySelector('.cf-saved');
     if(s){s.classList.add('on');clearTimeout(s._t);s._t=setTimeout(function(){s.classList.remove('on');},1600);}
   }
   function schedSave(mode){clearTimeout(saveT[mode]);saveT[mode]=setTimeout(function(){persist(mode);},350);}
 
-  async function unlock(pw){
-    var meta=getMeta();
+  async function unlock(pw,g){
+    var meta=getMeta(g);
     var k=await derive(pw,unb64(meta.salt),meta.iter);
     try{var chk=await decJSON(k,meta.check);if(chk!=='coffre-ok')throw 0;}catch(e){return false;}
-    key=k;
-    for(var i=0;i<2;i++){
-      var m=['pro','perso'][i],raw=localStorage.getItem(VKEY[m]);
-      if(raw){try{V[m]=await decJSON(key,JSON.parse(raw));}catch(e){V[m]={v:1,entries:[],broken:true};}}
+    K[g]=k;
+    for(var i=0;i<GM[g].length;i++){
+      var m=GM[g][i],raw=localStorage.getItem(VKEY[m]);
+      if(raw){try{V[m]=await decJSON(K[g],JSON.parse(raw));}catch(e){V[m]={v:1,entries:[],broken:true};}}
       else V[m]={v:1,entries:[]};
       if(!V[m].entries)V[m].entries=[];
     }
     touch();
     return true;
   }
-  async function setup(pw){
+  async function setup(pw,g){
     var salt=rnd(16),k=await derive(pw,salt,ITER);
     var meta={v:1,salt:b64(salt),iter:ITER,check:await encJSON(k,'coffre-ok')};
-    localStorage.setItem(META_KEY,JSON.stringify(meta));
-    key=k;V={pro:{v:1,entries:[]},perso:{v:1,entries:[]}};
-    await persist('pro');await persist('perso');touch();
+    localStorage.setItem(METAK[g],JSON.stringify(meta));
+    K[g]=k;GM[g].forEach(function(m){V[m]={v:1,entries:[]};});
+    for(var i=0;i<GM[g].length;i++)await persist(GM[g][i]);
+    conflict[g]=false;touch();
   }
 
   // ── Synchro avec les raccourcis ──
   function syncShortcuts(mode){
+    if(mode==='equipe')return {add:0,orph:0,upd:0};
     var v=V[mode];if(!v)return {add:0,orph:0,upd:0};
     var list=shortcuts(mode),seen={},add=0,orph=0,upd=0;
     list.forEach(function(s){
@@ -33111,7 +33269,7 @@ function formPageEdit(fid) {
   }
 
   // ── Rendu ──
-  function dupCount(pwd){if(!pwd)return 0;var n=0;['pro','perso'].forEach(function(m){(V[m]&&V[m].entries||[]).forEach(function(e){if(e.pwd===pwd)n++;});});return n;}
+  function dupCount(pwd){if(!pwd)return 0;var n=0;['pro','perso','equipe'].forEach(function(m){(V[m]&&V[m].entries||[]).forEach(function(e){if(e.pwd===pwd)n++;});});return n;}
   function cardStatus(e){
     var chip=e.orphan?'<span class="cf-chip orph">Raccourci supprimé</span>':(e.pwd?'<span class="cf-chip ok">✓ Enregistré</span>':'<span class="cf-chip todo">À remplir</span>');
     var w=[];
@@ -33140,38 +33298,40 @@ function formPageEdit(fid) {
     var q=search[mode].toLowerCase(),es=V[mode].entries.filter(function(e){
       if(filterTodo[mode]&&e.pwd)return false;
       if(q&&((e.nom||'')+' '+(e.url||'')+' '+(e.login||'')).toLowerCase().indexOf(q)<0)return false;return true;});
+    if(!V[mode].entries.length&&mode==='equipe')return '<div class="cf-box cf-note" style="text-align:center">Aucun accès pour l\'instant. Clique sur « ➕ Ajouter un site » pour mettre ici les accès que tu partages avec ton équipe.</div>';
     if(!V[mode].entries.length)return '<div class="cf-box cf-note" style="text-align:center">Aucun site pour l\'instant. Ajoute des raccourcis dans l\'onglet <b>Raccourcis</b> puis clique sur « 🔄 Mettre à jour depuis mes raccourcis ».</div>';
     if(!es.length)return '<div class="cf-box cf-note" style="text-align:center">Rien à afficher avec ce filtre.</div>';
     return '<div class="cf-grid">'+es.map(function(e){return cardHTML(e,mode);}).join('')+'</div>';
   }
   function render(mode,msg){
     var h=host(mode);if(!h)return;
-    var meta=getMeta(),cls='cf-wrap cf-'+mode;
-    var intro='<p class="cf-intro">'+(mode==='pro'?'Les mots de passe de tes sites pros — un par raccourci de l\'onglet Raccourcis.':'Les mots de passe de tes sites perso — un par raccourci de l\'onglet Raccourcis perso.')+' Tout est <b>chiffré</b> (AES-256) avec ton mot de passe maître : sans lui, rien n\'est lisible, ni ici ni dans la sauvegarde.</p>';
+    var g=G(mode),meta=getMeta(g),own=(typeof window.accRole==='function'?window.accRole()==='owner':true),cls='cf-wrap cf-'+mode;
+    var intro='<p class="cf-intro">'+(mode==='pro'?'Les mots de passe de tes sites pros — un par raccourci de l\'onglet Raccourcis.':mode==='perso'?'Les mots de passe de tes sites perso — un par raccourci de l\'onglet Raccourcis perso.':'Les accès partagés avec ton équipe (outils, comptes communs…). Ce coffre a son <b>propre mot de passe</b>, différent de celui de ton coffre pro et perso : c\'est lui que tu donnes à ton équipe.')+' Tout est <b>chiffré</b> (AES-256) avec le mot de passe maître : sans lui, rien n\'est lisible, ni ici ni dans le cloud. <b>☁️ Il te suit sur tous tes appareils</b> (chiffré dans ton cloud privé).</p>'+confHTML(g);
+    if(!meta&&mode==='equipe'&&!own){h.innerHTML='<div class="'+cls+'">'+intro+'<div class="cf-box cf-lock"><div class="cf-big">🗝️</div><h3>Pas encore de coffre équipe</h3><p>Anaïs ne l\'a pas encore créé.</p></div></div>';return;}
     if(!meta){
-      h.innerHTML='<div class="'+cls+'">'+intro+'<div class="cf-box cf-lock"><div class="cf-big">🔐</div><h3>Crée ton mot de passe maître</h3><p>C\'est le seul mot de passe à retenir. Choisis une phrase longue (au moins 12 caractères).</p>'+
+      h.innerHTML='<div class="'+cls+'">'+intro+'<div class="cf-box cf-lock"><div class="cf-big">🔐</div><h3>'+(mode==='equipe'?'Crée le mot de passe du coffre équipe':'Crée ton mot de passe maître')+'</h3><p>'+(mode==='equipe'?'Tu le donneras à ton équipe. Choisis-en un différent de ton mot de passe maître personnel (au moins 12 caractères).':'C\'est le seul mot de passe à retenir. Choisis une phrase longue (au moins 12 caractères).')+'</p>'+
         '<div class="cf-stack"><input class="cf-in" type="password" id="cfN_'+mode+'" placeholder="Mot de passe maître" autocomplete="new-password"><div class="cf-meter"><i id="cfM_'+mode+'"></i></div><div class="cf-meter-lb" id="cfL_'+mode+'">&nbsp;</div>'+
         '<input class="cf-in" type="password" id="cfC_'+mode+'" placeholder="Confirme-le" autocomplete="new-password">'+
         '<label class="cf-check"><input type="checkbox" id="cfK_'+mode+'"><span>J\'ai compris : <b>si je perds ce mot de passe maître, personne ne peut le récupérer</b> (pas même Claude). Je le note dans un endroit sûr.</span></label>'+
         '<button class="cf-btn" data-a="setup">Créer mon coffre-fort</button></div><div class="cf-err" id="cfE_'+mode+'"></div></div></div>';
       return;
     }
-    if(!key){
+    if(!K[g]){
       h.innerHTML='<div class="'+cls+'">'+intro+'<div class="cf-box cf-lock"><div class="cf-big">🔒</div><h3>Coffre verrouillé</h3><p>'+esc(msg||'Entre ton mot de passe maître pour l\'ouvrir.')+'</p>'+
         '<div class="cf-stack"><input class="cf-in" type="password" id="cfP_'+mode+'" placeholder="Mot de passe maître" autocomplete="current-password"><button class="cf-btn" data-a="unlock">Déverrouiller</button></div><div class="cf-err" id="cfE_'+mode+'"></div>'+
-        '<div class="cf-note" style="margin-top:8px"><a href="#" data-a="forgot" style="color:#8A4A21">J\'ai oublié mon mot de passe maître</a></div></div></div>';
+        (mode==='equipe'&&!own?'':'<div class="cf-note" style="margin-top:8px"><a href="#" data-a="forgot" style="color:#8A4A21">J\'ai oublié mon mot de passe maître</a></div>')+'</div></div>';
       var inp=document.getElementById('cfP_'+mode);if(inp&&host(mode).offsetParent!==null)setTimeout(function(){try{inp.focus();}catch(e){}},30);
       return;
     }
     var broken=V[mode].broken?'<div class="cf-box" style="border-color:#fed7d7;color:#c53030;font-size:13px;margin-bottom:10px">Ce coffre n\'a pas pu être déchiffré (données d\'un autre appareil ?). Rien n\'a été écrasé. Ferme et rouvre la page, ou contacte-moi.</div>':'';
     h.innerHTML='<div class="'+cls+'">'+intro+broken+
-      '<div class="cf-bar"><button class="cf-btn" data-a="sync">🔄 Mettre à jour depuis mes raccourcis</button><button class="cf-btn sec" data-a="add">➕ Ajouter un site</button>'+
+      '<div class="cf-bar">'+(mode==='equipe'?'':'<button class="cf-btn" data-a="sync">🔄 Mettre à jour depuis mes raccourcis</button>')+'<button class="cf-btn sec" data-a="add">➕ Ajouter un site</button>'+
       '<input class="cf-in grow" id="cfS_'+mode+'" placeholder="🔍 Rechercher…" value="'+esc(search[mode])+'" autocomplete="off">'+
       '<label class="cf-note" style="display:flex;gap:5px;align-items:center;white-space:nowrap"><input type="checkbox" data-a="todo" '+(filterTodo[mode]?'checked':'')+'> À remplir seulement</label>'+
       '<button class="cf-btn sec" data-a="lock">🔒 Verrouiller</button><span class="cf-saved">✓ Chiffré et enregistré</span></div>'+
       '<div class="cf-stats" id="cfT_'+mode+'">'+statsHTML(mode)+'</div><div id="cfList_'+mode+'">'+listHTML(mode)+'</div>'+
       '<div class="cf-panel"><div class="cf-note" style="margin-bottom:8px">Verrouillage automatique après 3 min d\'inactivité, en quittant l\'onglet, ou si tu quittes la page plus d\'1 min. Les mots de passe copiés s\'effacent du presse-papiers au bout de 20 s.</div>'+
-      '<button class="cf-btn sec sm" data-a="chpw">🔑 Changer le mot de passe maître</button> <span id="cfCh_'+mode+'"></span></div></div>';
+      (mode==='equipe'&&!own?'':'<button class="cf-btn sec sm" data-a="chpw">🔑 Changer le mot de passe maître</button> <span id="cfCh_'+mode+'"></span>')+'</div></div>';
   }
   function refreshList(mode){var l=document.getElementById('cfList_'+mode);if(l)l.innerHTML=listHTML(mode);var t=document.getElementById('cfT_'+mode);if(t)t.innerHTML=statsHTML(mode);}
   function refreshCardStatus(mode,card){
@@ -33201,15 +33361,17 @@ function formPageEdit(fid) {
       if(p!==c){er.textContent='Les deux mots de passe ne sont pas identiques.';return;}
       if(!k){er.textContent='Coche la case pour confirmer que tu as compris.';return;}
       b.disabled=true;er.textContent='Création du coffre…';
-      try{await setup(p);syncShortcuts('pro');syncShortcuts('perso');await persist('pro');await persist('perso');render('pro');render('perso');toast('🔐 Coffre créé');}catch(e){er.textContent='Erreur : '+e.message;b.disabled=false;}
+      var g1=G(mode);try{await setup(p,g1);GM[g1].forEach(function(m){syncShortcuts(m);});for(var i1=0;i1<GM[g1].length;i1++)await persist(GM[g1][i1]);GM[g1].forEach(function(m){render(m);});toast('🔐 Coffre créé et enregistré dans ton cloud privé');}catch(e){er.textContent='Erreur : '+e.message;b.disabled=false;}
     }else if(a==='unlock'){doUnlock(mode,b);}
     else if(a==='forgot'){
       ev.preventDefault();
-      if(!confirm('Si tu as oublié ton mot de passe maître, il est IMPOSSIBLE de récupérer les mots de passe enregistrés. Tu peux seulement effacer le coffre et repartir de zéro. Effacer maintenant ?'))return;
+      if(!confirm('Si tu as oublié ton mot de passe maître, il est IMPOSSIBLE de récupérer les mots de passe enregistrés. Tu peux seulement effacer le coffre (sur TOUS tes appareils et dans le cloud) et repartir de zéro. Effacer maintenant ?'))return;
       var t=prompt('Pour confirmer, tape : EFFACER');if(t!=='EFFACER')return;
-      localStorage.removeItem(META_KEY);localStorage.removeItem(VKEY.pro);localStorage.removeItem(VKEY.perso);key=null;V={pro:null,perso:null};render('pro');render('perso');toast('Coffre effacé.');
+      var g2=G(mode);wipeLocal(g2);cloudPushVault(g2,true);GM[g2].forEach(function(m){render(m);});toast('Coffre effacé.');
     }
     else if(a==='lock'){lock('Coffre verrouillé.');}
+    else if(a==='keeplocal'){var g3=G(mode);conflict[g3]=false;setT(g3,Date.now());cloudPushVault(g3);GM[g3].forEach(function(m){render(m);});toast('☁️ Le coffre de cet appareil remplace celui du cloud.');}
+    else if(a==='usecloud'){var g4=G(mode);if(!confirm('Le coffre de cet appareil va être REMPLACÉ par celui du cloud. Continuer ?'))return;var r4=conflictR[g4];if(r4){applyRemote(g4,r4,true);relock(g4);}conflict[g4]=false;}
     else if(a==='sync'){var r=syncShortcuts(mode);await persist(mode);refreshList(mode);toast('🔄 '+r.add+' ajouté'+(r.add>1?'s':'')+(r.orph?' · '+r.orph+' raccourci(s) supprimé(s)':'')+(r.add+r.orph+r.upd===0?' — déjà à jour':''));}
     else if(a==='add'){V[mode].entries.unshift({id:newId(),nom:'Nouveau site',url:'',login:'',pwd:'',note:'',linked:false,orphan:false,nomEdited:true,at:Date.now()});await persist(mode);refreshList(mode);var f=host(mode).querySelector('.cf-name');if(f){f.focus();f.select();}}
     else if(a==='del'&&card){var e=entryOf(mode,card);if(!e)return;if(!confirm('Supprimer la fiche « '+(e.nom||'')+' » et son mot de passe ?'+(e.linked&&!e.orphan?'\n(Le raccourci reste ; la fiche reviendra au prochain « Mettre à jour ».)':'')))return;
@@ -33228,9 +33390,9 @@ function formPageEdit(fid) {
     var inp=document.getElementById('cfP_'+mode),er=document.getElementById('cfE_'+mode);if(!inp)return;
     var now=Date.now();if(now<lockedUntil){er.textContent='Patiente '+Math.ceil((lockedUntil-now)/1000)+' s avant de réessayer.';return;}
     if(!inp.value)return;btn&&(btn.disabled=true);er.textContent='Vérification…';
-    var ok=false;try{ok=await unlock(inp.value);}catch(e){}
-    if(ok){fails=0;var r1=syncShortcuts('pro'),r2=syncShortcuts('perso');await persist('pro');await persist('perso');render('pro');render('perso');
-      var n=r1.add+r2.add;if(n)toast('🔄 '+n+' nouveau(x) site(s) ajouté(s) depuis tes raccourcis');}
+    var g5=G(mode),ok=false;try{ok=await unlock(inp.value,g5);}catch(e){}
+    if(ok){fails=0;var n=0;GM[g5].forEach(function(m){n+=syncShortcuts(m).add;});for(var i5=0;i5<GM[g5].length;i5++)await persist(GM[g5][i5]);GM[g5].forEach(function(m){render(m);});
+      if(n)toast('🔄 '+n+' nouveau(x) site(s) ajouté(s) depuis tes raccourcis');}
     else{fails++;lockedUntil=Date.now()+Math.min(30000,1000*Math.pow(2,fails));er.textContent='Mot de passe incorrect.';inp.value='';btn&&(btn.disabled=false);}
   }
   document.addEventListener('keydown',function(ev){
@@ -33260,23 +33422,82 @@ function formPageEdit(fid) {
     if(n!==c){er.textContent='Les deux nouveaux mots de passe diffèrent.';return;}
     btn.disabled=true;er.textContent='Vérification…';
     try{
-      var meta=getMeta(),ko=await derive(o,unb64(meta.salt),meta.iter);
+      var g6=G(mode),meta=getMeta(g6),ko=await derive(o,unb64(meta.salt),meta.iter);
       try{var chk=await decJSON(ko,meta.check);if(chk!=='coffre-ok')throw 0;}catch(e){er.textContent='Ancien mot de passe incorrect.';btn.disabled=false;return;}
       var salt=rnd(16),k=await derive(n,salt,ITER);
-      key=k;
+      K[g6]=k;
       var nm={v:1,salt:b64(salt),iter:ITER,check:await encJSON(k,'coffre-ok')};
-      await persist('pro');await persist('perso');
-      localStorage.setItem(META_KEY,JSON.stringify(nm));
-      touch();render('pro');render('perso');toast('🔑 Mot de passe maître changé');
+      for(var i6=0;i6<GM[g6].length;i6++)await persist(GM[g6][i6]);
+      localStorage.setItem(METAK[g6],JSON.stringify(nm));setT(g6,Date.now());cloudPushVault(g6);
+      touch();GM[g6].forEach(function(m){render(m);});toast('🔑 Mot de passe maître changé (sur tous tes appareils)');
     }catch(e){er.textContent='Erreur : '+e.message;btn.disabled=false;}
   }
 
+
+  // ── Synchro cloud du coffre (les données restent chiffrées : le cloud ne voit que du texte illisible) ──
+  function dbq(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
+  function getT(g){return parseInt(localStorage.getItem(TK[g])||'0',10)||0;}
+  function setT(g,t){try{localStorage.setItem(TK[g],String(t||Date.now()));}catch(e){}}
+  function localPack(g){var m=localStorage.getItem(METAK[g]);if(!m)return null;var o={meta:m,t:getT(g)};GM[g].forEach(function(x){var v=localStorage.getItem(VKEY[x]);if(v)o[x]=v;});return o;}
+  function cloudPushVault(g,del){
+    clearTimeout(pushT[g]);
+    pushT[g]=setTimeout(function(){var db=dbq();if(!db)return;var o=del?{del:1,t:Date.now()}:localPack(g);if(!o)return;try{db.ref(CL[g]).set(o).catch(function(){});}catch(e){}},700);
+  }
+  function applyRemote(g,r,metaToo){
+    if(metaToo)localStorage.setItem(METAK[g],r.meta);
+    GM[g].forEach(function(m){if(r[m])localStorage.setItem(VKEY[m],r[m]);else localStorage.removeItem(VKEY[m]);});
+    setT(g,r.t);
+  }
+  function wipeLocal(g){
+    localStorage.removeItem(METAK[g]);localStorage.removeItem(TK[g]);
+    GM[g].forEach(function(m){localStorage.removeItem(VKEY[m]);V[m]=null;});K[g]=null;conflict[g]=false;
+  }
+  function busy(){var a=document.activeElement;return !!(a&&a.closest&&a.closest('.cf-wrap')&&/INPUT|TEXTAREA/.test(a.tagName));}
+  function relock(g){
+    K[g]=null;GM[g].forEach(function(m){V[m]=null;});
+    GM[g].forEach(function(m){render(m,'Ce coffre a été mis à jour depuis un autre appareil : entre ton mot de passe maître.');});
+  }
+  async function reloadData(g){
+    if(!K[g])return;
+    for(var i=0;i<GM[g].length;i++){var m=GM[g][i],raw=localStorage.getItem(VKEY[m]);
+      if(raw){try{V[m]=await decJSON(K[g],JSON.parse(raw));}catch(e){V[m]={v:1,entries:[],broken:true};}}else V[m]={v:1,entries:[]};
+      if(!V[m].entries)V[m].entries=[];}
+    if(!busy())GM[g].forEach(function(m){render(m);});
+  }
+  function confHTML(g){
+    if(!conflict[g])return '';
+    return '<div class="cf-box" style="border-color:#e9c46a;background:#fffaf0;font-size:13px;margin-bottom:10px"><b>⚠️ Deux coffres différents</b><p style="margin:6px 0">Cet appareil a un coffre, et ton cloud en contient un autre (créé ailleurs). Je n\'ai rien écrasé. Choisis celui à garder :</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="cf-btn sm" data-a="keeplocal">Garder le coffre de cet appareil</button><button class="cf-btn sec sm" data-a="usecloud">Prendre celui du cloud</button></div></div>';
+  }
+  function handleRemote(g,r){
+    var lt=getT(g),lm=localStorage.getItem(METAK[g]);
+    if(!r){if(lm){if(!lt)setT(g,Date.now());cloudPushVault(g);}return;}
+    if(r.del){if(lm&&lt<=r.t){wipeLocal(g);GM[g].forEach(function(m){render(m);});}else if(lm&&lt>r.t)cloudPushVault(g);return;}
+    if(!r.meta)return;
+    if(!lm){applyRemote(g,r,true);relock(g);return;}
+    if(r.meta===lm){
+      conflict[g]=false;
+      if(r.t>lt){applyRemote(g,r,false);reloadData(g);}
+      else if(r.t<lt)cloudPushVault(g);
+      return;
+    }
+    if(!lt){conflict[g]=true;conflictR[g]=r;if(!busy())GM[g].forEach(function(m){render(m);});return;}
+    if(r.t>lt){applyRemote(g,r,true);relock(g);}
+    else if(r.t<lt)cloudPushVault(g);
+  }
+  function pullVault(g){
+    var db=dbq();if(!db||pulling2[g])return;pulling2[g]=true;
+    try{db.ref(CL[g]).once('value').then(function(sn){pulling2[g]=false;try{handleRemote(g,sn.val());}catch(e){}}).catch(function(){pulling2[g]=false;});}catch(e){pulling2[g]=false;}
+  }
+  function pullAll(){pullVault('main');pullVault('equipe');}
+  setTimeout(function(){pullAll();setInterval(pullAll,45000);},4000);
+
   window.coffreInit=function(mode){
     if(!window.crypto||!crypto.subtle){var h=host(mode);if(h)h.innerHTML='<div class="cf-box" style="color:#c53030">Ce navigateur ne permet pas le chiffrement (ouvre le tableau de bord en https).</div>';return;}
-    if(key&&V[mode]){var r=syncShortcuts(mode);if(r.add||r.orph)persist(mode);touch();}
-    render(mode);
+    var gi=G(mode);
+    if(K[gi]&&V[mode]){var r=syncShortcuts(mode);if(r.add||r.orph)persist(mode);touch();}
+    render(mode);pullVault(gi);
   };
-  window.coffreLock=function(){if(key)lock('Coffre verrouillé en quittant l\'onglet.');};
+  window.coffreLock=function(){if(K.main||K.equipe)lock('Coffre verrouillé en quittant l\'onglet.');};
 })();
 </script>
 
@@ -33320,7 +33541,8 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     ['pole_marketing','📣','Marketing'],['pole_acquisition','🎯','Acquisition'],['pole_vente','📞','Vente'],['pole_livraison','💪','Livraison (suivi clientes)'],
     ['task_compta','💰','Pôle Admin. (compta)'],['monprojet','🗂️','Mon projet'],['association','🏛️','Association (adhérentes, facturation)'],['formations','🎓','Formation'],
     ['boutique','🛍️','Boutique (produits, commandes, précommandes)'],
-    ['coffre_pro','🔐','Coffre-fort pro (il faut aussi ton mot de passe maître)']
+    ['coffre_pro','🔐','Coffre-fort pro (il faut aussi ton mot de passe maître)'],
+    ['coffre_equipe','🗝️','Coffre-fort équipe (il faut le mot de passe du coffre équipe)']
   ];
   var IDS=VIEWS.map(function(v){return v[0];});
   var enc=new TextEncoder(), OPEN={};
@@ -33623,7 +33845,8 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     if(Date.now()>Date.parse('2026-11-29T23:59:59')){localStorage.setItem('sfm_acces_rescue_v2','x');return;}
     localStorage.setItem('sfm_acces_rescue_v2','1');
     var d=get();
-    if(d&&(d.enabled||d.code)){d.enabled=false;d.code=null;save(d);try{sessionStorage.removeItem(PKEY);}catch(e){}sset('owner');try{removeGate();}catch(e){}try{enforce(true);}catch(e){}setTimeout(function(){toast('🔓 Protection désactivée : choisis un nouveau code propriétaire dans l\'onglet Équipe, puis réactive-la.');},800);}
+    if(d&&d.rescue2)return;   // déjà fait une fois (sur n'importe quel appareil) : on ne désactive plus jamais
+    if(d&&(d.enabled||d.code)){d.enabled=false;d.code=null;d.rescue2=true;save(d);try{sessionStorage.removeItem(PKEY);}catch(e){}sset('owner');try{removeGate();}catch(e){}try{enforce(true);}catch(e){}setTimeout(function(){toast('🔓 Protection désactivée : choisis un nouveau code propriétaire dans l\'onglet Équipe, puis réactive-la.');},800);}
   }catch(e){}}
   function start(){resetOnce();guard();enforce();coachFlag();whoChip();setTimeout(cloudLoop,800);}
   if(document.readyState==='complete')setTimeout(start,50);else window.addEventListener('load',function(){setTimeout(start,50);});
