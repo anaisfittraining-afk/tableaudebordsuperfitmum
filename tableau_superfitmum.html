@@ -32609,6 +32609,66 @@ function formPageEdit(fid) {
 
   // ── Propositions de départ (tu peux tout changer case par case) ────────────────────────────────
   var D_PRO = [
+    // Parcours calqué sur le MOIS 1 de la phase 1 (« Comprendre son épuisement »). Semaine 1 : les 6 piliers du programme (alimentation, sport, stress, sommeil, temps, confiance en soi) ; semaines 2 à 4 : un module chacune. [rubrique, titre, texte]
+    ['Mois 1 · Piliers', 'Introduction : mise en place des piliers', 'Ton accompagnement repose sur 6 piliers : l’alimentation, le sport, le stress, le sommeil, le temps et la confiance en soi. Aujourd’hui, on les découvre : lequel te parle le plus en ce moment ?'],
+    ['Mois 1 · Piliers', 'Pilier : l’alimentation', 'Premier pilier. Aujourd’hui, on le regarde simplement : comment tu manges en ce moment, sans te juger.'],
+    ['Mois 1 · Piliers', 'Pilier : le sport', 'Deuxième pilier. Aujourd’hui, regarde la place que prend le mouvement dans ta semaine, à ton rythme.'],
+    ['Mois 1 · Piliers', 'Pilier : le stress', 'Troisième pilier. Aujourd’hui, repère ce qui te met sous tension dans ta journée.'],
+    ['Bilan', 'Mon bilan avec Anaïs', ''],
+    ['Mois 1 · Piliers', 'Pilier : le sommeil', 'Quatrième pilier. Aujourd’hui, regarde comment se passent tes nuits et ce qui les perturbe.'],
+    ['Mois 1 · Piliers', 'Pilier : le temps', 'Cinquième pilier. Aujourd’hui, regarde où passe ton temps dans une journée type.'],
+    ['Découverte', 'Mon espace co-NAÎTRE : ton suivi et ta coach', ''],
+    ['Mois 1 · Piliers', 'Pilier : la confiance en soi', 'Sixième pilier. Aujourd’hui, note une chose que tu fais bien en ce moment, même petite.'],
+    ['Mois 1 · Épuisement', 'Comprendre l’épuisement des mamans', 'Ce n’est pas un manque de volonté : tu portes la charge de tout et de tous. Aujourd’hui, on met des mots sur ce qui t’use, sans te juger.'],
+    ['Découverte', 'co-NAÎTRE son foyer : toute la famille participe', ''],
+    ['Mois 1 · Épuisement', 'L’épuisement des mamans : ce que tu portes', 'Aujourd’hui, note ce que tu portes en ce moment, dans ta tête et dans ton quotidien.'],
+    ['Mois 1 · Épuisement', 'L’épuisement des mamans : ce qui te fait du bien', 'Aujourd’hui, note une chose qui te fait du bien, même petite, et fais-la.'],
+    ['Découverte', 'co-NAÎTRE en mouvement : du Pilates qui s’adapte à ta vie', ''],
+    ['Mois 1 · Monde intérieur', 'Reprendre le contrôle de ton monde intérieur', 'Tes pensées vont vite, surtout en décembre. Aujourd’hui, on commence par les observer, sans chercher à les changer.'],
+    ['Mois 1 · Monde intérieur', 'Ton monde intérieur : ce qui tourne dans ta tête', 'Aujourd’hui, remarque ce qui revient souvent dans tes pensées pendant la journée.'],
+    ['Mois 1 · Monde intérieur', 'Ton monde intérieur : comment tu te parles', 'Aujourd’hui, écoute la façon dont tu te parles à toi-même.'],
+    ['Masterclass', 'Ma masterclass offerte', 'Une heure avec moi pour aller plus loin, à ton rythme. Clique sur le bouton pour t’inscrire.'],
+    ['Mois 1 · Monde intérieur', 'Ton monde intérieur : ce que tu gardes', 'Choisis une pensée qui te fait du bien et garde-la avec toi pour la suite.'],
+    ['Mois 1 · Système nerveux', 'Comprendre ton système nerveux', 'Pourquoi tu es sur les nerfs ou à plat, et ce que ton corps essaie de te dire. Une explication claire, sans jargon.'],
+    ['Mois 1 · Système nerveux', 'Ton système nerveux : écouter ton corps', 'Aujourd’hui, à trois moments de la journée, remarque comment ton corps réagit : tendu, calme, fatigué ?'],
+    ['Mois 1 · Système nerveux', 'Ton système nerveux : ce que tu retiens', 'Aujourd’hui, note ce que tu as compris sur ton fonctionnement.'],
+    ['Mois 1 · Système nerveux', 'Ton bilan de ces 24 jours', 'Ce que tu as compris sur ton épuisement, ce qui t’a fait du bien, ce que tu gardes pour janvier. Prends cinq minutes pour l’écrire.'],
+    ['Cadeau', 'Ton cadeau de Noël', '']
+  ];
+  // Version précédente (mois 1 avec piliers inventés) : sert uniquement à repérer les cases jamais modifiées
+  var D_PRO_PREV2 = [
+    // Parcours calqué sur le MOIS 1 de la phase 1 de l'accompagnement (« Comprendre son épuisement ») : 4 semaines de contenu en 24 jours. [rubrique, titre, texte]
+    // ── Semaine 1 · Mise en place des piliers ──
+    ['Mois 1 · Piliers', 'Poser tes piliers : le socle de ces 24 jours', 'Avant de vouloir tout changer, on pose le socle : bouger un peu, bien manger, respirer, dormir. Aujourd’hui, choisis le pilier qui te manque le plus et note-le. Un seul, pas quatre.'],
+    ['Mois 1 · Piliers', 'Bouger un peu : tes 10 minutes', 'Pas de séance, pas de tenue : dix minutes de mouvement doux, quand tu veux dans la journée. Marcher, t’étirer, danser dans la cuisine. L’important, c’est de commencer petit.'],
+    ['Mois 1 · Piliers', 'Respirer : trois grandes respirations', 'Pose ce que tu tiens, inspire par le nez en gonflant le ventre, souffle longtemps par la bouche. Trois fois, c’est tout. À refaire à chaque fois que ça s’emballe.'],
+    ['Mois 1 · Piliers', 'Manger simple, sans te punir', 'Ni régime ni privation : un repère simple pour ton assiette de la journée. Aujourd’hui, un seul repas un peu plus posé, assise, sans écran si possible.'],
+    ['Bilan', 'Mon bilan avec Anaïs', ''],
+    ['Mois 1 · Piliers', 'Dormir : ton petit rituel du soir', 'Récupérer commence avant le coucher. Ce soir, choisis un seul geste qui annonce la fin de la journée : lumière douce, téléphone loin, verre d’eau, trois respirations.'],
+    // ── Semaine 2 · Comprendre l'épuisement des mamans ──
+    ['Mois 1 · Épuisement', 'Comprendre l’épuisement des mamans', 'Ce n’est pas un manque de volonté : tu portes la charge de tout et de tous. Aujourd’hui, on met des mots sur ce qui t’use, sans te juger.'],
+    ['Découverte', 'Mon espace co-NAÎTRE : ton suivi et ta coach', ''],
+    ['Mois 1 · Épuisement', 'La charge mentale : qui porte quoi ?', 'Penser à tout, c’est aussi du travail, même quand ça ne se voit pas. Aujourd’hui, note trois choses que tu portes dans ta tête sans que personne ne le sache.'],
+    ['Mois 1 · Épuisement', 'Ce qui t’use, ce qui te recharge', 'Deux colonnes, cinq minutes : ce qui te vide d’un côté, ce qui te fait du bien de l’autre. Tu verras vite ce qu’il faut protéger en décembre.'],
+    ['Découverte', 'co-NAÎTRE son foyer : toute la famille participe', ''],
+    ['Mois 1 · Épuisement', 'Accepter d’être fatiguée', 'Être fatiguée n’est pas un échec. Aujourd’hui, une phrase à te répéter : « C’est normal que je sois fatiguée, vu tout ce que je porte. » Et une seule chose à lâcher.'],
+    // ── Semaine 3 · Reprendre le contrôle de son monde intérieur ──
+    ['Mois 1 · Monde intérieur', 'Reprendre le contrôle de ton monde intérieur', 'Tes pensées vont vite, surtout en décembre. Aujourd’hui, un exercice simple pour poser ce qui tourne dans ta tête et retrouver un peu de place.'],
+    ['Découverte', 'co-NAÎTRE en mouvement : du Pilates qui s’adapte à ta vie', ''],
+    ['Mois 1 · Monde intérieur', 'Écrire pour vider ta tête', 'Un carnet, un timer de cinq minutes, aucune phrase à soigner. Écris tout ce qui tourne, puis ferme le carnet. Ta tête n’a plus à tout garder.'],
+    ['Mois 1 · Monde intérieur', 'Comment tu te parles', 'Écoute la voix dans ta tête aujourd’hui. Si une amie te parlait comme ça, que lui dirais-tu ? Reformule une phrase dure en phrase plus juste.'],
+    ['Mois 1 · Monde intérieur', 'Une pensée à la fois', 'Quand tout se bouscule, on ne peut pas tout régler. Aujourd’hui, choisis la pensée la plus envahissante et pose-lui une seule question : qu’est-ce qui est vraiment sous mon contrôle ?'],
+    ['Masterclass', 'Ma masterclass offerte', 'Une heure avec moi pour aller plus loin, à ton rythme. Clique sur le bouton pour t’inscrire.'],
+    // ── Semaine 4 · Comprendre son système nerveux ──
+    ['Mois 1 · Monde intérieur', 'Une phrase-ressource pour les jours durs', 'Choisis une phrase courte qui te calme et te tient debout. Écris-la sur un post-it, mets-la là où tu la verras. Elle t’accompagnera jusqu’en janvier.'],
+    ['Mois 1 · Système nerveux', 'Comprendre ton système nerveux', 'Pourquoi tu es sur les nerfs ou à plat, et ce que ton corps essaie de te dire. Une explication claire, sans jargon.'],
+    ['Mois 1 · Système nerveux', 'Mode alerte, mode repos : repère ton signal', 'Aujourd’hui, observe trois fois dans la journée dans quel mode tu es : en alerte (tendue, pressée) ou au repos (posée, disponible). Juste observer, sans rien changer.'],
+    ['Mois 1 · Système nerveux', 'Ta première pratique de 5 minutes', 'On termine par une pratique courte à refaire chaque jour : respiration, étirements doux, ou pause à toi. À toi de choisir.'],
+    ['Mois 1 · Système nerveux', 'Ton bilan de ces 24 jours', 'Ce que tu as compris sur ton épuisement, ce qui t’a fait du bien, ce que tu gardes pour janvier. Prends cinq minutes pour l’écrire.'],
+    ['Cadeau', 'Ton cadeau de Noël', '']
+  ];
+  // Ancienne version du parcours (4 « mois ») : sert uniquement à repérer les cases jamais modifiées lors de « Passer à la nouvelle structure »
+  var D_PRO_PREV = [
     // Parcours calqué sur la phase 1 de l'accompagnement : 4 « mois » de 6 jours. [rubrique, titre, texte]
     // ── Mois 1 · Comprendre son épuisement (jours 1 à 6) ──
     ['Mois 1 · Comprendre', 'Poser tes piliers : le socle de ces 24 jours', 'Avant de vouloir tout changer, on pose le socle : bouger un peu, bien manger, respirer, dormir. Aujourd’hui, choisis le pilier qui te manque le plus et note-le. Un seul, pas quatre.'],
@@ -32978,7 +33038,9 @@ function formPageEdit(fid) {
       var n = i + 1, c = cur[n], r = { rubrique: x[0], titre: x[1] };
       var vide = !c || (!c.titre && !c.texte && !c.video && !c.lien);
       var ancien = c && c.titre === AV_OLD_T[par][i] && !c.texte;
-      var dejaNeuf = c && c.titre === x[1];
+      var pvs = (par === 'prospect') ? [D_PRO_PREV[i], D_PRO_PREV2[i]] : [], pv = null;
+      pvs.forEach(function (q) { if (q && c && c.titre === q[1] && String(c.texte || '') === String(q[2] || '')) { ancien = true; pv = q; } });
+      var dejaNeuf = c && c.titre === x[1] && !(pv && (pv[0] !== x[0] || String(pv[2] || '') !== String(x[2] || '')));
       if (dejaNeuf) { return; }
       if (!(vide || ancien)) { keep++; return; }
       if (x[2]) r.texte = x[2];
@@ -33866,7 +33928,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
         return d;}}catch(e){}
     return {enabled:false,code:null,members:[]};}
   // ── Sauvegarde cloud directe des réglages d'équipe (indépendante de la synchro générale) ──
-  var ACC_BUILD='26/11 · 22h · coffres v10', CLOUDSEEN=null;
+  var ACC_BUILD='27/11 · 1h · coffre aperçu v13', CLOUDSEEN=null;
   var CLOUD='dash_team/config', TKEY='sfm_acces_cloud_t', ST={ok:null,msg:'Vérification de la connexion au cloud…'}, pulling=false, pollN=0;
   function dbq(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
   function stTxt(){return (ST.ok===false?'⚠️ ':ST.ok?'☁️ ':'')+ST.msg;}
@@ -34330,6 +34392,28 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     var csv='﻿'+out.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
     var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='remunerations_'+PAY.month+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},500);
   };
+  // ── Coffres-forts : œil « aperçu » sur les champs de mot de passe maître (voir ce qu'on écrit, se remasque tout seul après 15 s) ──
+  (function(){
+    var PEEK=/^cf(P|N|C|O|N2|C2)_/;
+    if(!document.getElementById('cfPeekCss')){var st=document.createElement('style');st.id='cfPeekCss';st.textContent='.cf-peekwrap{position:relative;display:block;width:100%}.cf-peekwrap .cf-in{padding-right:46px}.cf-peekbtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;font-size:17px;line-height:1;cursor:pointer;padding:6px 8px;border-radius:8px;opacity:.75}.cf-peekbtn:hover,.cf-peekbtn:focus-visible{opacity:1;background:#EFEBDD}.cf-peekbtn.on{opacity:1;background:#E3EDFB}';document.head.appendChild(st);}
+    function decorate(root){
+      root.querySelectorAll('input.cf-in').forEach(function(inp){
+        if(!PEEK.test(inp.id||'')||inp.getAttribute('data-peek'))return;
+        inp.setAttribute('data-peek','1');
+        var w=document.createElement('span');w.className='cf-peekwrap';inp.parentNode.insertBefore(w,inp);w.appendChild(inp);
+        var b=document.createElement('button');b.type='button';b.className='cf-peekbtn';b.title='Voir ce que j\'écris';b.setAttribute('aria-label','Afficher ou masquer le mot de passe pendant la saisie');b.textContent='👁';
+        function hide(){inp.type='password';b.classList.remove('on');b.textContent='👁';}
+        b.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();clearTimeout(b._t);if(inp.type==='password'){inp.type='text';b.classList.add('on');b.textContent='🙈';b._t=setTimeout(hide,15000);}else hide();try{inp.focus();}catch(e){}});
+        inp.addEventListener('blur',function(){setTimeout(function(){if(document.activeElement!==b){clearTimeout(b._t);hide();}},200);});
+        w.appendChild(b);
+      });
+    }
+    function scan(){document.querySelectorAll('[id^="coffreHost_"]').forEach(decorate);}
+    var q=0;
+    function later(){if(q)return;q=requestAnimationFrame(function(){q=0;scan();});}
+    try{new MutationObserver(later).observe(document.body,{childList:true,subtree:true});}catch(e){}
+    scan();
+  })();
   window.accRole=role;
   window.accCloudNow=function(){try{pollN=0;cloudPull();setTimeout(function(){try{enforce();}catch(e){}},1200);}catch(e){}};
   // démarrage
