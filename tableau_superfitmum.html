@@ -22,6 +22,36 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
   <script>
+  // Boîtes de dialogue bloquées (ex. « Empêcher cette page de créer d'autres boîtes de dialogue » coché, ou fenêtre d'application) :
+  // le navigateur répond « non » tout de suite et le bouton n'a alors AUCUN effet. Dans ce cas, on remplace la confirmation par un
+  // double geste : même action refaite dans les 10 s = confirmée. Une vraie boîte de dialogue qui fonctionne n'est pas touchée.
+  (function(){
+    var nc = window.confirm.bind(window), na = window.alert.bind(window), armed = {};
+    function note(msg){
+      try{
+        var d = document.getElementById('sfmDlgNote');
+        if(!d){ d = document.createElement('div'); d.id = 'sfmDlgNote'; d.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:100002;background:#2C4432;color:#fff;padding:14px 18px;border-radius:14px;max-width:min(520px,calc(100vw - 28px));font:600 14px/1.45 system-ui,sans-serif;white-space:pre-line;box-shadow:0 10px 30px rgba(0,0,0,.3)'; (document.body||document.documentElement).appendChild(d); }
+        d.textContent = msg; d.style.display = 'block';
+        clearTimeout(d._t); d._t = setTimeout(function(){ d.style.display = 'none'; }, 9000);
+      }catch(e){}
+    }
+    window.confirm = function(msg){
+      var t = performance.now(), r = false;
+      try{ r = nc(msg); }catch(e){}
+      if(r) return true;
+      if(performance.now() - t > 250) return false; // vraie annulation par la personne
+      var k = String(msg).slice(0, 200), n = Date.now();
+      if(armed[k] && n - armed[k] < 10000){ armed[k] = 0; try{ var d = document.getElementById('sfmDlgNote'); if(d) d.style.display = 'none'; }catch(e){} return true; }
+      armed[k] = n;
+      note('⚠️ ' + String(msg) + '\n\n👉 Pour confirmer, clique de nouveau sur le même bouton (dans les 10 secondes).');
+      return false;
+    };
+    window.alert = function(msg){
+      var t = performance.now();
+      try{ na(msg); }catch(e){}
+      if(performance.now() - t < 120) note(String(msg));
+    };
+  })();
   // Diagnostic d'affichage (ajouté le 31/10/2026) : si une erreur de code se produit, un petit bandeau rouge
   // s'affiche en bas de l'écran avec le texte de l'erreur, pour qu'on puisse la lire sur iPhone/Safari.
   (function(){
@@ -19988,9 +20018,15 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       keep[ASSO_ADHERENTS_LAST_APPLIED_KEY] = localStorage.getItem(ASSO_ADHERENTS_LAST_APPLIED_KEY);
       var keepBilData = localStorage.getItem('sfm2_bilan_data'), keepBilTomb = localStorage.getItem(BILAN_TOMB_KEY);
       var keepAssoDocs = localStorage.getItem('sfm_asso_saved_docs_v1');
+      // Réglages d'accès / équipe et marqueurs propres à CET appareil : jamais écrasés ni effacés par la copie du cloud
+      // (sinon la protection disparaissait juste après le mot de passe, le temps que le cloud la ramène).
+      var ACC_KEEP = ['sfm_acces_v1','sfm_acces_cloud_t','sfm_acces_device_v1','sfm_acces_reset_v2','sfm_acces_rescue_v2','sfm_coach_device','sfm_dev_id'];
+      var keepAcc = {};
+      ACC_KEEP.forEach(function(k) { keepAcc[k] = localStorage.getItem(k); });
       try { localStorage.clear(); } catch (e) {}
       Object.keys(snap.localStorage).forEach(function(k) {
         if (k === ASSO_ADHERENTS_KEY || k === ASSO_ADHERENTS_LAST_APPLIED_KEY) return;
+        if (ACC_KEEP.indexOf(k) >= 0) return;
         // Avant, une erreur ici (le cas le plus courant étant le stockage local plein, voir
         // QuotaExceededError) était silencieusement ignorée : localStorage.clear() avait déjà tout
         // effacé juste avant, donc toute clé qui échouait à se réécrire disparaissait purement et
@@ -19999,6 +20035,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         try { localStorage.setItem(k, snap.localStorage[k]); } catch (e) { incomplete = true; }
       });
       Object.keys(keep).forEach(function(k) { if (keep[k] != null) { try { localStorage.setItem(k, keep[k]); } catch (e) {} } });
+      Object.keys(keepAcc).forEach(function(k) { if (keepAcc[k] != null) { try { localStorage.setItem(k, keepAcc[k]); } catch (e) {} } });
       // Les bilans de CET appareil ne sont jamais perdus : on les fusionne avec ceux de la capture cloud.
       try {
         if (keepBilTomb != null) localStorage.setItem(BILAN_TOMB_KEY, bilanTombUnion(keepBilTomb, snap.localStorage[BILAN_TOMB_KEY]));
@@ -29649,6 +29686,7 @@ function coMailBrand(o) {
   }
   function syncFinishBootAndInit() {
     bootLoadingHide();
+    try { window.accCloudNow && window.accCloudNow(); } catch (e) {}   // relit tout de suite les réglages d'équipe : l'écran de choix du profil apparaît sans attendre
     initDashboardAccessControl();
     setTimeout(function() { try { cfSyncAll(); } catch (e) {} }, 5000);
     setTimeout(function() { try { histWaCloudSync(); } catch (e) {} }, 7000);
@@ -30166,11 +30204,45 @@ function coMailBrand(o) {
       + '<button onclick="sfmFullBackup()" style="width:100%;padding:9px;background:#66735F;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;margin-bottom:8px">💾 Cet appareil seulement (rapide)</button>'
       + '<button onclick="sfmRecoverMealPlans(true)" style="width:100%;padding:9px;background:#F7E4D8;color:#8A4E2F;border:none;border-radius:10px;font-weight:700;cursor:pointer;margin-bottom:8px">🥗 Récupérer les plans alimentaires envoyés</button>'
       + '<label style="display:block;text-align:center;padding:9px;border:1px dashed #cbd5e0;border-radius:10px;cursor:pointer;color:#3E4A3A;font-weight:600">Restaurer depuis un fichier…<input type="file" accept=".json,application/json" style="display:none" onchange="sfmRestoreBackup(this)"></label>'
-      + '<div style="border-top:1px solid #EFEBDD;margin-top:10px;padding-top:8px"><div style="font-weight:700;margin-bottom:4px">🛟 Copies de sécurité de cet appareil</div><div id="sfmSafetyBox"></div></div>';
+      + '<div style="border-top:1px solid #EFEBDD;margin-top:10px;padding-top:8px"><div style="font-weight:700;margin-bottom:4px">🛟 Copies de sécurité de cet appareil</div><div id="sfmSafetyBox"></div></div>'
+      + '<div style="border-top:1px solid #EFEBDD;margin-top:10px;padding-top:8px"><div style="font-weight:700;margin-bottom:4px">🔬 L\'écran sautille ?</div><div style="color:#66735F;font-size:12px;margin-bottom:6px">Lance l\'analyse, ne touche à rien pendant 20 secondes, puis envoie-moi la capture du résultat.</div><button onclick="sfmJitterScan()" style="width:100%;padding:9px;background:#fff;color:#2C4432;border:1.5px solid #66735F;border-radius:10px;font-weight:700;cursor:pointer">Analyser pendant 20 s</button></div>';
     document.body.appendChild(p);
     setTimeout(function() { if (window.sfmSafetyRender) sfmSafetyRender(); }, 50);
     if (window.sfmBkPlace) window.sfmBkPlace();
   }
+  window.sfmJitterScan = function() {
+    var counts = {}, scrolls = 0, shifts = 0, t0 = Date.now(), lastY = window.scrollY, jumps = [];
+    function skip(el) { return !el || (el.closest && el.closest('#sfmBkPanel,#sfmScanBox,#sfmBkBtn')); }
+    var mo = new MutationObserver(function(ms) {
+      ms.forEach(function(m) {
+        var t = m.target, el = t.nodeType === 1 ? t : t.parentElement;
+        if (skip(el)) return;
+        if (m.type === 'childList' && el === document.body && Array.prototype.every.call(Array.prototype.concat.call([], Array.prototype.slice.call(m.addedNodes), Array.prototype.slice.call(m.removedNodes)), function(n) { return n.id === 'sfmScanBox' || n.id === 'sfmBkPanel'; })) return;
+        var host = el && el.closest ? el.closest('[id]') : null;
+        var k = (host ? '#' + host.id : (el ? el.tagName.toLowerCase() : '?')) + ' · ' + (m.type === 'childList' ? 'contenu remplacé' : (m.type === 'attributes' ? 'style/classe modifié' : 'texte modifié'));
+        counts[k] = (counts[k] || 0) + 1;
+      });
+    });
+    mo.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true });
+    function onScroll() { var y = window.scrollY; if (Math.abs(y - lastY) > 250) { scrolls++; jumps.push(Math.round(y - lastY)); } lastY = y; }
+    window.addEventListener('scroll', onScroll, true);
+    var po = null;
+    try { po = new PerformanceObserver(function(l) { l.getEntries().forEach(function(e) { if (!e.hadRecentInput) shifts += e.value; }); }); po.observe({ type: 'layout-shift', buffered: false }); } catch (e) {}
+    var box = document.createElement('div');
+    box.id = 'sfmScanBox';
+    box.style.cssText = 'position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:100001;background:#fff;border:2px solid #66735F;border-radius:14px;padding:14px 18px;max-width:min(560px,calc(100vw - 28px));font:13px/1.5 system-ui,sans-serif;color:#26312A;box-shadow:0 10px 30px rgba(0,0,0,.25)';
+    box.innerHTML = '🔬 Analyse en cours… ne touche à rien (20 s)';
+    document.body.appendChild(box);
+    setTimeout(function() {
+      mo.disconnect(); window.removeEventListener('scroll', onScroll, true); try { po && po.disconnect(); } catch (e) {}
+      var rows = Object.keys(counts).map(function(k) { return [k, counts[k]]; }).sort(function(a, b) { return b[1] - a[1]; }).slice(0, 8);
+      var h = '<b>🔬 Résultat (20 s sans toucher à rien)</b><br>Version : ' + (window.ACC_BUILD_PUB || '26/11 · scan v1') + '<br>Écran affiché : ' + ((document.querySelector('.view.active') || {}).id || '?') + '<br>';
+      h += 'Sauts de défilement : <b>' + scrolls + '</b>' + (jumps.length ? ' (' + jumps.slice(0, 6).join(', ') + ')' : '') + '<br>Décalage de mise en page : <b>' + shifts.toFixed(3) + '</b><br><br>';
+      h += rows.length ? ('<b>Ce qui a bougé :</b><br>' + rows.map(function(r) { return r[1] + ' × ' + r[0].replace(/</g, '&lt;'); }).join('<br>')) : 'Rien n\'a bougé dans la page pendant l\'analyse.';
+      h += '<div style="margin-top:10px"><button onclick="document.getElementById(\'sfmScanBox\').remove()" style="padding:7px 14px;border:none;background:#66735F;color:#fff;border-radius:9px;font-weight:700;cursor:pointer">Fermer</button></div>';
+      box.innerHTML = h;
+    }, 20000);
+  };
   function mount() {
     if (document.getElementById('sfmBkBtn')) return;
     var b = document.createElement('button'); b.id = 'sfmBkBtn'; b.type = 'button'; b.textContent = '💾 Sauvegarde';
@@ -32398,12 +32470,31 @@ function formPageEdit(fid) {
   ];
   var D_PRO_EXTRA = { 18: { lienLabel: 'Je m’inscris à la masterclass' }, 11: { video: VID + 'presentation_foyer.mp4', lien: TUN + '?f=foyer', lienLabel: 'Voir l’offre co-NAÎTRE son foyer' }, 14: { video: VID + 'presentation_mouvement.mp4', lien: TUN + '?f=mouvement', lienLabel: 'Voir l’offre co-NAÎTRE en mouvement' }, 8: { video: VID + 'presentation_espace.mp4', lien: TUN + '?f=bilan', lienLabel: 'Réserver mon Bilan Forme Santé offert' } };
   var D_CLI = [
-    ['Mission', 'Vider sa tête : une seule liste de tout ce qu’il reste à faire'], ['Pour moi', '5 minutes pour tout poser : respiration guidée'], ['Mission', 'Traditions : ce qu’on garde, ce qu’on laisse tomber'], ['Mission', 'Les cadeaux : qui, quoi, combien, et on s’arrête là'],
-    ['En famille', 'La liste de souhaits des enfants : trois choses, pas plus'], ['Mission', 'Répartir : qui fait quoi dans le foyer'], ['Pour moi', '10 minutes à soi, bloquées dans l’agenda'], ['Mission', 'Dire non sans culpabiliser : invitations et attentes de la famille'],
-    ['Mission', 'Le planning à rebours : courses, ménage, déco'], ['Mission', 'Cadeaux sans stress : idées par profil et emballage express'], ['En famille', 'Une mission par enfant, dans l’appli foyer'], ['Pour moi', 'Étirer nuque et épaules en 5 minutes'],
-    ['Mission', 'Repas à plusieurs : qui apporte quoi'], ['Mission', 'Un menu simple : trois plats maximum'], ['Recette', 'Toasts apéro légers (saumon, fromage frais, herbes)'], ['Recette', 'Velouté de potimarron et châtaigne'],
-    ['Recette', 'Plat de fête allégé (volaille ou magret)'], ['Mission', 'Les courses malignes : une seule liste, zéro gaspi'], ['Recette', 'Gratin de légumes d’hiver'], ['Recette', 'Bûche allégée aux fruits'],
-    ['Recette', 'Boisson festive sans alcool'], ['Mission', 'Préparer à l’avance et check-list de la veille'], ['Pour moi', 'Savourer le repas de fête sans culpabilité et protéger son sommeil'], ['Guidance', 'Ta guidance personnelle d’Anaïs']
+    // Parcours clientes : 24 missions douceur (2 à 5 minutes). [rubrique, titre, texte]
+    ['Mini-pause', 'Trois grandes respirations', 'Ta mission du jour : pose ce que tu tiens, inspire par le nez en gonflant le ventre, puis souffle longtemps par la bouche. Trois fois, c’est tout. Ton calendrier est commencé.'],
+    ['Pour moi', 'Une chose de moins sur ta liste', 'Aujourd’hui, barre une tâche qui n’est pas indispensable avant Noël. Pas la repousser : la supprimer. Note-la ici, et respire.'],
+    ['Corps', 'Dérouler la nuque', 'Assise, menton vers la poitrine, laisse le poids de ta tête étirer doucement la nuque. Cinq respirations, puis de l’autre côté. Si ça tire trop, tu relâches : aucune douleur.'],
+    ['Rituel', 'Une boisson chaude, sans écran', 'Prépare une boisson chaude et bois-la assise, sans téléphone, en sentant la chaleur dans tes mains. Cinq minutes rien que pour toi.'],
+    ['Pour moi', 'Dire non à une demande', 'Une petite demande te pèse ? Aujourd’hui, tu réponds : « Cette fois, je ne peux pas. » Tu n’as pas besoin de te justifier.'],
+    ['Mini-pause', 'Le soupir qui libère', 'Inspire par le nez, puis soupire bruyamment par la bouche, comme si tu posais un gros sac. Trois fois, à l’heure de la journée qui te pèse le plus.'],
+    ['Corps', 'Ouvrir les épaules', 'Mains croisées derrière le dos (ou une serviette entre les mains), ouvre la poitrine et regarde droit devant toi. Trente secondes, deux fois.'],
+    ['Rituel', 'Une lumière douce le soir', 'Ce soir, éteins le plafonnier et allume une bougie ou une guirlande. Dix minutes de lumière douce avant de reprendre le rythme.'],
+    ['Pour moi', 'Demander un coup de main', 'Choisis une chose à confier aujourd’hui : à ton conjoint, à tes enfants ou à une amie. Une phrase suffit : « Peux-tu t’en occuper ? »'],
+    ['Mini-pause', 'Les pieds bien ancrés', 'Debout, pieds nus si possible, sens le sol sous tes pieds. Transfère ton poids d’un pied sur l’autre, lentement, pendant deux minutes.'],
+    ['Corps', 'Dix minutes dehors', 'Sors dix minutes, sans écouteurs ni but. Regarde le ciel, les lumières, les gens. Marche à ton rythme, pas plus vite.'],
+    ['Pour moi', 'Ce que j’ai déjà fait', 'Écris trois choses que tu as réussies cette semaine, même toutes petites. Lis-les à voix haute.'],
+    ['Rituel', 'Un repas sans « parfait »', 'Pour un repas aujourd’hui, choisis le simple : une assiette, pas de dessert maison, pas de vaisselle de fête. Regarde ce que ça te laisse comme temps.'],
+    ['Mini-pause', 'Quatre secondes dedans, six dehors', 'Inspire quatre secondes, expire six secondes. Pendant deux minutes, compte dans ta tête. Tu peux le faire dans la voiture ou à la caisse.'],
+    ['Corps', 'Dos rond, dos creux', 'À quatre pattes ou assise sur une chaise : arrondis le dos en soufflant, creuse-le en inspirant. Huit fois, lentement. Ton dos te dit merci.'],
+    ['Pour moi', 'Un rendez-vous avec toi', 'Bloque quinze minutes cette semaine, à ton nom, comme un rendez-vous important. Écris-le dans ton agenda maintenant.'],
+    ['Rituel', 'Le menu en trois plats', 'Décide de ton menu de fête en trois plats maximum, et écris-le. Le reste, tu le laisses tomber, sans regret.'],
+    ['Mini-pause', 'Le verre d’eau conscient', 'Bois un grand verre d’eau lentement, en sentant chaque gorgée. Deux minutes de pause, c’est déjà du soin.'],
+    ['Corps', 'Détendre le bas du dos', 'Allongée sur le dos, ramène les genoux vers ta poitrine et berce-toi doucement de droite à gauche. Une minute, puis une grande respiration.'],
+    ['Pour moi', 'Une phrase gentille pour toi', 'Écris la phrase que tu dirais à une amie épuisée. Puis dis-la-toi à voix haute, devant le miroir.'],
+    ['Rituel', 'La veille, tout est prêt', 'Prépare ce qui peut l’être la veille : table, sacs, tenue. Dix minutes aujourd’hui, une soirée plus légère demain.'],
+    ['Mini-pause', 'Les cinq sens', 'Nomme cinq choses que tu vois, quatre que tu touches, trois que tu entends, deux que tu sens, une que tu goûtes. Tu reviens ici et maintenant.'],
+    ['Corps', 'Se détendre avant de dormir', 'Au lit, une main sur le ventre : quatre respirations lentes, puis relâche chaque partie du corps, des pieds à la tête. Protège ta nuit de fête.'],
+    ['Guidance', 'Ta guidance personnelle d’Anaïs', '']
   ];
 
   // ── Petits outils ──────────────────────────────────────────────────────────────────────────────
@@ -32636,7 +32727,7 @@ function formPageEdit(fid) {
   // ── Onglet Les 24 cases ────────────────────────────────────────────────────────────────────────
   function avCases() {
     var par = AV.par, list = AV.cases[par] || {}, n, h = '';
-    h += '<div class="avrow" style="margin-bottom:10px">' + btn('Parcours prospectes', 'avPar(\'prospect\')', par === 'prospect' ? 'main' : '') + btn('Parcours clientes', 'avPar(\'cliente\')', par === 'cliente' ? 'main' : '') + '<span style="flex:1"></span>' + btn('✨ Préremplir les titres proposés', 'avPrefill()') + '</div>';
+    h += '<div class="avrow" style="margin-bottom:10px">' + btn('Parcours prospectes', 'avPar(\'prospect\')', par === 'prospect' ? 'main' : '') + btn('Parcours clientes', 'avPar(\'cliente\')', par === 'cliente' ? 'main' : '') + '<span style="flex:1"></span>' + btn('✨ Préremplir les titres proposés', 'avPrefill()') + btn('🔄 Passer à la nouvelle structure', 'avUpdateDefaults()', 'line') + '</div>';
     h += '<p class="avs">' + (par === 'prospect' ? 'Pour les prospectes, anciennes clientes comprises : elles ont payé le calendrier. Les cases 5 (bilan) et 24 (réduction) ont déjà leur carte spéciale, ajoutée automatiquement sous ton contenu.' : 'Pour les clientes avec un accès co-NAÎTRE actif. La case 24 affiche automatiquement ton bouton de guidance sous ton contenu.') + '</p>';
     h += '<div class="avlist">';
     for (n = 1; n <= 24; n++) {
@@ -32661,7 +32752,7 @@ function formPageEdit(fid) {
     return o;
   }
   function avEditor(n) {
-    var d = (AV.cases[AV.par] || {})[n] || {}, rub = ['Mouvement', 'Détente', 'Alimentation', 'Mental', 'Découverte', 'Comprendre', 'Bilan', 'Cadeau', 'Mission', 'Recette', 'Pour moi', 'En famille', 'Guidance'];
+    var d = (AV.cases[AV.par] || {})[n] || {}, rub = ['Mini-pause', 'Corps', 'Rituel', 'Mouvement', 'Détente', 'Alimentation', 'Mental', 'Découverte', 'Comprendre', 'Bilan', 'Cadeau', 'Mission', 'Recette', 'Pour moi', 'En famille', 'Guidance'];
     var h = '<div class="avcard" id="avEd"><h3>Case ' + n + ' · ' + (AV.par === 'prospect' ? 'prospectes' : 'clientes') + '</h3>'
       + '<div class="avgrid">' + '<label class="avf"><span>Rubrique (petite étiquette)</span><input type="text" id="avRub" list="avRubL" value="' + esc(d.rubrique || '') + '"><datalist id="avRubL">' + rub.map(function (r) { return '<option value="' + esc(r) + '">'; }).join('') + '</datalist></label>' + fld('avCT', 'Titre de la case', d.titre || '', '') + '</div>'
       + '<label class="avf"><span>Texte</span><textarea id="avTx" rows="6">' + esc(d.texte || '') + '</textarea></label>'
@@ -32707,9 +32798,30 @@ function formPageEdit(fid) {
     if (!window.confirm('Copier cette case vers le parcours ' + (other === 'cliente' ? 'clientes' : 'prospectes') + ' (case ' + n + ') ?')) return;
     R(BP + '/cases/' + other + '/' + n).set(r).then(function () { showToast('📋 Copiée vers l’autre parcours'); });
   };
+  // Remplace par la nouvelle structure les cases VIDES ou encore à l'ancien titre proposé (sans texte ajouté).
+  // Une case que tu as modifiée toi-même (autre titre, ou texte ajouté) n'est jamais touchée.
+  var AV_OLD_T = { prospect: ["Réveil en douceur : nuque, épaules, respiration", "Respirer par le ventre", "Un petit-déjeuner de maman en 5 minutes", "Vider sa tête : une seule liste", "Mon bilan avec Anaïs", "Sentir son plancher pelvien, tout en douceur", "Poser une limite avec la famille pendant les fêtes", "Mon espace co-NAÎTRE : ton suivi et ta coach", "L’assiette équilibrée : un repère simple", "Dérouiller le dos", "co-NAÎTRE son foyer : toute la famille participe", "La routine du soir pour mieux dormir", "Pilates debout : grandir la colonne", "co-NAÎTRE en mouvement : du Pilates qui s’adapte à ta vie", "Une recette de Noël express", "Lâcher les tensions avant les fêtes", "La règle des trois priorités", "Fessiers en 5 minutes", "Ton énergie selon ton cycle", "Le repas de fête sans culpabilité", "Cohérence cardiaque : 5 minutes pour redescendre", "Mini-circuit complet de 5 minutes", "Ton bilan du mois : ce que tu gardes pour janvier", "Ton cadeau de Noël"], cliente: ["Vider sa tête : une seule liste de tout ce qu’il reste à faire", "5 minutes pour tout poser : respiration guidée", "Traditions : ce qu’on garde, ce qu’on laisse tomber", "Les cadeaux : qui, quoi, combien, et on s’arrête là", "La liste de souhaits des enfants : trois choses, pas plus", "Répartir : qui fait quoi dans le foyer", "10 minutes à soi, bloquées dans l’agenda", "Dire non sans culpabiliser : invitations et attentes de la famille", "Le planning à rebours : courses, ménage, déco", "Cadeaux sans stress : idées par profil et emballage express", "Une mission par enfant, dans l’appli foyer", "Étirer nuque et épaules en 5 minutes", "Repas à plusieurs : qui apporte quoi", "Un menu simple : trois plats maximum", "Toasts apéro légers (saumon, fromage frais, herbes)", "Velouté de potimarron et châtaigne", "Plat de fête allégé (volaille ou magret)", "Les courses malignes : une seule liste, zéro gaspi", "Gratin de légumes d’hiver", "Bûche allégée aux fruits", "Boisson festive sans alcool", "Préparer à l’avance et check-list de la veille", "Savourer le repas de fête sans culpabilité et protéger son sommeil", "Ta guidance personnelle d’Anaïs"] };
+  window.avUpdateDefaults = function () {
+    var par = AV.par, src = par === 'prospect' ? D_PRO : D_CLI, cur = AV.cases[par] || {}, upd = {}, k = 0, keep = 0;
+    src.forEach(function (x, i) {
+      var n = i + 1, c = cur[n], r = { rubrique: x[0], titre: x[1] };
+      var vide = !c || (!c.titre && !c.texte && !c.video && !c.lien);
+      var ancien = c && c.titre === AV_OLD_T[par][i] && !c.texte;
+      var dejaNeuf = c && c.titre === x[1];
+      if (dejaNeuf) { return; }
+      if (!(vide || ancien)) { keep++; return; }
+      if (x[2]) r.texte = x[2];
+      if (par === 'prospect' && D_PRO_EXTRA[n]) Object.keys(D_PRO_EXTRA[n]).forEach(function (q) { r[q] = D_PRO_EXTRA[n][q]; });
+      if (c && ancien) { ['video', 'image', 'lien', 'lienLabel'].forEach(function (f) { if (c[f] && r[f] == null) r[f] = c[f]; }); }
+      upd[n] = r; k++;
+    });
+    if (!k) { showToast('Rien à changer' + (keep ? ' (' + keep + ' case(s) personnalisée(s) conservée(s))' : '')); return; }
+    if (!window.confirm('Passer ' + k + ' case(s) du parcours ' + (par === 'prospect' ? 'prospectes' : 'clientes') + ' à la nouvelle structure ?\n\n' + keep + ' case(s) que tu as modifiée(s) toi-même restent telles quelles.')) return;
+    R(BP + '/cases/' + par).update(upd).then(function () { showToast('🔄 ' + k + ' case(s) mises à jour'); }).catch(function (e) { alert('Erreur : ' + (e && e.message || 'inconnue')); });
+  };
   window.avPrefill = function () {
     var par = AV.par, src = par === 'prospect' ? D_PRO : D_CLI, cur = AV.cases[par] || {}, upd = {}, k = 0;
-    src.forEach(function (x, i) { var n = i + 1; if (cur[n] && (cur[n].titre || cur[n].texte)) return; var r = { rubrique: x[0], titre: x[1] }; if (par === 'prospect' && x[2]) r.texte = x[2]; if (par === 'prospect' && D_PRO_EXTRA[n]) Object.keys(D_PRO_EXTRA[n]).forEach(function (q) { r[q] = D_PRO_EXTRA[n][q]; }); upd[n] = r; k++; });
+    src.forEach(function (x, i) { var n = i + 1; if (cur[n] && (cur[n].titre || cur[n].texte)) return; var r = { rubrique: x[0], titre: x[1] }; if (x[2]) r.texte = x[2]; if (par === 'prospect' && D_PRO_EXTRA[n]) Object.keys(D_PRO_EXTRA[n]).forEach(function (q) { r[q] = D_PRO_EXTRA[n][q]; }); upd[n] = r; k++; });
     if (!k) { showToast('Toutes les cases ont déjà un titre'); return; }
     if (!window.confirm('Remplir ' + k + ' case(s) vide(s) avec les titres proposés ? Les cases déjà remplies ne changent pas.')) return;
     R(BP + '/cases/' + par).update(upd).then(function () { showToast('✨ ' + k + ' titres ajoutés'); });
@@ -32728,7 +32840,7 @@ function formPageEdit(fid) {
       pp[1].forEach(function (x, i) {
         var k = i + 1; if (cur[k] && (cur[k].titre || cur[k].texte)) return;
         var r = { rubrique: x[0], titre: x[1] };
-        if (par === 'prospect' && x[2]) r.texte = x[2];
+        if (x[2]) r.texte = x[2];
         if (par === 'prospect' && D_PRO_EXTRA[k]) Object.keys(D_PRO_EXTRA[k]).forEach(function (q) { r[q] = D_PRO_EXTRA[k][q]; });
         caseUpd[par][k] = r; cn++;
       });
@@ -33583,6 +33695,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
         return d;}}catch(e){}
     return {enabled:false,code:null,members:[]};}
   // ── Sauvegarde cloud directe des réglages d'équipe (indépendante de la synchro générale) ──
+  var ACC_BUILD='26/11 · 15h · protection v3', CLOUDSEEN=null;
   var CLOUD='dash_team/config', TKEY='sfm_acces_cloud_t', ST={ok:null,msg:'Vérification de la connexion au cloud…'}, pulling=false, pollN=0;
   function dbq(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
   function stTxt(){return (ST.ok===false?'⚠️ ':ST.ok?'☁️ ':'')+ST.msg;}
@@ -33596,6 +33709,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     if(pulling)return;var db=dbq();if(!db)return;pulling=true;
     db.ref(CLOUD).once('value').then(function(sn){
       pulling=false;var r=sn.val(),lt=parseInt(localStorage.getItem(TKEY)||'0',10)||0;
+      try{CLOUDSEEN={at:Date.now(),has:!!r,t:r&&r.t,en:r&&r.v?!!(JSON.parse(r.v).enabled):null};}catch(e){CLOUDSEEN={at:Date.now(),has:!!r,en:null};}
       if(r&&typeof r.t==='number'&&r.v){
         if(r.t>lt){try{localStorage.setItem(SKEY,r.v);localStorage.setItem(TKEY,String(r.t));}catch(e){}ST={ok:true,msg:'Réglages d’équipe reçus du cloud'};enforce();render();}
         else if(r.t<lt){cloudPush(get(),lt);}
@@ -33815,9 +33929,16 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     o+='<div class="cf-box" style="margin-bottom:14px"><b>2. Mon équipe</b><p class="cf-note" style="margin:4px 0 10px">Chaque personne a son code personnel et ses propres accès.</p>'+
       (ms.length?ms.map(memberBox).join(''):'<p class="cf-note">Personne pour l\'instant.</p>')+
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><input class="cf-in" style="max-width:300px;margin:0" id="accNewName" placeholder="Prénom (ex : Lucie, closeuse)" autocomplete="off"><button class="cf-btn" onclick="accAddMember()">➕ Ajouter une personne</button></div><div class="cf-err" id="accAddErr"></div></div>';
-    o+='<div class="cf-box"><b>3. Activer</b><p class="cf-note" style="margin:4px 0 10px">'+(d.enabled?'✅ La protection est <b>active</b> : à chaque ouverture, le tableau de bord demande qui tu es (une personne de l\'équipe ou toi avec ton code).':'Quand c\'est activé, chaque appareil qui ouvre le tableau de bord doit choisir son profil.')+'</p><div style="display:flex;gap:8px;flex-wrap:wrap">'+
+    o+='<div class="cf-box"><b>3. Activer</b><p class="cf-note" style="margin:4px 0 10px">'+(d.enabled?'✅ La protection est <b>active</b> : à chaque ouverture, le tableau de bord demande qui tu es (une personne de l\'équipe ou toi avec ton code).':'Quand c\'est activé, chaque appareil qui ouvre le tableau de bord doit choisir son profil.'+(has?'':'<br><b style="color:#B23B3B">⚠️ Pour pouvoir activer : '+(d.code?'':'définis d\'abord TON code propriétaire (étape 1, « Enregistrer le code »). ')+((d.members||[]).some(function(m){return m.code;})?'':'Ajoute une personne avec son code (étape 2).')+'</b>'))+'</p><div style="display:flex;gap:8px;flex-wrap:wrap">'+
       (d.enabled?'<button class="cf-btn" onclick="accLogout()">🔍 Tester : me déconnecter et revoir l\'écran de choix</button><button class="cf-btn dng" onclick="accToggle(false)">Désactiver la protection</button>':'<button class="cf-btn" '+(has?'':'disabled title="Définis ton code et celui d\'au moins une personne"')+' onclick="accToggle(true)">Activer la protection</button>')+
       '</div><div class="cf-err" id="accTogErr"></div></div>';
+    var rl=role(),dv=device(),cs=CLOUDSEEN;
+    o+='<div class="cf-box" style="margin-top:14px"><b>🩺 Diagnostic de la protection</b><div class="cf-note" style="margin:6px 0 0;line-height:1.7">'
+      +'Version du tableau de bord : <b>'+ACC_BUILD+'</b><br>'
+      +'Sur cet appareil : protection <b>'+(d.enabled?'activée':'désactivée')+'</b>, code propriétaire '+(d.code?'défini':'absent')+', '+((d.members||[]).filter(function(m){return m.code;}).length)+' personne(s) avec un code<br>'
+      +'Dans le cloud : '+(cs?(cs.has?('protection <b>'+(cs.en===null?'?':(cs.en?'activée':'désactivée'))+'</b>'):'aucun réglage enregistré'):'pas encore lu')+'<br>'
+      +'Cet appareil est reconnu comme : <b>'+(rl==='owner'?'propriétaire':(rl?'équipe':'personne (l\'écran de choix devrait s\'afficher)'))+'</b>'+(dv.owner?' (appareil mémorisé)':'')
+      +'</div></div>';
     o+='<div class="cf-box" style="margin-top:14px"><b>Sauvegarde dans le cloud</b><p class="cf-note" id="accCloudSt" style="margin:4px 0 0">'+esc(stTxt())+'</p></div>';
     o+='<div class="cf-box" style="margin-top:14px"><b>Cet appareil</b><p class="cf-note" style="margin:4px 0 10px">Pour revoir l\'écran « Qui utilise le tableau de bord ? » sur cet ordinateur, déconnecte-le.</p><button class="cf-btn sec" onclick="accLogout()">Déconnecter cet appareil</button></div>';
     o+='<p class="cf-note" style="margin-top:14px">⚠️ À savoir : cette protection masque et verrouille les écrans, ce qui suffit à éviter les erreurs et la curiosité. Elle ne remplace pas un vrai cloisonnement : pour une confidentialité totale, chaque personne devrait utiliser son propre navigateur/profil, et les mots de passe doivent rester dans le coffre-fort (chiffré par ton mot de passe maître).</p></div>';
@@ -33848,6 +33969,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
   window.accPreview=function(mid){var m=member(mid);if(!m)return;try{sessionStorage.setItem(PKEY,mid);}catch(e){}sset('m:'+mid);enforce(true);window.showView('accueil',document.querySelector('.nav-tab[data-view=accueil]'));toast('👁 Aperçu : voici ce que voit '+m.name+' (clique « Accès Anaïs » en haut pour revenir)');};
 
   window.accRole=role;
+  window.accCloudNow=function(){try{pollN=0;cloudPull();setTimeout(function(){try{enforce();}catch(e){}},1200);}catch(e){}};
   // démarrage
   function coachFlag(){try{if(role()==='owner')localStorage.setItem('sfm_coach_device','1');else localStorage.removeItem('sfm_coach_device');}catch(e){}}
   // Une seule fois (cette version) : on oublie le profil retenu sur cet appareil, pour que « Qui utilise le tableau de bord ? » réapparaisse.
