@@ -14685,9 +14685,25 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       var links = getClientLinks(), sOld = dashSafeLinkKey(oldKey), sNew = dashSafeLinkKey(newKey);
       if (links[sOld] && sOld !== sNew) {
         var nl = Object.assign({}, links);
-        if (!nl[sNew]) nl[sNew] = nl[sOld];
-        delete nl[sOld];
+        // On ne supprime JAMAIS l'ancien lien d'accès : s'il y en a déjà un sur la nouvelle fiche, l'ancien reste en place (code toujours actif pour la cliente)
+        if (!nl[sNew]) { nl[sNew] = nl[sOld]; delete nl[sOld]; }
         saveClientLinks(nl);
+      }
+    } catch (e) {}
+    // « Mes accès » (code en clair) et codes foyer : rattachés à la nouvelle fiche si elle n'en a pas déjà un (rien n'est supprimé sinon)
+    try {
+      var sO2 = dashSafeLinkKey(oldKey), sN2 = dashSafeLinkKey(newKey);
+      if (sO2 !== sN2 && initSyncFirebase() && dashFbDB) {
+        ['dash_access_codes', 'dash_foyer_codes'].forEach(function(node) {
+          dashFbDB.ref(node + '/' + sO2).once('value').then(function(a) {
+            var v = a.val(); if (!v) return;
+            return dashFbDB.ref(node + '/' + sN2).once('value').then(function(b) {
+              if (b.val()) return;
+              v.key = newKey;
+              return dashFbDB.ref(node + '/' + sN2).set(v).then(function() { return dashFbDB.ref(node + '/' + sO2).remove(); });
+            });
+          }).catch(function() {});
+        });
       }
     } catch (e) {}
   }
@@ -15248,6 +15264,15 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
       html += '<button onclick="event.stopPropagation();dashAccessResetCode(\'epanouissement\',\'' + currentCode + '\')" style="padding:5px 12px;background:#fff;color:#8a7c5f;border:1px solid #e2d9c3;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Réinitialiser son code</button>';
       html += '<button onclick="event.stopPropagation();dashRegenerateClientLink(\'epanouissement\',\'' + safeKey + '\',\'' + safeCN + '\')" style="padding:5px 12px;background:#fff;color:#a4302a;border:1px solid #f0c9c6;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🆕 Nouveau lien (coupe l\'ancien)</button>';
       html += '</div>';
+      // Changer le code rattaché à cette fiche (sans rien supprimer : les autres codes restent actifs et visibles dans « Mes accès »)
+      (function() {
+        var rg = registry[currentCode] || {};
+        html += '<details onclick="event.stopPropagation()" style="margin-top:8px"><summary style="cursor:pointer;font-size:12px;font-weight:700;color:#3F5D46">🔁 Code rattaché : ' + esc(currentCode) + (rg.name || rg.email ? ' (' + esc(rg.name || rg.email) + ')' : '') + (rg.revoked ? ' · accès coupé' : '') + ' — changer</summary>'
+          + '<p style="margin:6px 0;font-size:11.5px;color:#66735F">Choisis le code qui appartient vraiment à cette cliente. Rien n\'est supprimé : l\'ancien code reste actif, seul le rattachement de la fiche change.</p>'
+          + '<select onchange="event.stopPropagation();if(this.value)setClientLinkCode(\'' + safeKey + '\', this.value)" onclick="event.stopPropagation()" style="width:100%;padding:8px 10px;border:1.5px solid #e2d9c3;border-radius:8px;font-size:12.5px;background:white;"><option value="">— garder le code actuel —</option>'
+          + codes.map(function(c) { var e = registry[c] || {}; return '<option value="' + esc(c) + '"' + (c === currentCode ? ' disabled' : '') + '>' + esc((e.name || e.email || ('code ' + c)) + (e.revoked ? ' (accès coupé)' : '')) + ' · ' + esc(c) + (c === currentCode ? ' (actuel)' : '') + '</option>'; }).join('')
+          + '</select></details>';
+      })();
       if (!/^lien-general-/.test(currentCode)) {
         html += '<div style="margin-top:8px"><button onclick="event.stopPropagation();ficheUseGeneralLink(\'' + safeKey + '\',\'' + currentSexe + '\')" style="padding:5px 12px;background:#fff;color:#2C4432;border:1px solid #9ae6b4;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🔗 Associer cette fiche à mon lien général (toi)</button></div>';
       } else {
@@ -20170,6 +20195,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
   }
   function keysyncSchedule(key, value) {
     if (KEYSYNC_EXCLUDE[key]) return;
+    try { if (window.accTrackEdit) window.accTrackEdit(key); } catch (eT) {}
     clearTimeout(keysyncTimers[key]);
     keysyncTimers[key] = setTimeout(function() { keysyncPushKey(key, value); }, 900);
   }
@@ -20343,6 +20369,9 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     // réécrites, et remplacerait la copie cloud complète. On ne l'envoie pas (les clés modifiées
     // continuent, elles, d'être sauvegardées une par une dans le cloud).
     if (syncIncompleteRestore) { syncSetStatus('error'); return; }
+    // Plusieurs personnes en même temps : une personne de l'équipe n'envoie JAMAIS la grosse copie globale (elle est réservée à
+    // la propriétaire). Ses modifications partent déjà une par une dans le cloud (sauvegarde par clé) et arrivent en direct chez les autres.
+    try { if (window.accRole && String(window.accRole() || '').indexOf('m:') === 0) { syncDirtySince = null; syncSetStatus('idle'); return; } } catch (eRole) {}
     var db = initSyncFirebase();
     if (!db) return;
     var dirtyMarkerAtStart = syncDirtySince; // pour ne pas effacer le "dirty" si une NOUVELLE modif arrive pendant l'envoi
@@ -20365,12 +20394,29 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         syncSetStatus('error');
         return;
       }
+      var staleExtra = null;
       if (remoteCheck && remoteCheck.updatedAt && remoteCheck.updatedAt > syncKnownRemoteUpdatedAt) {
-        syncSetStatus('error');
-        syncShowStaleWarning();
-        return;
+        // Quelqu'un d'autre (autre appareil, équipe) a enregistré entre-temps. Avant : bandeau rouge et on n'envoyait plus rien.
+        // Maintenant : on lit sa copie et on envoie la nôtre COMPLÉTÉE de ce qui nous manque (rien n'est retiré, rien n'est
+        // écrasé : ce qui existe ici reste tel quel, et une clé supprimée ici n'est pas recréée). Si la lecture échoue : bandeau.
+        try { staleExtra = await syncDecrypt(syncCryptoKey, remoteCheck); } catch (eDec) { staleExtra = null; }
+        if (!staleExtra || !staleExtra.localStorage) {
+          syncSetStatus('error');
+          syncShowStaleWarning();
+          return;
+        }
       }
       var snapshot = syncGatherLocalSnapshot();
+      if (staleExtra) {
+        try {
+          var metaSeen = keysyncGetMeta();
+          Object.keys(staleExtra.localStorage).forEach(function(k) {
+            if (snapshot.localStorage[k] !== undefined || k === SYNC_LAST_APPLIED_KEY || k === ASSO_ADHERENTS_KEY || k === ASSO_ADHERENTS_LAST_APPLIED_KEY) return;
+            if (metaSeen && metaSeen[k]) return; // déjà vue ici puis supprimée ici : on ne la recrée pas
+            snapshot.localStorage[k] = staleExtra.localStorage[k];
+          });
+        } catch (eMerge) {}
+      }
       var payload = await syncEncrypt(syncCryptoKey, snapshot);
       var now = Date.now();
       await db.ref(SYNC_FB_PATH).update({
@@ -25762,6 +25808,125 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     if (!date) return ref.remove();
     return ref.set({ kind: kind, id: id, nom: d.nom || '', tel: d.telephone || '', email: d.email || '', date: date, note: note || '' });
   }
+  // ── Bloquer un Bilan Forme dans Google Agenda (ouvre l'événement déjà rempli ; un clic sur « Enregistrer » chez Google) ──
+  function acqBilanDuree() { try { var f = ACQ_FUNNELS.bilan || ACQ_DEFAULT_FUNNELS.bilan || {}; return parseInt((f.agenda || {}).duree, 10) || 30; } catch (e) { return 30; } }
+  function acqBilanSel(sid, which, cur) {
+    var l = window.accSalesPeople ? accSalesPeople(which) : [], me = window.accMeId ? accMeId() : '', pick = cur || '';
+    if (!pick && which === 'set') l.forEach(function(p) { if (p.id === me && me !== 'owner') pick = me; });
+    return '<select id="' + sid + '" style="padding:7px 9px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:13px;font-family:inherit"><option value="">— choisir —</option>' + l.map(function(p) { return '<option value="' + esc(p.id) + '"' + (p.id === pick ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select>';
+  }
+  function acqBilanQuick(n) { var e = document.getElementById('acqSB_date'); if (e) e.value = acqIsoDay(n); }
+  function acqBilanUrl(d, date, time, dur) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date), t = /^(\d{1,2}):(\d{2})$/.exec(time); if (!m || !t) return '';
+    var st = new Date(+m[1], +m[2] - 1, +m[3], +t[1], +t[2]), en = new Date(st.getTime() + dur * 60000);
+    function f(x) { return x.getFullYear() + acqPad(x.getMonth() + 1) + acqPad(x.getDate()) + 'T' + acqPad(x.getHours()) + acqPad(x.getMinutes()) + '00'; }
+    var det = ['Bilan Forme Santé (appel offert)', d.nom ? 'Prospecte : ' + d.nom : '', d.telephone ? 'Tél : ' + d.telephone : '', d.email ? 'E-mail : ' + d.email : '', d.rappelNote ? 'Note : ' + d.rappelNote : ''].filter(Boolean).join('\n');
+    return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('Bilan Forme Santé — ' + (d.nom || 'prospecte')) + '&dates=' + f(st) + '/' + f(en) + '&ctz=Europe%2FParis&details=' + encodeURIComponent(det) + '&location=' + encodeURIComponent('Appel téléphonique ou visio');
+  }
+  function acqBilanBlock(kind, id, noCal) {
+    var d = acqSItem(kind, id), g = function(i) { return (document.getElementById(i) || {}).value || ''; };
+    var date = g('acqSB_date'), time = g('acqSB_time'), dur = parseInt(g('acqSB_dur'), 10) || 30;
+    if (!date || !time) { alert('Choisis le jour et l\'heure du bilan.'); return; }
+    var url = acqBilanUrl(d, date, time, dur); if (!url) { alert('Date ou heure non valide.'); return; }
+    if (!noCal) window.open(url, '_blank', 'noopener');
+    var now = new Date().toISOString(), ref = acqSRef(kind, id), jk = ref.child('journal').push().key, upd = {};
+    upd['journal/' + jk] = { at: now, canal: 'appel', note: (noCal ? '✅ Bilan Forme Santé validé à la main le ' : '📅 Bilan Forme Santé bloqué le ') + hliDate(date) + ' à ' + time + ' (' + dur + ' min)' };
+    upd.bilanRdv = { date: date, time: time, dur: dur, at: now, manuel: !!noCal };
+    if (kind === 'lead') { upd.rdvDate = date; upd.rdvHeure = time; upd.rdvDuree = dur; } upd.recontacteAt = now; upd.updatedAt = now;
+    var sId = g('acqSB_set'), vId = g('acqSB_ven'), sP = sId ? acqSalePerson('set', sId) : null, vP = vId ? acqSalePerson('vente', vId) : null;
+    if (sP) { upd.setterId = sP.id; upd.setterName = sP.name; } if (vP) { upd.closerId = vP.id; upd.closerName = vP.name; }
+    if (d.suivi !== 'pas_interessee') upd.suivi = 'interessee';
+    upd.rappelDate = null; upd.rappelNote = null; ACQ_PANEL = null;
+    ref.child('nbContacts').transaction(function(n) { return (n || 0) + 1; })
+      .then(function() { return ref.update(upd); })
+      .then(function() { return acqRappelMirror(kind, id, d, '', ''); })
+      .then(function() { return acqVenteMirror(kind, id, upd); })
+      .then(function() { showToast(noCal ? '✅ Bilan validé le ' + hliDate(date) + ' à ' + time : '📅 Bilan noté le ' + hliDate(date) + ' à ' + time + ' : clique « Enregistrer » dans Google Agenda'); try { acqRenderListOnly(); } catch (e) {} })
+      .catch(function(err) { alert('Erreur : ' + (err && err.message ? err.message : 'inconnue')); });
+  }
+  function acqBilanFromHome(kind, id) {
+    acqRappelOpen(kind, id);
+    setTimeout(function() { ACQ_PANEL = { key: kind + ':' + id, type: 'bilan' }; try { acqRenderListOnly(); } catch (e) {} }, 700);
+  }
+  // ── Setteuse / vendeuse, présence au bilan, signature (pour calculer la rémunération) ──
+  function acqVenteMirror(kind, id, extra) {
+    var d = Object.assign({}, acqSItem(kind, id), extra || {}), cc = (typeof ACQ_CTS !== 'undefined' && (ACQ_CTS[id] || {}).contratCode) || d.contratCode || '';
+    var rec = { kind: kind, id: id, nom: d.nom || '', setterId: d.setterId || null, setterName: d.setterName || null, closerId: d.closerId || null, closerName: d.closerName || null,
+      presence: (extra && 'presence' in extra) ? (extra.presence || null) : (acqSalePresence(d) || null), bilanDate: d.rdvDate || (d.bilanRdv && d.bilanRdv.date) || null, contactsN: ACQ_CONTACTS3.filter(function(x) { return (d.contacts || {})[x[0]]; }).length, signe: !!d.signe, signeAt: d.signeAt || null, signeMontant: (d.signeMontant != null ? d.signeMontant : null), contratCode: cc || null, updatedAt: new Date().toISOString() };
+    if (!rec.setterId && !rec.closerId) return dashFbDB.ref('acquisition/ventes/' + kind + '_' + id).remove();
+    return dashFbDB.ref('acquisition/ventes/' + kind + '_' + id).set(rec);
+  }
+  function acqSalePerson(which, pid) { var l = window.accSalesPeople ? accSalesPeople(which) : []; for (var i = 0; i < l.length; i++) if (l[i].id === pid) return l[i]; return null; }
+  function acqSaleSet(kind, id, which, pid) {
+    var p = pid ? acqSalePerson(which === 'setter' ? 'set' : 'vente', pid) : null, upd = { updatedAt: new Date().toISOString() }, ex = {};
+    if (which === 'setter') { upd.setterId = pid || null; upd.setterName = p ? p.name : null; } else { upd.closerId = pid || null; upd.closerName = p ? p.name : null; }
+    ex = Object.assign({}, upd);
+    acqSRef(kind, id).update(upd).then(function() { return acqVenteMirror(kind, id, ex); }).then(function() { showToast('✅ ' + (which === 'setter' ? 'Setteuse' : 'Vendeuse') + ' : ' + (p ? p.name : 'aucune')); try { acqRenderListOnly(); } catch (e) {} })
+      .catch(function(err) { alert('Erreur : ' + (err && err.message ? err.message : 'inconnue')); });
+  }
+  function acqSalePresence(d) {
+    var key = acqRdvKey(d), k = key ? (((d.presences || {})[key] || {}).k || '') : '';
+    if (key && k) return k === 'presente' ? 'presente' : (k === 'absente' ? 'absente' : '');
+    return d.presence || '';
+  }
+  function acqSalePres(kind, id, v) {
+    var d = acqSItem(kind, id), key = (kind === 'lead') ? acqRdvKey(d) : '', cur = acqSalePresence(d), nv = (cur === v) ? '' : v, miss = acqContactsMissing(d);
+    if (nv === 'presente' && miss.length) showToast('⚠️ Contacts obligatoires pas tous faits : il manque ' + miss.join(', '));
+    if (key) { acqPresenceSet(id, nv || null); setTimeout(function() { acqVenteMirror(kind, id, { presence: nv || null }).then(function() { try { acqRenderListOnly(); } catch (e) {} }); }, 700); return; }
+    var now = new Date().toISOString(), ref = acqSRef(kind, id), jk = ref.child('journal').push().key, upd = { presence: nv || null, presenceAt: nv ? now : null, presenceBy: nv ? (window.accWho ? accWho() : '') : null, updatedAt: now };
+    if (nv) upd['journal/' + jk] = { at: now, canal: 'appel', note: (nv === 'presente' ? '✅ Présente au bilan' : '❌ Absente au bilan') + (upd.presenceBy ? ' (confirmé par ' + upd.presenceBy + ')' : '') };
+    ref.update(upd).then(function() { return acqVenteMirror(kind, id, upd); }).then(function() { showToast(nv === 'presente' ? '✅ Présence confirmée' : (nv === 'absente' ? '❌ Absence notée' : 'Présence effacée')); try { acqRenderListOnly(); } catch (e) {} })
+      .catch(function(err) { alert('Erreur : ' + (err && err.message ? err.message : 'inconnue')); });
+  }
+  // 3 contacts obligatoires avant le bilan, cochés avec leur date
+  var ACQ_CONTACTS3 = [['confirm', 'Confirmation du rendez-vous'], ['guide', 'Envoi du guide de préparation à l\'appel'], ['lien', 'Envoi du lien de connexion']];
+  function acqContactsMissing(d) { var c = (d && d.contacts) || {}; return ACQ_CONTACTS3.filter(function(x) { return !c[x[0]]; }).map(function(x) { return x[1].toLowerCase(); }); }
+  function acqContactTick(kind, id, k, on) {
+    var now = new Date().toISOString(), ref = acqSRef(kind, id), jk = ref.child('journal').push().key, upd = { updatedAt: now }, lab = '';
+    ACQ_CONTACTS3.forEach(function(x) { if (x[0] === k) lab = x[1]; });
+    upd['contacts/' + k] = on ? acqIsoDay(0) : null;
+    if (on) upd['journal/' + jk] = { at: now, canal: 'appel', note: '✅ ' + lab + ' (fait le ' + hliDate(acqIsoDay(0)) + ')' };
+    ref.update(upd).then(function() { var c = Object.assign({}, acqSItem(kind, id).contacts || {}); if (on) c[k] = acqIsoDay(0); else delete c[k]; return acqVenteMirror(kind, id, { contacts: c }); }).then(function() { showToast(on ? '✅ ' + lab + ' : fait' : 'Coche retirée'); try { acqRenderListOnly(); } catch (e) {} });
+  }
+  function acqContactDate(kind, id, k, v) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return;
+    var upd = { updatedAt: new Date().toISOString() }; upd['contacts/' + k] = v;
+    acqSRef(kind, id).update(upd).then(function() { var c = Object.assign({}, acqSItem(kind, id).contacts || {}); c[k] = v; return acqVenteMirror(kind, id, { contacts: c }); }).then(function() { showToast('📅 Date modifiée'); try { acqRenderListOnly(); } catch (e) {} });
+  }
+  function acqSaleSign(kind, id) {
+    var d = acqSItem(kind, id), el = document.getElementById('acqSM_' + id), raw = el ? String(el.value || '').replace(',', '.').trim() : '', n = raw === '' ? null : parseFloat(raw), now = new Date().toISOString();
+    if (n !== null && (!isFinite(n) || n < 0)) { alert('Montant non valide.'); return; }
+    var upd = { signe: true, signeAt: d.signeAt || now.slice(0, 10), signeMontant: n, updatedAt: now };
+    acqSRef(kind, id).update(upd).then(function() { return acqVenteMirror(kind, id, upd); }).then(function() { showToast('✍️ Fiche marquée signée'); try { acqRenderListOnly(); } catch (e) {} })
+      .catch(function(err) { alert('Erreur : ' + (err && err.message ? err.message : 'inconnue')); });
+  }
+  function acqSaleUnsign(kind, id) {
+    var upd = { signe: false, signeAt: null, signeMontant: null, updatedAt: new Date().toISOString() };
+    acqSRef(kind, id).update(upd).then(function() { return acqVenteMirror(kind, id, upd); }).then(function() { showToast('Signature retirée'); try { acqRenderListOnly(); } catch (e) {} });
+  }
+  function acqSaleHtml(kind, d) {
+    var id = d._id, j = jsAttr(kind), i = jsAttr(id), inp = 'padding:6px 8px;border:1.5px solid #E2DCC8;border-radius:8px;font-size:12.5px;font-family:inherit', bt = 'padding:5px 10px;border:1.5px solid #E2DCC8;background:#fff;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;color:#3E4A3A';
+    function sel(which, list, cur, curName) {
+      var has = !cur; list.forEach(function(p) { if (p.id === cur) has = true; });
+      return '<select onchange="acqSaleSet(' + j + ',' + i + ',\'' + which + '\',this.value)" style="' + inp + '"><option value="">— choisir —</option>' + (has ? '' : '<option value="' + esc(cur) + '" selected>' + esc(curName || cur) + '</option>') + list.map(function(p) { return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + '</option>'; }).join('') + '</select>';
+    }
+    var S = window.accSalesPeople ? accSalesPeople('set') : [], V = window.accSalesPeople ? accSalesPeople('vente') : [];
+    var cc = (typeof ACQ_CTS !== 'undefined' && (ACQ_CTS[id] || {}).contratCode) || d.contratCode || '', ct = cc && window.CONTRATS_ALL && window.CONTRATS_ALL[cc], auto = !!(ct && ct.status === 'signe');
+    var signed = !!d.signe || auto, amount = (d.signeMontant != null && d.signeMontant !== '') ? Number(d.signeMontant) : (auto ? (parseFloat(String(ct.tarifBase || '').replace(',', '.')) || 0) * (ct.offer === '12mois' ? 12 : 4) : '');
+    var h = '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #E2DCC8;display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:12.5px"><label style="font-weight:700">🎧 Setteuse ' + sel('setter', S, d.setterId || '', d.setterName) + '</label><label style="font-weight:700">🤝 Vendeuse ' + sel('closer', V, d.closerId || '', d.closerName) + '</label></div>';
+    h += '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px"><b>Bilan :</b>'
+      + '<button onclick="acqSalePres(' + j + ',' + i + ',\'presente\')" style="' + bt + (acqSalePresence(d) === 'presente' ? ';background:#E1F1E0;border-color:#3F5D46;color:#2C4432' : '') + '">✅ Présente</button>'
+      + '<button onclick="acqSalePres(' + j + ',' + i + ',\'absente\')" style="' + bt + (acqSalePresence(d) === 'absente' ? ';background:#FBE3E3;border-color:#B23B3B;color:#8A2A2A' : '') + '">❌ Absente</button>'
+      + (acqSalePresence(d) ? '<span style="color:#66735F">confirmé' + (d.presenceBy ? ' par ' + esc(d.presenceBy) : '') + '</span>' : '<span style="color:#8a8577">pas encore confirmé</span>') + '</div>';
+    if ((kind === 'lead' && acqRdvKey(d)) || d.bilanRdv) {
+      var cs = d.contacts || {}, nOk = ACQ_CONTACTS3.filter(function(x) { return cs[x[0]]; }).length;
+      h += '<div style="margin-top:8px;padding:8px 10px;border-radius:10px;background:' + (nOk === 3 ? '#EAF4E6' : '#FFF6E8') + ';border:1px solid ' + (nOk === 3 ? '#CFE0C9' : '#F0D9AE') + '"><div style="font-weight:700;font-size:12.5px;color:' + (nOk === 3 ? '#2C4432' : '#8a5a00') + '">📋 3 contacts obligatoires avant le bilan · ' + nOk + '/3' + (nOk === 3 ? ' ✅' : '') + '</div>'
+        + ACQ_CONTACTS3.map(function(x) { var v = cs[x[0]] || ''; return '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:5px;font-size:12.5px"><label style="display:flex;gap:6px;align-items:center;cursor:pointer;min-width:260px"><input type="checkbox"' + (v ? ' checked' : '') + ' onchange="acqContactTick(' + j + ',' + i + ',\'' + x[0] + '\',this.checked)"> ' + esc(x[1]) + '</label>' + (v ? '<span style="color:#66735F">fait le</span> <input type="date" value="' + esc(v) + '" onchange="acqContactDate(' + j + ',' + i + ',\'' + x[0] + '\',this.value)" style="' + inp + '">' : '<span style="color:#B23B3B;font-weight:700">à faire</span>') + '</div>'; }).join('') + '</div>';
+    }
+    if (signed) h += '<div style="margin-top:6px;font-size:12.5px;font-weight:700;color:#2C4432">✍️ Fiche signée' + (auto ? ' (contrat signé en ligne)' : '') + (amount !== '' ? ' · ' + amount + ' €' : ' · montant à saisir') + ' <input type="number" id="acqSM_' + esc(id) + '" value="' + esc(amount) + '" step="1" min="0" style="' + inp + ';width:100px" placeholder="montant €"> <button onclick="acqSaleSign(' + j + ',' + i + ')" style="' + bt + '">💾 Corriger le montant</button>' + (d.signe ? ' <button onclick="acqSaleUnsign(' + j + ',' + i + ')" style="background:none;border:none;color:#8a8577;font-size:11.5px;cursor:pointer;text-decoration:underline">retirer</button>' : '') + '</div>';
+    else h += '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px"><b>Signature :</b><input type="number" id="acqSM_' + esc(id) + '" step="1" min="0" style="' + inp + ';width:110px" placeholder="montant signé €"><button onclick="acqSaleSign(' + j + ',' + i + ')" style="' + bt + ';background:#2C4432;border-color:#2C4432;color:#fff">✍️ Elle a signé</button></div>';
+    return h;
+  }
   function acqPanelToggle(kind, id, type) {
     var key = kind + ':' + id;
     ACQ_PANEL = (ACQ_PANEL && ACQ_PANEL.key === key && ACQ_PANEL.type === type) ? null : { key: key, type: type };
@@ -25821,7 +25986,7 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
         + '<div style="font-size:12px;font-weight:700;color:' + (late > 0 ? '#c53030' : '#8a5a00') + '">⏰ ' + (late > 0 ? 'en retard de ' + late + ' j (prévu le ' + hliDate(r.date) + ')' : 'à rappeler aujourd\'hui') + '</div></div>'
         + (r.note ? '<div style="font-size:12.5px;color:#66735F;margin-top:3px">📝 ' + esc(r.note) + '</div>' : '')
         + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">' + (r.tel ? '<a href="tel:' + esc(r.tel) + '" style="' + bt + '">📞 ' + esc(r.tel) + '</a>' : '') + (wa ? '<a href="#" onclick="waBusinessOpen(' + jsAttr(wa) + ',\'\');return false" style="' + bt + '">💬 WhatsApp Business</a>' : '') + (r.email ? '<a href="mailto:' + esc(r.email) + '" style="' + bt + '">✉️</a>' : '')
-        + '<button onclick="acqRappelDone(' + j + ',' + i + ')" style="' + bt + ';background:#2C4432;border-color:#2C4432;color:#fff">✅ Je l\'ai recontactée</button><button onclick="acqRappelShift(' + j + ',' + i + ',1)" style="' + bt + '">Demain</button><button onclick="acqRappelShift(' + j + ',' + i + ',3)" style="' + bt + '">+3 j</button><button onclick="acqRappelShift(' + j + ',' + i + ',7)" style="' + bt + '">+1 sem.</button><button onclick="acqRappelOpen(' + j + ',' + i + ')" style="' + bt + '">📂 Sa fiche</button></div></div>';
+        + '<button onclick="acqRappelDone(' + j + ',' + i + ')" style="' + bt + ';background:#2C4432;border-color:#2C4432;color:#fff">✅ Je l\'ai recontactée</button><button onclick="acqBilanFromHome(' + j + ',' + i + ')" style="' + bt + '">📅 Bloquer un Bilan</button><button onclick="acqRappelShift(' + j + ',' + i + ',1)" style="' + bt + '">Demain</button><button onclick="acqRappelShift(' + j + ',' + i + ',3)" style="' + bt + '">+3 j</button><button onclick="acqRappelShift(' + j + ',' + i + ',7)" style="' + bt + '">+1 sem.</button><button onclick="acqRappelOpen(' + j + ',' + i + ')" style="' + bt + '">📂 Sa fiche</button></div></div>';
     });
     if (h && later) h += '<div style="font-size:12px;color:#8a8577">+ ' + later + ' autre' + (later > 1 ? 's' : '') + ' rappel' + (later > 1 ? 's' : '') + ' programmé' + (later > 1 ? 's' : '') + ' plus tard.</div>';
     acqHomeSet('homeRappels', due.length ? acqHomeBox('#8A4A2E', '#FFF7F0', '#F0C9B2', '⏰ Prospectes à rappeler', due.length, h) : '');
@@ -25834,15 +25999,21 @@ alert('📧 Tri automatique toutes les 2h, de 7h à 21h.\n\nSi l\'app Claude ét
     var h = '<div style="margin-top:10px;padding:10px 12px;background:#FAF8F1;border:1px solid #EFEBDD;border-radius:10px"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
       + '<select onchange="acqSuiviSet(' + j + ',' + i + ',this.value)" style="' + inp + ';font-weight:700">' + Object.keys(ACQ_SUIVI).map(function(k) { return '<option value="' + k + '"' + ((d.suivi || '') === k ? ' selected' : '') + '>' + ACQ_SUIVI[k] + '</option>'; }).join('') + '</select>'
       + '<button onclick="acqPanelToggle(' + j + ',' + i + ',\'contact\')" style="' + bt + (pan === 'contact' ? ';background:#E7EEE1' : '') + '">✅ Je l\'ai recontactée</button>'
-      + '<button onclick="acqPanelToggle(' + j + ',' + i + ',\'rappel\')" style="' + bt + (pan === 'rappel' ? ';background:#E7EEE1' : '') + '">⏰ ' + (d.rappelDate ? 'Changer le rappel' : 'Programmer un rappel') + '</button></div>';
+      + '<button onclick="acqPanelToggle(' + j + ',' + i + ',\'rappel\')" style="' + bt + (pan === 'rappel' ? ';background:#E7EEE1' : '') + '">⏰ ' + (d.rappelDate ? 'Changer le rappel' : 'Programmer un rappel') + '</button>'
+      + '<button onclick="acqPanelToggle(' + j + ',' + i + ',\'bilan\')" style="' + bt + (pan === 'bilan' ? ';background:#E7EEE1' : '') + '">📅 Bloquer un Bilan Forme</button></div>';
     var st = [];
     if (d.recontacteAt) st.push('✅ Dernier contact le ' + acqDt(d.recontacteAt) + ' (' + (d.nbContacts || 1) + ' fois)'); else st.push('Pas encore recontactée');
     h += '<div style="font-size:12.5px;color:#66735F;margin-top:6px">' + st.join(' · ') + '</div>';
+    try { h += acqSaleHtml(kind, d); } catch (eS) {}
     if (d.rappelDate) h += '<div style="margin-top:5px;font-size:12.5px;font-weight:700;color:' + (due ? '#c53030' : '#8a5a00') + '">⏰ À rappeler le ' + hliDate(d.rappelDate) + (due ? ' (maintenant)' : '') + (d.rappelNote ? ' — ' + esc(d.rappelNote) : '') + ' <button onclick="acqRappelClear(' + j + ',' + i + ')" style="background:none;border:none;color:#8a8577;font-size:11.5px;cursor:pointer;text-decoration:underline">retirer</button></div>';
     if (pan === 'contact') h += '<div style="margin-top:10px;display:grid;gap:8px"><div style="font-weight:700;font-size:12.5px">Comment l\'as-tu recontactée ?</div><select id="acqSC_canal" style="' + inp + '">' + Object.keys(ACQ_CANAUX).map(function(k) { return '<option value="' + k + '">' + ACQ_CANAUX[k] + '</option>'; }).join('') + '</select>'
       + '<textarea id="acqSC_note" placeholder="Ce qu\'elle t\'a dit, ce que tu as proposé…" style="' + inp + ';min-height:48px;resize:vertical"></textarea>'
       + '<div style="font-size:12.5px;font-weight:700">Programmer un rappel (facultatif)</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="date" id="acqSC_rap" min="' + today + '" style="' + inp + '"><button onclick="acqRappelQuick(1)" style="' + bt + '">Demain</button><button onclick="acqRappelQuick(3)" style="' + bt + '">Dans 3 j</button><button onclick="acqRappelQuick(7)" style="' + bt + '">Dans 1 sem.</button></div>'
       + '<div style="display:flex;gap:8px"><button onclick="acqContactSave(' + j + ',' + i + ')" style="padding:8px 16px;border:none;border-radius:10px;background:#3F5D46;color:#fff;font-weight:700;font-size:13px;cursor:pointer">💾 Enregistrer</button><button onclick="acqPanelToggle(' + j + ',' + i + ',\'contact\')" style="' + bt + '">Annuler</button></div></div>';
+    if (d.bilanRdv && d.bilanRdv.date) h += '<div style="margin-top:5px;font-size:12.5px;font-weight:700;color:#2A4A63">📅 Bilan Forme le ' + hliDate(d.bilanRdv.date) + ' à ' + esc(d.bilanRdv.time || '') + ' (' + (d.bilanRdv.dur || 30) + ' min)</div>';
+    if (pan === 'bilan') h += '<div style="margin-top:10px;display:grid;gap:8px"><div style="font-weight:700;font-size:12.5px">Quel jour et à quelle heure pour son Bilan Forme ?</div><div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12.5px;font-weight:700"><label>🎧 Qui book ce bilan ? ' + acqBilanSel('acqSB_set', 'set', d.setterId) + '</label><label>🤝 Qui fait le bilan ? ' + acqBilanSel('acqSB_ven', 'vente', d.closerId) + '</label></div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="date" id="acqSB_date" min="' + today + '" value="' + esc((d.bilanRdv && d.bilanRdv.date) || acqIsoDay(1)) + '" style="' + inp + '"><input type="time" id="acqSB_time" value="' + esc((d.bilanRdv && d.bilanRdv.time) || '10:00') + '" step="900" style="' + inp + '"><select id="acqSB_dur" style="' + inp + '">' + [15, 30, 45, 60].map(function(m) { return '<option value="' + m + '"' + (m === ((d.bilanRdv && d.bilanRdv.dur) || acqBilanDuree()) ? ' selected' : '') + '>' + m + ' min</option>'; }).join('') + '</select><button onclick="acqBilanQuick(1)" style="' + bt + '">Demain</button><button onclick="acqBilanQuick(2)" style="' + bt + '">Après-demain</button><button onclick="acqBilanQuick(7)" style="' + bt + '">Dans 1 sem.</button></div>'
+      + '<div style="font-size:12px;color:#66735F">Ça ouvre ton Google Agenda avec le créneau déjà rempli (nom, téléphone, e-mail). Il te reste à cliquer « Enregistrer » chez Google. Son rappel est retiré de ta liste et la fiche garde la trace du rendez-vous.</div>'
+      + '<div style="display:flex;gap:8px"><button onclick="acqBilanBlock(' + j + ',' + i + ')" style="padding:8px 16px;border:none;border-radius:10px;background:#3F5D46;color:#fff;font-weight:700;font-size:13px;cursor:pointer">📅 Bloquer dans Google Agenda</button><button onclick="acqBilanBlock(' + j + ',' + i + ',true)" title="Si tu l\'as prise au téléphone ou en direct : le rendez-vous est validé sans ouvrir Google Agenda" style="' + bt + '">✅ Valider sans l\'agenda</button><button onclick="acqPanelToggle(' + j + ',' + i + ',\'bilan\')" style="' + bt + '">Annuler</button></div></div>';
     if (pan === 'rappel') h += '<div style="margin-top:10px;display:grid;gap:8px"><div style="font-weight:700;font-size:12.5px">Quand veux-tu qu\'on te le rappelle sur l\'accueil ?</div><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="date" id="acqSR_date" min="' + today + '" value="' + esc(d.rappelDate || acqIsoDay(1)) + '" style="' + inp + '"><button onclick="acqRappelQuick(1)" style="' + bt + '">Demain</button><button onclick="acqRappelQuick(3)" style="' + bt + '">Dans 3 j</button><button onclick="acqRappelQuick(7)" style="' + bt + '">Dans 1 sem.</button></div>'
       + '<input type="text" id="acqSR_note" placeholder="Pourquoi la rappeler ? (ex : voulait réfléchir)" value="' + esc(d.rappelNote || '') + '" style="' + inp + '"><div style="display:flex;gap:8px"><button onclick="acqRappelSave(' + j + ',' + i + ')" style="padding:8px 16px;border:none;border-radius:10px;background:#3F5D46;color:#fff;font-weight:700;font-size:13px;cursor:pointer">⏰ Programmer</button><button onclick="acqPanelToggle(' + j + ',' + i + ',\'rappel\')" style="' + bt + '">Annuler</button></div></div>';
     if (jr.length) h += '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#3F5D46">📖 Historique du suivi (' + jr.length + ')</summary><div style="margin-top:6px;font-size:12.5px;line-height:1.55;color:#3E4A3A">' + jr.slice(0, 20).map(function(e) { return '<div style="padding:4px 0;border-top:1px solid #EFEBDD"><b>' + esc(acqDt(e.at)) + '</b> · ' + esc(ACQ_CANAUX[e.canal] || e.canal || '') + (e.note ? '<br>' + esc(e.note) : '') + '</div>'; }).join('') + '</div></details>';
@@ -33695,7 +33866,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
         return d;}}catch(e){}
     return {enabled:false,code:null,members:[]};}
   // ── Sauvegarde cloud directe des réglages d'équipe (indépendante de la synchro générale) ──
-  var ACC_BUILD='26/11 · 15h · protection v3', CLOUDSEEN=null;
+  var ACC_BUILD='26/11 · 22h · coffres v10', CLOUDSEEN=null;
   var CLOUD='dash_team/config', TKEY='sfm_acces_cloud_t', ST={ok:null,msg:'Vérification de la connexion au cloud…'}, pulling=false, pollN=0;
   function dbq(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
   function stTxt(){return (ST.ok===false?'⚠️ ':ST.ok?'☁️ ':'')+ST.msg;}
@@ -33813,7 +33984,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     showGate('owner');};
 
   // ── Habillage selon le profil ──
-  function viewOfEl(el){var m=(el.getAttribute('onclick')||'').match(/showView\('(\w+)'/);return m?m[1]:null;}
+  function viewOfEl(el){var oc=el.getAttribute('onclick')||'',m=oc.match(/showView\('(\w+)'/);if(m)return m[1];if(/openLivraisonEvenements/.test(oc))return 'pole_livraison';return null;}
   function chrome(){
     var r=role(),assist=isR(r);
     document.body.classList.toggle('acc-assist',assist);
@@ -33845,6 +34016,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     var root=document.querySelector('.view.active');if(!root)return;
     root.querySelectorAll('input,textarea,select,button,[contenteditable="true"],[onclick]').forEach(function(el){
       if(el.getAttribute('data-acc')||el.closest('.sub-tab,.sub-nav-tile,.nav-tab,.acc-banner,#accGate'))return;
+      if(/^cfP_/.test(el.id||''))return;   // coffres-forts : en lecture seule, on peut quand même saisir le mot de passe maître pour déverrouiller et consulter
       var tag=el.tagName,ty=(el.type||'').toLowerCase();
       if(tag==='INPUT'&&(ty==='checkbox'||ty==='radio')){if(!isFilt(el)){el.disabled=true;el.setAttribute('data-acc','dis');}}
       else if(tag==='INPUT'&&(ty==='button'||ty==='submit')){if(MUT.test((el.getAttribute('onclick')||'')+' '+el.value)){el.disabled=true;el.setAttribute('data-acc','dis');}}
@@ -33867,6 +34039,15 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     mo.observe(document.getElementById('view-'+curView())||root,{childList:true,subtree:true});
   }
 
+  // ── Coffres-forts en lecture seule : on peut déverrouiller (mot de passe maître), consulter, copier, voir ; jamais modifier ──
+  document.addEventListener('click',function(ev){
+    try{
+      if(!document.body.classList.contains('acc-ro'))return;
+      var b=ev.target&&ev.target.closest?ev.target.closest('[data-a]'):null;if(!b||!b.closest('[id^="coffreHost_"]'))return;
+      var a=b.getAttribute('data-a');
+      if(['setup','forgot','keeplocal','usecloud','sync','add','del','gen','chpw','chgo'].indexOf(a)>=0){ev.preventDefault();ev.stopImmediatePropagation();notify();}
+    }catch(e){}
+  },true);
   // ── Lecture seule : couche données (filet de sécurité) ──
   var SAFE=/^(sfm_dashboard_mode_v1|sfm_acces|sfm_coffre|sfm_keysync_meta)/;
   var lastT=0;
@@ -33880,7 +34061,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     }catch(e){}
     try{
       var R=window.firebase&&firebase.database&&firebase.database.Reference&&firebase.database.Reference.prototype;
-      if(R&&!R.__accg){['set','update','remove','push','transaction','setWithPriority'].forEach(function(n){var o=R[n];if(!o)return;R[n]=function(){if(roNow()){notify();return Promise.resolve();}return o.apply(this,arguments);};});R.__accg=1;}
+      if(R&&!R.__accg){['set','update','remove','push','transaction','setWithPriority'].forEach(function(n){var o=R[n];if(!o)return;R[n]=function(){if(roNow()&&!window.__accSys){notify();return Promise.resolve();}return o.apply(this,arguments);};});R.__accg=1;}
     }catch(e){}
   }
 
@@ -33913,6 +34094,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     var n=0;IDS.forEach(function(id){if(perm(id,m.id)!=='none')n++;});
     var o='<details class="cf-box" style="margin-bottom:10px" '+(OPEN[m.id]?'open ':'')+'ontoggle="accOpen(\''+m.id+'\',this.open)"><summary style="cursor:pointer;font-weight:700">👤 '+esc(m.name)+' <span class="cf-chip '+(m.code?'ok':'todo')+'">'+(m.code?'code défini':'code à définir')+'</span> <span class="cf-chip orph">'+n+' espace'+(n>1?'s':'')+' partagé'+(n>1?'s':'')+'</span></summary><div style="margin-top:10px">';
     o+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px"><input class="cf-in" style="max-width:260px;margin:0" value="'+esc(m.name)+'" aria-label="Nom" onchange="accRename(\''+m.id+'\',this.value)"><button class="cf-btn sec sm" onclick="accPreview(\''+m.id+'\')">👁 Voir comme '+esc(m.name)+'</button><button class="cf-btn dng sm" onclick="accDelMember(\''+m.id+'\')">Supprimer</button></div>';
+    o+='<div class="cf-note" style="margin:4px 0 6px">💶 <b>Rôle commercial</b> (pour la rémunération) :</div><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><select class="cf-in" style="max-width:250px;margin:0" aria-label="Rôle commercial" onchange="accSetField(\''+m.id+'\',\'salesRole\',this.value)"><option value="">— aucun —</option><option value="set"'+(m.salesRole==='set'?' selected':'')+'>🎧 Setteuse (book les bilans)</option><option value="vente"'+(m.salesRole==='vente'?' selected':'')+'>🤝 Vendeuse (fait le bilan, signe)</option><option value="both"'+(m.salesRole==='both'?' selected':'')+'>Les deux</option></select><label style="font-size:12.5px">% setteuse <input class="cf-in" type="number" min="0" max="100" step="0.5" style="width:80px;margin:0;display:inline-block" value="'+(Number(m.pctSet)||0)+'" onchange="accSetField(\''+m.id+'\',\'pctSet\',this.value)"></label><label style="font-size:12.5px">% vendeuse <input class="cf-in" type="number" min="0" max="100" step="0.5" style="width:80px;margin:0;display:inline-block" value="'+(Number(m.pctVente)||0)+'" onchange="accSetField(\''+m.id+'\',\'pctVente\',this.value)"></label></div>';
     o+=codeBox(m.id,'Code personnel de '+esc(m.name),!!m.code);
     o+='<p class="cf-note" style="margin:12px 0 6px">Ce que '+esc(m.name)+' peut voir (tout est masqué par défaut, enregistré tout de suite) :</p><div class="acc-scroll"><table class="acc-tbl">';
     VIEWS.forEach(function(v){var p=perm(v[0],m.id);o+='<tr><td>'+v[1]+' '+esc(v[2])+'</td><td style="text-align:right"><span class="acc-seg">'+
@@ -33932,6 +34114,8 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     o+='<div class="cf-box"><b>3. Activer</b><p class="cf-note" style="margin:4px 0 10px">'+(d.enabled?'✅ La protection est <b>active</b> : à chaque ouverture, le tableau de bord demande qui tu es (une personne de l\'équipe ou toi avec ton code).':'Quand c\'est activé, chaque appareil qui ouvre le tableau de bord doit choisir son profil.'+(has?'':'<br><b style="color:#B23B3B">⚠️ Pour pouvoir activer : '+(d.code?'':'définis d\'abord TON code propriétaire (étape 1, « Enregistrer le code »). ')+((d.members||[]).some(function(m){return m.code;})?'':'Ajoute une personne avec son code (étape 2).')+'</b>'))+'</p><div style="display:flex;gap:8px;flex-wrap:wrap">'+
       (d.enabled?'<button class="cf-btn" onclick="accLogout()">🔍 Tester : me déconnecter et revoir l\'écran de choix</button><button class="cf-btn dng" onclick="accToggle(false)">Désactiver la protection</button>':'<button class="cf-btn" '+(has?'':'disabled title="Définis ton code et celui d\'au moins une personne"')+' onclick="accToggle(true)">Activer la protection</button>')+
       '</div><div class="cf-err" id="accTogErr"></div></div>';
+    o+='<div class="cf-box" style="margin-top:14px"><b>💶 Rémunération des ventes</b><p class="cf-note" style="margin:4px 0 8px">Sur chaque fiche prospecte, tu choisis la setteuse (qui book le bilan) et la vendeuse (qui le fait), tu confirmes la présence, puis la signature. Ici tu retrouves ce que chaque personne doit toucher. <b>Tu fais partie de la liste</b> (« Anaïs (moi) ») : règle ton propre % ci-dessous si tu veux te l\'attribuer aussi.</p><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><b style="font-size:13px">🔑 Anaïs</b><label style="font-size:12.5px">% setteuse <input class="cf-in" type="number" min="0" max="100" step="0.5" style="width:80px;margin:0;display:inline-block" value="'+(Number(d.ownerPctSet)||0)+'" onchange="accSetField(\'owner\',\'pctSet\',this.value)"></label><label style="font-size:12.5px">% vendeuse <input class="cf-in" type="number" min="0" max="100" step="0.5" style="width:80px;margin:0;display:inline-block" value="'+(Number(d.ownerPctVente)||0)+'" onchange="accSetField(\'owner\',\'pctVente\',this.value)"></label></div><div id="accPayBody" class="cf-note" style="line-height:1.55">Chargement…</div></div>';
+    o+='<div class="cf-box" style="margin-top:14px"><b>👥 Activité de l\'équipe</b><p class="cf-note" style="margin:4px 0 8px">Qui est connecté, depuis combien de temps, quels onglets sont ouverts et combien de modifications ont été faites (jamais le contenu). Chaque personne en est prévenue à sa connexion.</p><div class="cf-note" id="accPresBody" style="line-height:1.55">Chargement…</div></div>';
     var rl=role(),dv=device(),cs=CLOUDSEEN;
     o+='<div class="cf-box" style="margin-top:14px"><b>🩺 Diagnostic de la protection</b><div class="cf-note" style="margin:6px 0 0;line-height:1.7">'
       +'Version du tableau de bord : <b>'+ACC_BUILD+'</b><br>'
@@ -33943,6 +34127,8 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     o+='<div class="cf-box" style="margin-top:14px"><b>Cet appareil</b><p class="cf-note" style="margin:4px 0 10px">Pour revoir l\'écran « Qui utilise le tableau de bord ? » sur cet ordinateur, déconnecte-le.</p><button class="cf-btn sec" onclick="accLogout()">Déconnecter cet appareil</button></div>';
     o+='<p class="cf-note" style="margin-top:14px">⚠️ À savoir : cette protection masque et verrouille les écrans, ce qui suffit à éviter les erreurs et la curiosité. Elle ne remplace pas un vrai cloisonnement : pour une confidentialité totale, chaque personne devrait utiliser son propre navigateur/profil, et les mots de passe doivent rester dans le coffre-fort (chiffré par ton mot de passe maître).</p></div>';
     h.innerHTML=o;
+    setTimeout(function(){try{window.presUI&&window.presUI();}catch(e){}},30);
+    setTimeout(function(){try{window.payUI&&window.payUI(true);}catch(e){}},60);
   }
   window.accOpen=function(id,on){if(on)OPEN[id]=1;else delete OPEN[id];};
   window.accAddMember=function(){
@@ -33968,6 +34154,182 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
     d.enabled=!!on;save(d);if(on){sset('owner');}toast(on?'🛡️ Protection activée':'Protection désactivée');render();};
   window.accPreview=function(mid){var m=member(mid);if(!m)return;try{sessionStorage.setItem(PKEY,mid);}catch(e){}sset('m:'+mid);enforce(true);window.showView('accueil',document.querySelector('.nav-tab[data-view=accueil]'));toast('👁 Aperçu : voici ce que voit '+m.name+' (clique « Accès Anaïs » en haut pour revenir)');};
 
+  // ── Présence et journal d'activité de l'équipe (visible seulement dans Équipe, par la propriétaire) ──
+  // On note : qui est connecté, depuis quand, les onglets ouverts (et le temps passé dessus), le NOMBRE de modifications par onglet.
+  // Jamais le contenu de ce qui est écrit. Chaque personne de l'équipe en est prévenue à sa connexion.
+  var PR_P='dash_team/presence', PR_S='dash_team/sessions';
+  var PR={sid:null,who:null,start:0,act:0,view:'',views:{},edits:{},trail:[],lastInput:0,lastBeat:0,noticed:false};
+  function prSafe(x){return String(x||'').replace(/[.#$\[\]\/]/g,' ').trim().slice(0,60)||'?';}
+  function prLabel(id){
+    try{var t=document.querySelector('.nav-tab[data-view="'+id+'"]');if(t){var x=t.textContent.replace(/\s+/g,' ').trim();if(x)return prSafe(x);}}catch(e){}
+    for(var i=0;i<VIEWS.length;i++)if(VIEWS[i][0]===id)return prSafe(VIEWS[i][2]);
+    return prSafe(id==='accueil'?'Accueil':id);
+  }
+  function prActor(){var r=role();if(r==='owner')return {id:'owner',name:'Anaïs'};if(isR(r)){var m=member(String(r).slice(2));return {id:String(r).slice(2),name:m?m.name:'Équipe'};}return null;}
+  function prDev(){var u=navigator.userAgent||'',d=/iPhone/.test(u)?'iPhone':/iPad/.test(u)?'iPad':/Android/.test(u)?'Android':/Macintosh/.test(u)?'Mac':/Windows/.test(u)?'Windows':'Appareil';var b=/Edg\//.test(u)?'Edge':/Chrome\//.test(u)?'Chrome':/Firefox\//.test(u)?'Firefox':/Safari\//.test(u)?'Safari':'';return d+(b?' · '+b:'');}
+  function prSys(fn){window.__accSys=true;try{return fn();}finally{window.__accSys=false;}}
+  function prTrail(type,label,n){
+    var t=Date.now(),L=PR.trail,last=L[L.length-1];
+    if(type==='e'&&last&&last[1]==='e'&&last[2]===label&&t-last[0]<120000){last[3]=(last[3]||1)+(n||1);return;}
+    L.push([t,type,label].concat(type==='e'?[n||1]:[]));if(L.length>120)L.shift();
+  }
+  function prStart(a){
+    var saved=null;try{saved=JSON.parse(sessionStorage.getItem('sfm_acces_sid')||'null');}catch(e){}
+    if(saved&&saved.id===a.id&&saved.sid){PR.sid=saved.sid;PR.start=saved.start;}
+    else{PR.sid=Date.now().toString(36)+Math.random().toString(36).slice(2,6);PR.start=Date.now();try{sessionStorage.setItem('sfm_acces_sid',JSON.stringify({sid:PR.sid,id:a.id,start:PR.start}));}catch(e){}}
+    PR.who=a;PR.act=0;PR.view='';PR.views={};PR.edits={};PR.trail=[];PR.lastBeat=0;
+    if(isR(role())&&!PR.noticed){PR.noticed=true;setTimeout(function(){toast('ℹ️ Pour le suivi de l\'équipe, Anaïs voit quand tu es connectée, les onglets que tu ouvres et le nombre de modifications (jamais le contenu).');},1800);}
+  }
+  function prBeat(final){
+    var db=dbq();if(!db||!PR.sid||!PR.who)return;
+    var now=Date.now(),lab=PR.view||'?',rec={id:PR.who.id,name:PR.who.name,dev:prDev(),start:PR.start,last:now,act:PR.act,views:PR.views,edits:PR.edits,trail:PR.trail};
+    try{prSys(function(){
+      db.ref(PR_S+'/'+PR.sid).set(rec);
+      if(final)db.ref(PR_P+'/'+PR.sid).remove();
+      else db.ref(PR_P+'/'+PR.sid).set({id:PR.who.id,name:PR.who.name,dev:rec.dev,start:PR.start,last:now,view:lab});
+    });}catch(e){}
+    PR.lastBeat=now;
+  }
+  function prEnd(){try{prBeat(true);}catch(e){}PR.sid=null;PR.who=null;try{sessionStorage.removeItem('sfm_acces_sid');}catch(e){}}
+  function prTick(){
+    var a=prActor();
+    if(!a){if(PR.sid)prEnd();return;}
+    if(!PR.sid||!PR.who||PR.who.id!==a.id){if(PR.sid)prEnd();prStart(a);}
+    var now=Date.now(),active=document.visibilityState==='visible'&&now-PR.lastInput<120000;
+    var cv=prLabel(curView());
+    if(cv!==PR.view){PR.view=cv;prTrail('v',cv);}
+    if(active){PR.act+=5;PR.views[cv]=(PR.views[cv]||0)+5;}
+    if(now-PR.lastBeat>=30000)prBeat(false);
+  }
+  window.accTrackEdit=function(k){
+    if(!PR.sid||Date.now()-PR.lastInput>4000||SAFE.test(String(k)))return;
+    var lab=PR.view||prLabel(curView());PR.edits[lab]=(PR.edits[lab]||0)+1;prTrail('e',lab,1);
+  };
+  ['click','keydown','touchstart','input','change'].forEach(function(ev){document.addEventListener(ev,function(){PR.lastInput=Date.now();},true);});
+  window.addEventListener('pagehide',function(){try{if(PR.sid)prBeat(true);}catch(e){}});
+  setInterval(prTick,5000);
+  // — affichage (propriétaire) —
+  function prDur(ms){var m=Math.round(ms/60000);if(m<1)return 'moins d\'1 min';if(m<60)return m+' min';var h=Math.floor(m/60);return h+' h '+(m%60<10?'0':'')+(m%60);}
+  function prSecs(s){return prDur(s*1000);}
+  function prFmt(t){try{return new Date(t).toLocaleString('fr-FR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}catch(e){return String(t);}}
+  function prHm(t){try{return new Date(t).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}catch(e){return '';}}
+  window.presUI=function(){
+    var body=document.getElementById('accPresBody');if(!body||role()!=='owner')return;
+    var db=dbq();if(!db){body.textContent='Le cloud n\'est pas encore connecté…';return;}
+    Promise.all([db.ref(PR_P).once('value'),db.ref(PR_S).limitToLast(40).once('value')]).then(function(r){
+      var P=r[0].val()||{},S=r[1].val()||{},now=Date.now(),h='',on=[];
+      Object.keys(P).forEach(function(k){var p=P[k];if(p&&now-p.last<90000)on.push(p);});
+      on.sort(function(a,b){return a.start-b.start;});
+      h+='<div style="margin-bottom:10px"><b>🟢 En ligne maintenant ('+on.length+')</b>';
+      if(!on.length)h+='<div>Personne.</div>';
+      on.forEach(function(p){h+='<div style="margin-top:3px">'+esc(p.name)+' · '+esc(p.dev||'')+' · connectée depuis '+prDur(now-p.start)+' · onglet : <b>'+esc(p.view||'?')+'</b>'+(PR.sid&&PR.start===p.start&&PR.who&&PR.who.id===p.id?' <i>(cet appareil)</i>':'')+'</div>';});
+      h+='</div>';
+      var ks=Object.keys(S).sort().reverse();
+      h+='<b>🕘 Journal des connexions ('+ks.length+' dernières)</b>';
+      if(!ks.length)h+='<div>Aucune connexion enregistrée pour l\'instant.</div>';
+      ks.forEach(function(k){
+        var s=S[k]||{},vs=Object.keys(s.views||{}).sort(function(a,b){return s.views[b]-s.views[a];}),es=Object.keys(s.edits||{}),ne=es.reduce(function(n,x){return n+s.edits[x];},0);
+        var live=now-(s.last||0)<90000;
+        h+='<details style="margin-top:6px;border-top:1px solid #EFEBDD;padding-top:5px"><summary style="cursor:pointer"><b>'+esc(s.name||'?')+'</b> · '+esc(prFmt(s.start))+' · '+esc(s.dev||'')+' · '+(live?'<span style="color:#2F7D46">en cours</span> · ':'')+'connectée '+prDur((s.last||s.start)-s.start)+' (actif '+prSecs(s.act||0)+') · '+ne+' modification'+(ne>1?'s':'')+'</summary><div style="margin:6px 0 4px 14px;line-height:1.55">';
+        if(vs.length){h+='<div><b>Onglets (temps actif)</b></div>';vs.slice(0,8).forEach(function(v){h+='<div>'+esc(v)+' : '+prSecs(s.views[v])+(s.edits&&s.edits[v]?' · '+s.edits[v]+' modif.':'')+'</div>';});}
+        var tr=s.trail||[];
+        if(tr.length){h+='<div style="margin-top:6px"><b>Déroulé</b></div>';tr.forEach(function(e){h+='<div>'+esc(prHm(e[0]))+' · '+(e[1]==='v'?'ouvre « '+esc(e[2])+' »':'modifie « '+esc(e[2])+' » ×'+(e[3]||1))+'</div>';});}
+        h+='</div></details>';
+      });
+      h+='<div style="margin-top:10px"><button class="cf-btn sec" onclick="presClear()">Effacer le journal</button></div>';
+      var el=document.getElementById('accPresBody');if(el)el.innerHTML=h;
+    }).catch(function(e){var el=document.getElementById('accPresBody');if(el)el.textContent='Lecture impossible : '+((e&&(e.code||e.message))||'erreur');});
+  };
+  window.presClear=function(){
+    if(!twice('presclear','⚠️ Clique encore une fois sur « Effacer le journal » pour supprimer tout l\'historique de connexions.'))return;
+    var db=dbq();if(!db)return;try{prSys(function(){db.ref(PR_S).remove();});}catch(e){}
+    PR.trail=[];PR.views={};PR.edits={};PR.act=0;setTimeout(window.presUI,400);
+  };
+  setInterval(function(){try{var v=document.getElementById('view-acces');if(v&&v.classList.contains('active'))window.presUI();}catch(e){}},20000);
+
+  // ── Rôles commerciaux (setteuse / vendeuse) et rémunération ──
+  window.accWho=function(){var r=role();if(r&&r.indexOf('m:')===0){var m=member(r.slice(2));return m?m.name:'';}return 'Anaïs';};
+  window.accMeId=function(){var r=role();return (r&&r.indexOf('m:')===0)?r.slice(2):(r==='owner'?'owner':'');};
+  // which : 'set' (setteuse) | 'vente' (vendeuse) | 'all'. Anaïs peut être vendeuse elle-même (sans %).
+  window.accSalesPeople=function(which){
+    var out=[],ms=get().members||[];
+    ms.forEach(function(m){var r=m.salesRole||'';var ok=(which==='all')?!!r:(which==='set'?(r==='set'||r==='both'):(r==='vente'||r==='both'));if(ok)out.push({id:m.id,name:m.name,pct:Number(which==='set'?m.pctSet:m.pctVente)||0,role:r,pctSet:Number(m.pctSet)||0,pctVente:Number(m.pctVente)||0});});
+    var dd=get(),ps=Number(dd.ownerPctSet)||0,pv=Number(dd.ownerPctVente)||0;
+    out.unshift({id:'owner',name:'Anaïs (moi)',pct:(which==='set'?ps:pv),role:'both',pctSet:ps,pctVente:pv});
+    return out;
+  };
+  window.accSetField=function(mid,k,v){
+    var d=get();
+    if(mid==='owner'){var n0=parseFloat(String(v).replace(',','.'));d[k==='pctSet'?'ownerPctSet':'ownerPctVente']=(isFinite(n0)&&n0>=0&&n0<=100)?n0:0;save(d);toast('✅ Enregistré');return;}
+    (d.members||[]).forEach(function(m){if(m.id===mid){
+      if(k==='salesRole'){m.salesRole=(v==='set'||v==='vente'||v==='both')?v:'';}
+      else if(k==='pctSet'||k==='pctVente'){var n=parseFloat(String(v).replace(',','.'));m[k]=(isFinite(n)&&n>=0&&n<=100)?n:0;}
+    }});save(d);toast('✅ Enregistré');if(k==='salesRole')render();
+  };
+  function payMonthDefault(){var n=new Date();return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2);}
+  var PAY={month:null,data:null,loading:false};
+  function payFmt(n){return (Math.round((Number(n)||0)*100)/100).toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:2})+' €';}
+  function payContrat(v){
+    var cc=v.contratCode,c=cc&&window.CONTRATS_ALL&&window.CONTRATS_ALL[cc];
+    if(cc&&!c&&PAY.cts&&PAY.cts[cc])c=PAY.cts[cc];
+    return c||null;
+  }
+  function payInfo(v){
+    var c=payContrat(v),signed=false,date='',amount=null,auto=false;
+    if(c&&c.status==='signe'){signed=true;auto=true;date=String(c.signedAt||v.signeAt||'').slice(0,10);
+      var base=parseFloat(String(c.tarifBase||'').replace(',','.'))||0;amount=base*(c.offer==='12mois'?12:4);}
+    if(v.signe){signed=true;date=String(v.signeAt||date||'').slice(0,10);}
+    if(v.signeMontant!=null&&v.signeMontant!==''&&isFinite(Number(v.signeMontant)))amount=Number(v.signeMontant);
+    return {signed:signed,date:date,amount:amount,auto:auto};
+  }
+  window.payLoad=function(cb){
+    var db=dbq();if(!db){cb&&cb();return;}
+    PAY.loading=true;
+    db.ref('acquisition/ventes').once('value').then(function(sn){
+      PAY.data=sn.val()||{};PAY.cts={};
+      var need=[];Object.keys(PAY.data).forEach(function(k){var v=PAY.data[k];if(v.contratCode&&!(window.CONTRATS_ALL&&window.CONTRATS_ALL[v.contratCode]))need.push(v.contratCode);});
+      return Promise.all(need.map(function(cc){return db.ref('contrats/'+cc).once('value').then(function(s){if(s.val())PAY.cts[cc]=s.val();}).catch(function(){});}));
+    }).then(function(){PAY.loading=false;cb&&cb();}).catch(function(e){PAY.loading=false;PAY.err=(e&&(e.code||e.message))||'erreur';cb&&cb();});
+  };
+  window.payUI=function(reload){
+    var host=document.getElementById('accPayBody');if(!host||role()!=='owner')return;
+    if(!PAY.month)PAY.month=payMonthDefault();
+    if(reload||!PAY.data){host.textContent='Chargement…';window.payLoad(function(){window.payUI(false);});return;}
+    if(PAY.err){host.innerHTML='<span style="color:#B23B3B">Lecture impossible : '+esc(PAY.err)+'</span>';PAY.err=null;return;}
+    var people={},rows=[],bil={};
+    var all=get().members||[];
+    Object.keys(PAY.data).forEach(function(k){
+      var v=PAY.data[k]||{},inf=payInfo(v);
+      if(v.setterId&&v.bilanDate&&String(v.bilanDate).slice(0,7)===PAY.month){var b=bil[v.setterId]=bil[v.setterId]||{name:v.setterName||v.setterId,ok:0,ko:0,att:0};if(v.presence==='presente')b.ok++;else if(v.presence==='absente')b.ko++;else b.att++;}
+      if(!inf.signed||String(inf.date).slice(0,7)!==PAY.month)return;
+      [['set',v.setterId,v.setterName],['vente',v.closerId,v.closerName]].forEach(function(x){
+        if(!x[1])return;var m=null;all.forEach(function(mm){if(mm.id===x[1])m=mm;});
+        var dd0=get(),isO=(x[1]==='owner'),pct=m?(Number(x[0]==='set'?m.pctSet:m.pctVente)||0):(isO?(Number(x[0]==='set'?dd0.ownerPctSet:dd0.ownerPctVente)||0):0),amt=inf.amount||0,com=amt*pct/100;
+        var p=people[x[1]]=people[x[1]]||{id:x[1],name:isO?'Anaïs (moi)':((m&&m.name)||x[2]||x[1]),n:0,tot:0,com:0,lines:[]};
+        p.n++;p.tot+=amt;p.com+=com;
+        p.lines.push({role:x[0],nom:v.nom||'',date:inf.date,amt:amt,pct:pct,com:com,pres:v.presence||'',cn:(v.contactsN==null?null:v.contactsN),noAmt:inf.amount==null});
+      });
+    });
+    var ids=Object.keys(people).sort(function(a,b){return people[b].com-people[a].com;});
+    var h='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px"><label style="font-weight:700;font-size:13px">Mois de signature : <input type="month" value="'+PAY.month+'" style="padding:7px 9px;border:1.5px solid #E2DCC8;border-radius:8px" onchange="payMonth(this.value)"></label><button class="cf-btn sec sm" onclick="payUI(true)">🔄 Actualiser</button><button class="cf-btn sec sm" onclick="payCsv()">⬇️ Exporter (tableur)</button></div>';
+    if(!ids.length)h+='<p class="cf-note">Aucune fiche signée ce mois-ci avec une setteuse ou une vendeuse choisie. Sur la fiche de la prospecte, choisis la setteuse / la vendeuse et indique la signature : elle apparaît ici.</p>';
+    var tot=0;
+    ids.forEach(function(id){var p=people[id];tot+=p.com;
+      h+='<details class="cf-box" style="margin-bottom:8px"><summary style="cursor:pointer;font-weight:700">👤 '+esc(p.name)+' · '+p.n+' signature'+(p.n>1?'s':'')+' · signé '+payFmt(p.tot)+' · <span style="color:#2C4432">à verser '+payFmt(p.com)+'</span></summary><div style="margin-top:8px;font-size:12.5px;line-height:1.6">'+
+        p.lines.map(function(l){return '<div style="padding:4px 0;border-top:1px solid #EFEBDD">'+(l.role==='set'?'🎧 Setteuse':'🤝 Vendeuse')+' · <b>'+esc(l.nom)+'</b> · signée le '+esc(l.date.split('-').reverse().join('/'))+' · '+(l.noAmt?'<span style="color:#B23B3B">montant à saisir sur la fiche</span>':payFmt(l.amt))+' × '+l.pct+' % = <b>'+payFmt(l.com)+'</b>'+(l.role==='set'&&l.pres!=='presente'?' · <span style="color:#B23B3B">⚠️ présence '+(l.pres==='absente'?'« absente »':'non confirmée')+'</span>':'')+(l.cn!=null&&l.cn<3?' · <span style="color:#B23B3B">⚠️ contacts '+l.cn+'/3</span>':'')+'</div>';}).join('')+'</div></details>';});
+    if(ids.length)h+='<p style="font-weight:700;margin:8px 0">Total à verser pour '+PAY.month.split('-').reverse().join('/')+' : '+payFmt(tot)+'</p>';
+    var bk=Object.keys(bil);
+    if(bk.length)h+='<p class="cf-note" style="margin:10px 0 4px"><b>Bilans bookés ce mois-ci (par setteuse)</b></p>'+bk.map(function(k){var b=bil[k];return '<div style="font-size:12.5px">🎧 '+esc(b.name)+' : ✅ '+b.ok+' présente'+(b.ok>1?'s':'')+' · ❌ '+b.ko+' absente'+(b.ko>1?'s':'')+' · ⏳ '+b.att+' à confirmer</div>';}).join('');
+    h+='<p class="cf-note" style="margin:10px 0 0">Calcul : % de la personne × montant signé. Quand le contrat est signé en ligne, le montant = tarif mensuel × durée (4 ou 12 mois) ; tu peux le corriger sur la fiche. Les % se règlent dans la fiche de chaque personne ci-dessus.</p>';
+    host.innerHTML=h;PAY.last={ids:ids,people:people};
+  };
+  window.payMonth=function(v){PAY.month=v||payMonthDefault();window.payUI(false);};
+  window.payCsv=function(){
+    if(!PAY.last)return;var out=[['Personne','Rôle','Prospecte','Date signature','Montant signé','% ','Commission','Présence']];
+    PAY.last.ids.forEach(function(id){var p=PAY.last.people[id];p.lines.forEach(function(l){out.push([p.name,l.role==='set'?'Setteuse':'Vendeuse',l.nom,l.date,String(l.amt).replace('.',','),String(l.pct).replace('.',','),String(Math.round(l.com*100)/100).replace('.',','),l.pres==='presente'?'présente':(l.pres==='absente'?'absente':'non confirmée')]);});});
+    var csv='﻿'+out.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(';');}).join('\r\n');
+    var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='remunerations_'+PAY.month+'.csv';document.body.appendChild(a);a.click();setTimeout(function(){a.remove();},500);
+  };
   window.accRole=role;
   window.accCloudNow=function(){try{pollN=0;cloudPull();setTimeout(function(){try{enforce();}catch(e){}},1200);}catch(e){}};
   // démarrage
@@ -34106,9 +34468,33 @@ function ensureStripe(cb){
   STR_Q=[cb];
   function done(){var q=STR_Q||[];STR_Q=null;q.forEach(function(f){try{f();}catch(e){}});}
   var s=document.createElement('script');s.src='asso_stripe_data.js?v=20261125';
-  s.onload=function(){if(window.SFM_STRIPE){prep();}else{loadErr='vide';}done();};
+  s.onload=function(){if(window.SFM_STRIPE){prep();liveMerge(done);return;}else{loadErr='vide';}done();};
   s.onerror=function(){loadErr='absent';done();};
   document.head.appendChild(s);
+}
+// ── Paiements reçus en direct (enregistrés par la fonction Firebase à chaque paiement Stripe) ──
+var LIVE={done:false,n:0,unclassified:0,maj:null,err:''};
+function liveMerge(cb){
+  var db=null;try{db=(typeof initSyncFirebase==='function'&&initSyncFirebase()&&window.dashFbDB)?window.dashFbDB:null;}catch(e){}
+  if(!db||!window.SFM_STRIPE){LIVE.err=db?'':'hors ligne';cb&&cb();return;}
+  db.ref('asso_stripe_live').once('value').then(function(sn){
+    var v=sn.val()||{},pays=v.payments||{},have={};
+    window.SFM_STRIPE.payments=window.SFM_STRIPE.payments.filter(function(p){return !p.live;});
+    window.SFM_STRIPE.payments.forEach(function(p){have[p.id]=p;});
+    LIVE.n=0;LIVE.unclassified=0;LIVE.err='';
+    Object.keys(pays).forEach(function(k){var r=pays[k];if(!r||!r.id)return;var ex=have[r.id];
+      if(ex){if((r.r||0)>(ex.r||0))ex.r=r.r;return;}
+      if(r.incomplet)LIVE.unclassified++;
+      window.SFM_STRIPE.payments.push(r);LIVE.n++;});
+    LIVE.maj=v.maj||null;LIVE.done=true;prep();cb&&cb();
+  }).catch(function(e){LIVE.err=(e&&(e.code||e.message))||'erreur';cb&&cb();});
+}
+window.faLiveRefresh=function(){liveMerge(function(){try{renderF();}catch(e){}if(window.faAutoScan){try{faAutoScan();}catch(e2){}}});};
+function liveHtml(){
+  var t='<div class="fa-note" style="margin:0 0 14px">';
+  if(LIVE.err)return t+'Paiements Stripe lus au <b>'+fdate(STR.generatedAt)+'</b>. ⚠️ Les paiements en direct ne sont pas disponibles ('+esc(String(LIVE.err))+'). <button class="fa-btn sec sm" onclick="faLiveRefresh()">🔄 Réessayer</button></div>';
+  return t+'☁️ Paiements Stripe <b>en direct</b> : fichier du '+fdate(STR.generatedAt)+' + <b>'+LIVE.n+'</b> paiement'+(LIVE.n>1?'s':'')+' reçu'+(LIVE.n>1?'s':'')+' depuis'+(LIVE.maj&&LIVE.maj.at?' (dernier le '+fdate(String(LIVE.maj.at).slice(0,10))+')':'')+'. <button class="fa-btn sec sm" onclick="faLiveRefresh()">🔄 Actualiser</button>'
+    +(LIVE.unclassified?'<br><span style="color:#B23B3B">⚠️ '+LIVE.unclassified+' paiement'+(LIVE.unclassified>1?'s reçus':' reçu')+' sans détail (impossible de savoir si c’est Pilates ou coaching) : ils ne sont pas comptés ici. Vérifie dans Stripe, ou autorise la clé Stripe à lire les factures (voir le guide Firebase).</span>':'')+'</div>';
 }
 function prep(){
   STR=window.SFM_STRIPE;
@@ -34293,7 +34679,7 @@ function renderF(){
   var P=persons();
   var upd=P.filter(function(x){return !x.orphan&&x.v.diff.length;}).length;
   h.innerHTML=head+cfgHtml()+autoHtml()+statsHtml(P)
-   +'<div class="fa-note" style="margin:0 0 14px">Paiements Stripe lus au <b>'+fdate(STR.generatedAt)+'</b> (lecture seule). Pour les actualiser, demande-moi « mets à jour les paiements Stripe ».</div>'
+   +liveHtml()
    +'<div class="fa-bar"><button class="fa-btn" onclick="faApplyAll()"'+(upd?'':' disabled')+'>✅ Mettre à jour toutes les fiches ('+upd+')</button><button class="fa-btn sec" onclick="faGenAll()">🧾 Créer les factures manquantes</button></div>'
    +'<div class="fa-bar"><button class="fa-btn sec" onclick="faPublishAll(true)">📤 Publier les factures dans les applis des clientes</button><span id="faPubSt" class="fa-note" style="margin:0">'+esc(FP_LAST)+'</span></div>'
    +'<div class="fa-bar"><input class="fa-in" id="faQ" type="search" placeholder="Chercher une adhérente…" value="'+esc(QUERY)+'" oninput="faSetQuery(this.value)"></div>'
