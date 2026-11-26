@@ -33359,6 +33359,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
         if(d&&(d.code||(d.members||[]).length)){var t0=lt||Date.now();try{localStorage.setItem(TKEY,String(t0));}catch(e){}cloudPush(d,t0);}
         else ST={ok:true,msg:'Aucun réglage d’équipe dans le cloud pour l’instant'};
       }
+      try{rescueOnce();}catch(e){}
       renderStatus();
     }).catch(function(e){pulling=false;ST={ok:false,msg:'Lecture du cloud impossible : '+((e&&(e.code||e.message))||'erreur')};renderStatus();});
   }
@@ -33615,8 +33616,16 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
   }
   // Déblocage d'urgence, une seule fois par appareil : la protection est désactivée et le code propriétaire effacé (les personnes de l'équipe et leurs accès restent).
   // Anaïs choisit ensuite un nouveau code dans l'onglet Équipe et réactive la protection.
-  function rescueOnce(){try{if(localStorage.getItem('sfm_acces_rescue_v1'))return;localStorage.setItem('sfm_acces_rescue_v1','1');var d=get();if(d&&(d.enabled||d.code)){d.enabled=false;d.code=null;save(d);try{sessionStorage.removeItem(PKEY);}catch(e){}sset('owner');setTimeout(function(){toast('🔓 Protection désactivée : choisis un nouveau code propriétaire dans l\'onglet Équipe, puis réactive-la.');},1500);}}catch(e){}}
-  function start(){rescueOnce();resetOnce();guard();enforce();coachFlag();whoChip();setTimeout(cloudLoop,800);}
+  // v2 : le déblocage attend d'avoir LU les réglages d'équipe dans le cloud (sinon, sur un appareil neuf, il se consommait avant de les recevoir).
+  // Valable une seule fois par appareil et seulement jusqu'au 29/11/2026.
+  function rescueOnce(){try{
+    if(localStorage.getItem('sfm_acces_rescue_v2'))return;
+    if(Date.now()>Date.parse('2026-11-29T23:59:59')){localStorage.setItem('sfm_acces_rescue_v2','x');return;}
+    localStorage.setItem('sfm_acces_rescue_v2','1');
+    var d=get();
+    if(d&&(d.enabled||d.code)){d.enabled=false;d.code=null;save(d);try{sessionStorage.removeItem(PKEY);}catch(e){}sset('owner');try{removeGate();}catch(e){}try{enforce(true);}catch(e){}setTimeout(function(){toast('🔓 Protection désactivée : choisis un nouveau code propriétaire dans l\'onglet Équipe, puis réactive-la.');},800);}
+  }catch(e){}}
+  function start(){resetOnce();guard();enforce();coachFlag();whoChip();setTimeout(cloudLoop,800);}
   if(document.readyState==='complete')setTimeout(start,50);else window.addEventListener('load',function(){setTimeout(start,50);});
   setInterval(function(){guard();enforce();coachFlag();whoChip();},2500);
 })();
