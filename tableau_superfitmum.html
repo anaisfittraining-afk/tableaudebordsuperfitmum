@@ -33846,9 +33846,13 @@ function formPageEdit(fid) {
   var RSEEN={};
   function fpr(g){try{var m=getMeta(g);return m&&m.salt?String(m.salt).replace(/[^A-Za-z0-9]/g,'').slice(0,6).toUpperCase():'aucun';}catch(e){return '?';}}
   function fprR(r){try{var m=r&&r.meta?JSON.parse(r.meta):null;return m&&m.salt?String(m.salt).replace(/[^A-Za-z0-9]/g,'').slice(0,6).toUpperCase():null;}catch(e){return null;}}
-  function fprTxt(g){return 'Coffre n° '+fpr(g)+' · cloud : '+(RSEEN[g]?(RSEEN[g].has?('n° '+RSEEN[g].f+(RSEEN[g].f===fpr(g)?' ✔ identique':' ✖ différent')):'vide'):'pas encore lu')+' · version : '+(window.ACC_BUILD_PUB||'ancienne');}
+  function fprTxt(g){
+    var R=RSEEN[g],rl='?';try{rl=typeof window.accRole==='function'?String(window.accRole()||'aucun'):'?';}catch(e){}
+    var cl=R?(R.err?('lecture IMPOSSIBLE ('+R.err+')'):(R.has?('n° '+R.f+(R.f===fpr(g)?' ✔ identique':' ✖ différent')+(R.t?' (écrit le '+new Date(R.t).toLocaleString('fr-FR')+')':'')):'vide')):'pas encore lu';
+    return 'Coffre n° '+fpr(g)+' · cloud : '+cl+' · profil : '+(rl==='owner'?'propriétaire':rl)+' · version : '+(window.ACC_BUILD_PUB||'ancienne');
+  }
   function handleRemote(g,r){
-    RSEEN[g]={has:!!(r&&r.meta),f:fprR(r)};
+    RSEEN[g]={has:!!(r&&r.meta),f:fprR(r),t:(r&&r.t)||0};
     setTimeout(function(){try{document.querySelectorAll('.cf-fpr[data-g="'+g+'"]').forEach(function(e){e.textContent=fprTxt(g);});}catch(e){}},50);
     var lt=getT(g),lm=localStorage.getItem(METAK[g]);
     if(!canPush()){   // équipe : on adopte le coffre d'Anaïs (l'ancien coffre local est mis de côté, rien d'effacé), on n'envoie jamais rien
@@ -33873,7 +33877,7 @@ function formPageEdit(fid) {
   }
   function pullVault(g){
     var db=dbq();if(!db||pulling2[g])return;pulling2[g]=true;
-    try{db.ref(CL[g]).once('value').then(function(sn){pulling2[g]=false;try{handleRemote(g,sn.val());}catch(e){}}).catch(function(){pulling2[g]=false;});}catch(e){pulling2[g]=false;}
+    try{db.ref(CL[g]).once('value').then(function(sn){pulling2[g]=false;try{handleRemote(g,sn.val());}catch(e){}}).catch(function(er){pulling2[g]=false;RSEEN[g]={err:String((er&&(er.code||er.message))||'erreur').slice(0,40)};setTimeout(function(){try{document.querySelectorAll('.cf-fpr[data-g="'+g+'"]').forEach(function(e){e.textContent=fprTxt(g);});}catch(e){}},50);});}catch(e){pulling2[g]=false;}
   }
   function pullAll(){pullVault('main');pullVault('equipe');}
   setTimeout(function(){pullAll();setInterval(pullAll,45000);},4000);
@@ -33946,7 +33950,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
         return d;}}catch(e){}
     return {enabled:false,code:null,members:[]};}
   // ── Sauvegarde cloud directe des réglages d'équipe (indépendante de la synchro générale) ──
-  var ACC_BUILD='27/11 · 2h · coffre équipe v15', CLOUDSEEN=null;window.ACC_BUILD_PUB=ACC_BUILD;
+  var ACC_BUILD='27/11 · 2h30 · coffre équipe v16', CLOUDSEEN=null;window.ACC_BUILD_PUB=ACC_BUILD;
   var CLOUD='dash_team/config', TKEY='sfm_acces_cloud_t', ST={ok:null,msg:'Vérification de la connexion au cloud…'}, pulling=false, pollN=0;
   function dbq(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
   function stTxt(){return (ST.ok===false?'⚠️ ':ST.ok?'☁️ ':'')+ST.msg;}
