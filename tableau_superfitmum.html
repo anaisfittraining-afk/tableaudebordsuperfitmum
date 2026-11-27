@@ -34157,10 +34157,16 @@ function formPageEdit(fid) {
     var who=au?'connectée':'NON connectée à Firebase';
     try{db.ref(CL[g]).set(o).then(function(){
       var url=((db.app&&db.app.options&&db.app.options.databaseURL)||'https://cooperation-familiale-default-rtdb.europe-west1.firebasedatabase.app')+'/'+CL[g]+'/t.json';
-      return fetch(url+'?_='+Date.now(),{cache:'no-store'}).then(function(rs){return rs.json();}).then(function(t){
-        var hh=new Date().toLocaleTimeString('fr-FR');
-        st(t===o.t?('✔ envoi vérifié à '+hh+' (serveur = cet appareil)'):('✖ envoi accepté mais le serveur affiche encore '+(t?new Date(t).toLocaleString('fr-FR'):'rien')+' ('+who+')'));
-      });
+      var au2=null;try{au2=window.firebase&&firebase.auth&&firebase.auth().currentUser;}catch(e){}
+      function rd(tok){
+        return fetch(url+'?_='+Date.now()+(tok?('&auth='+encodeURIComponent(tok)):''),{cache:'no-store'}).then(function(rs){return rs.json().then(function(j){return {s:rs.status,j:j};});}).then(function(x){
+          var hh=new Date().toLocaleTimeString('fr-FR');
+          if(x.s!==200||(x.j&&typeof x.j==='object'))st('✔ envoi accepté à '+hh+' (relecture impossible : serveur '+x.s+(tok?'':', sans connexion')+')');
+          else st(x.j===o.t?('✔ envoi vérifié à '+hh+' (serveur = cet appareil)'):('✖ envoi accepté mais le serveur affiche encore '+(x.j?new Date(x.j).toLocaleString('fr-FR'):'rien')+' ('+who+')'));
+        });
+      }
+      if(au2&&au2.getIdToken)return au2.getIdToken().then(rd,function(){return rd(null);});
+      return rd(null);
     }).catch(function(er){st('✖ envoi REFUSÉ par le serveur : '+String((er&&(er.code||er.message))||er).slice(0,60)+' ('+who+')');});}catch(e){st('✖ envoi impossible : '+String(e&&e.message||e).slice(0,50));}
   }
   var PUSHST={};
@@ -34321,7 +34327,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
         return d;}}catch(e){}
     return {enabled:false,code:null,members:[]};}
   // ── Sauvegarde cloud directe des réglages d'équipe (indépendante de la synchro générale) ──
-  var ACC_BUILD='27/11 · 4h · dictée v22', CLOUDSEEN=null;window.ACC_BUILD_PUB=ACC_BUILD;
+  var ACC_BUILD='27/11 · 4h · coffre v23', CLOUDSEEN=null;window.ACC_BUILD_PUB=ACC_BUILD;
   var CLOUD='dash_team/config', TKEY='sfm_acces_cloud_t', ST={ok:null,msg:'Vérification de la connexion au cloud…'}, pulling=false, pollN=0;
   function dbq(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
   function stTxt(){return (ST.ok===false?'⚠️ ':ST.ok?'☁️ ':'')+ST.msg;}
