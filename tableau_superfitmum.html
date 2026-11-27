@@ -2001,6 +2001,7 @@ window.EXERCISE_LIBRARY = [
       <div class="sub-tab" onclick="showSubView('montage_video', this)">🎞️ Générique personnalisé</div>
       <div class="sub-tab" onclick="showSubView('livraison_accueil', this)">🏠 Accueil de l'app</div>
       <div class="sub-tab" onclick="showSubView('livraison_lecture', this)">📚 Lecture</div>
+      <div class="sub-tab" onclick="showSubView('livraison_indispensables', this)">⭐ Indispensables</div>
       <div class="sub-tab" onclick="showSubView('livraison_espace', this)">🌿 Mon programme co-NAÎTRE</div>
       <div class="sub-tab" onclick="showSubView('livraison_avent', this)">📅 Calendrier de l'Avent</div>
       <div class="sub-tab" onclick="showSubView('livraison_apps', this)">📱 Mes applications</div>
@@ -2491,6 +2492,12 @@ window.EXERCISE_LIBRARY = [
     <div class="section-title" style="margin-bottom:6px"><h2>📚 Lecture — les livres de l'appli co-NAÎTRE</h2></div>
     <p style="color:#66735F;font-size:14px;margin-bottom:14px;max-width:820px">Ajoute ici tes livres préférés (titre, auteur, photo de couverture, un petit mot). Ils apparaissent dans la tuile <b>« Ma lecture »</b> de l'accueil de l'appli de tes clientes, signés « Anaïs ». Tes clientes peuvent aussi y ajouter leurs coups de cœur, signés de leur prénom : tu les vois ci-dessous et tu peux les masquer ou les supprimer.</p>
     <div id="lecDashEditor" style="max-width:900px"></div>
+  </div>
+
+  <div class="view-sub" id="subview-livraison_indispensables">
+    <div class="section-title" style="margin-bottom:6px"><h2>⭐ Indispensables — la liste des courses de base</h2></div>
+    <p style="color:#66735F;font-size:14px;margin-bottom:14px;max-width:820px">Importe un PDF (liste par catégories : fruits &amp; légumes, protéines, épicerie…) ou écris la liste ici. Elle apparaît dans l'onglet <b>Courses → ⭐ Indispensables</b> de l'appli <b>co-NAÎTRE son foyer</b> de toutes tes clientes. Chacune peut ensuite masquer des aliments et ajouter les siens, sans toucher à ta liste.</p>
+    <div id="indDashEditor" style="max-width:900px"></div>
   </div>
 
   <div class="view-sub" id="subview-livraison_avent">
@@ -3416,6 +3423,10 @@ window.EXERCISE_LIBRARY = [
       #view-histoire .hist-btn.main:hover{background:#2F4A3A}
       #view-histoire .hist-btn.warn{border-color:#C9A79A;color:#9B4A32}
       #view-histoire .hist-btn.sm{padding:5px 10px;font-size:12px;border-radius:8px}
+      #view-histoire .hist-btn.rec{background:#B9402F;border-color:#B9402F;color:#fff;animation:histRec 1.4s ease-in-out infinite}
+      @keyframes histRec{0%,100%{box-shadow:0 0 0 0 rgba(185,64,47,.45)}50%{box-shadow:0 0 0 6px rgba(185,64,47,0)}}
+      @media(prefers-reduced-motion:reduce){#view-histoire .hist-btn.rec{animation:none}}
+      #view-histoire .hist-dict-note{font-size:11.5px;color:#8a8577;margin-top:4px}
       #view-histoire .hist-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
       #view-histoire .hist-chap{display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid #E2DCC8;border-radius:10px;padding:9px 12px;margin-top:8px;background:#FFFEFA;flex-wrap:wrap}
       #view-histoire .hist-chap b{font-size:14px;color:#26312A}
@@ -6001,6 +6012,7 @@ window.EXERCISE_LIBRARY = [
     if (id === 'livraison_avent') setTimeout(function() { if (window.avInit) avInit(); }, 50);
     if (id === 'livraison_accueil') setTimeout(accInit, 50);
     if (id === 'livraison_lecture') setTimeout(function() { if (window.lecDInit) lecDInit(); }, 50);
+    if (id === 'livraison_indispensables') setTimeout(function() { if (window.indDInit) indDInit(); }, 50);
     if (id === 'livraison_apps') setTimeout(function(){ if (window.appsInit) appsInit(); }, 50);
     if (id === 'livraison_bk_perso') setTimeout(function(){ if (window.bkInit) bkInit('perso'); }, 50);
     if (id === 'livraison_bk_clients') setTimeout(function(){ if (window.bkInit) bkInit('clients'); }, 50);
@@ -30738,7 +30750,7 @@ function coMailBrand(o) {
     h += '<input type="text" class="hist-ed-title" value="' + esc(c.titre) + '" placeholder="Titre du chapitre" oninput="histSetChap(\'' + c.id + '\',\'titre\',this.value);histChapSelRefresh(this.value)">';
     if (p && (p.resume || p.consigne || p.citation)) h += '<details class="hist-hint" style="margin:6px 0"><summary style="cursor:pointer;font-weight:700">💡 Ce que je garde en tête (' + esc(p.court) + ')</summary>' + (p.citation ? '<div class="hist-quote" style="font-size:15px">« ' + esc(p.citation) + ' »</div>' : '') + (p.consigne ? '<p style="margin:6px 0 0"><b>' + esc(p.consigne) + '</b></p>' : '') + (p.resume ? '<p style="margin:6px 0 0;white-space:pre-wrap;font-size:12.5px">' + esc(p.resume) + '</p>' : '') + '</details>';
     h += '<textarea id="histEd" class="hist-ed-area" placeholder="Écris ici… Pour reprendre un passage des textes à côté, clique sur son ➕ ou sélectionne-le puis « Insérer »." oninput="histSetChap(\'' + c.id + '\',\'texte\',this.value)">' + esc(c.texte) + '</textarea>';
-    h += '<div class="hist-row" style="justify-content:space-between;margin:8px 0"><span class="hist-saved" id="histWc">' + histWords(c.texte) + ' mots</span><div class="hist-row">'
+    h += '<div class="hist-row" style="justify-content:space-between;margin:8px 0"><span class="hist-saved" id="histWc">' + histWords(c.texte) + ' mots</span><div class="hist-row">' + histDictBtn('histEd')
       + '<button class="hist-btn sm"' + (prev ? '' : ' disabled style="opacity:.4"') + ' onclick="histAtChap(\'' + (prev ? prev.id : '') + '\')" title="' + esc(prev ? prev.titre : '') + '">←</button><button class="hist-btn sm"' + (next ? '' : ' disabled style="opacity:.4"') + ' onclick="histAtChap(\'' + (next ? next.id : '') + '\')" title="' + esc(next ? next.titre : '') + '">→</button>'
       + '<button class="hist-btn sm" onclick="histCopyChap(\'' + c.id + '\')">📋 Copier</button><button class="hist-btn sm warn" onclick="histDelChap(\'' + c.id + '\')">🗑</button></div></div>';
     h += '<details class="hist-hint"><summary style="cursor:pointer;font-weight:700">📝 Notes pour ce chapitre</summary>' + histTa(c.notes, "histSetChap('" + c.id + "','notes',this.value);histGrow(this)", 'Souvenirs à intégrer, questions…', 3) + '</details>';
@@ -30795,10 +30807,10 @@ function coMailBrand(o) {
       h += '<div class="hist-capture"><div class="hist-k">💡 Quelque chose me revient</div><textarea id="histIdeaT" class="hist-ta" placeholder="Écris-le ici, tel que ça vient… (Ctrl + Entrée pour enregistrer)" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key===\'Enter\'){histIdeaAdd();}"></textarea>'
         + '<div class="hist-row" style="margin-top:6px"><select id="histIdeaType" class="hist-sel">' + Object.keys(HIST_IDEA_T).map(function(t) { return '<option value="' + t + '">' + HIST_IDEA_T[t] + '</option>'; }).join('') + '</select>'
         + (!full && c ? '<label style="font-size:12.5px;display:flex;gap:5px;align-items:center"><input type="checkbox" id="histIdeaPin" checked style="width:auto"> Rattacher à « ' + esc((c.titre || 'ce chapitre').slice(0, 24)) + ' »</label>' : '')
-        + '<button class="hist-btn main sm" onclick="histIdeaAdd()">Enregistrer</button></div></div>';
+        + histDictBtn('histIdeaT') + '<button class="hist-btn main sm" onclick="histIdeaAdd()">Enregistrer</button></div><div class="hist-dict-note" id="histDictNote_histIdeaT">' + histDictHint() + '</div></div>';
     } else {
       h += '<div class="hist-row" style="margin-bottom:8px"><button class="hist-btn sm" onclick="HIST_AT.addOpen=!HIST_AT.addOpen;histSrcRender()">➕ Ajouter un texte</button></div>';
-      if (HIST_AT.addOpen) h += '<div class="hist-capture"><input type="text" id="histAddTitle" placeholder="Titre (ex. Lettre du 3 mars)" style="margin-bottom:6px"><textarea id="histAddText" class="hist-ta" placeholder="Colle ou écris ton texte ici…" rows="4"></textarea><div class="hist-row" style="margin-top:6px"><button class="hist-btn main sm" onclick="histTextAdd()">Ajouter à ma matière</button></div></div>';
+      if (HIST_AT.addOpen) h += '<div class="hist-capture"><input type="text" id="histAddTitle" placeholder="Titre (ex. Lettre du 3 mars)" style="margin-bottom:6px"><textarea id="histAddText" class="hist-ta" placeholder="Colle ou écris ton texte ici…" rows="4"></textarea><div class="hist-row" style="margin-top:6px">' + histDictBtn('histAddText') + '<button class="hist-btn main sm" onclick="histTextAdd()">Ajouter à ma matière</button></div></div>';
     }
     h += '<input type="text" id="histListQ" value="' + esc(HIST_AT.q) + '" placeholder="Rechercher un mot dans cette liste…" oninput="histListSearch(this.value)" style="margin:8px 0">';
     h += '<div id="histListBody">' + histListBody(k) + '</div>';
@@ -30863,6 +30875,83 @@ function coMailBrand(o) {
     if (!t.trim()) { showToast("Écris ou colle d'abord un texte."); return; }
     var m = { id: histUid(), kind: 'lettre', ro: false, titre: ti.trim(), date: '', texte: t.trim(), partHint: 'p1', createdAt: Date.now() };
     histMat().push(m); HIST_AT.addOpen = false; histSaveNow(); showToast('✓ Texte ajouté à ta matière'); histSrcRender();
+  }
+
+  // ── 🎙️ Dictée vocale : parle, le texte s'écrit à l'endroit du curseur (idées, texte ajouté, chapitre). Navigateur : Chrome ou Safari. ──
+  var HIST_DICT = { rec: null, id: '', on: false, before: '', after: '', fin: '', retry: 0 };
+  function histDictHint() { return 'Dis « à la ligne », « nouveau paragraphe », « virgule », « point final », « point d\'interrogation » pour la ponctuation.'; }
+  function histDictBtn(id) { return '<button type="button" class="hist-btn sm" id="histMic_' + id + '" onclick="histDictToggle(\'' + id + '\')" title="Dicter à la voix">🎙️ Dicter</button>'; }
+  function histDictUi() {
+    document.querySelectorAll('[id^="histMic_"]').forEach(function(b) {
+      var on = HIST_DICT.on && b.id === 'histMic_' + HIST_DICT.id;
+      b.classList.toggle('rec', on); b.innerHTML = on ? '⏹ Arrêter la dictée' : '🎙️ Dicter';
+    });
+  }
+  function histDictApply(t) {   // commandes vocales de ponctuation
+    var map = [[/\s*\bnouveau paragraphe\b[\s,.]*/gi, '\n\n'], [/\s*(?<![A-Za-zÀ-ÿ])à la ligne(?![A-Za-zÀ-ÿ])[\s,.]*/gi, '\n'], [/\s*\bpoint d['’ ]interrogation\b/gi, ' ?'], [/\s*\bpoint d['’ ]exclamation\b/gi, ' !'],
+      [/\s*\bpoint[- ]virgule\b/gi, ' ;'], [/\s*\bdeux[- ]points\b/gi, ' :'], [/\s*\bpoints de suspension\b/gi, '…'], [/\s*\bpoint final\b/gi, '.'], [/\s*\bvirgule\b/gi, ',']];
+    map.forEach(function(m) { t = t.replace(m[0], m[1]); });
+    return t;
+  }
+  function histDictText(raw) {
+    var t = histDictApply(raw).replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n'), b = HIST_DICT.before;
+    if (b && !/[\s\n]$/.test(b) && /^[A-Za-zÀ-ÿ0-9«“"(]/.test(t.trim() ? t : 'x')) t = ' ' + t.replace(/^\s+/, '');
+    else if (b && /[\s]$/.test(b) && /^\s/.test(t) && !/^\n/.test(t)) t = t.replace(/^[ \t]+/, '');
+    if (!/\S/.test(b) || /[.!?…]\s*$|\n\s*$/.test(b)) t = t.replace(/^(\s*)([a-zà-ÿ])/, function(m, sp, c) { return sp + c.toUpperCase(); });
+    t = t.replace(/([.!?…]\s+|\n\s*)([a-zà-ÿ])/g, function(m, a, c) { return a + c.toUpperCase(); });
+    return t;
+  }
+  function histDictWrite(interim) {
+    var ta = document.getElementById(HIST_DICT.id); if (!ta) { histDictStop(); return; }
+    var txt = histDictText(HIST_DICT.fin + (interim || '')); if (txt && HIST_DICT.after && /^[A-Za-zÀ-ÿ0-9«“"(]/.test(HIST_DICT.after) && !/\s$/.test(txt)) txt += ' '; var v = HIST_DICT.before + txt + HIST_DICT.after, pos = (HIST_DICT.before + txt).length;
+    ta.value = v; try { ta.setSelectionRange(pos, pos); } catch (e) {}
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    if (ta.classList.contains('hist-ta') && typeof histGrow === 'function') histGrow(ta);
+    if (document.activeElement !== ta) { /* reste dans la zone sans voler le défilement */ }
+    HIST_DICT.cur = pos;
+  }
+  function histDictBegin(ta) {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition, rec = new SR(), pos = (typeof ta.selectionEnd === 'number' && document.activeElement === ta) ? ta.selectionEnd : (HIST_DICT.cur != null && HIST_DICT.id === ta.id ? Math.min(HIST_DICT.cur, ta.value.length) : ta.value.length);
+    HIST_DICT.before = ta.value.slice(0, pos); HIST_DICT.after = ta.value.slice(pos); HIST_DICT.fin = ''; HIST_DICT.rec = rec;
+    rec.lang = 'fr-FR'; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = function(e) {
+      var interim = '';
+      for (var i = e.resultIndex; i < e.results.length; i++) {
+        var r = e.results[i], tx = r[0] ? r[0].transcript : '';
+        if (r.isFinal) HIST_DICT.fin += tx; else interim += tx;
+      }
+      HIST_DICT.retry = 0; histDictWrite(interim); histDictUi();
+    };
+    rec.onerror = function(e) {
+      var er = e && e.error;
+      if (er === 'not-allowed' || er === 'service-not-allowed') { HIST_DICT.on = false; showToast('🎙️ Micro refusé : autorise le micro pour ce site dans ton navigateur (cadenas de la barre d\'adresse).'); }
+      else if (er === 'audio-capture') { HIST_DICT.on = false; showToast('🎙️ Aucun micro détecté.'); }
+      else if (er === 'network') { HIST_DICT.on = false; showToast('🎙️ La dictée a besoin d\'internet.'); }
+    };
+    rec.onend = function() {
+      var ta2 = document.getElementById(HIST_DICT.id);
+      if (HIST_DICT.on && ta2 && HIST_DICT.retry < 6) {   // le navigateur coupe après un silence : on relance, le texte déjà dicté reste
+        HIST_DICT.retry++; var pos2 = ta2.value.length - HIST_DICT.after.length; HIST_DICT.cur = pos2;
+        try { histDictBegin(ta2); histDictStart(); return; } catch (e) {}
+      }
+      HIST_DICT.on = false; HIST_DICT.rec = null; histDictUi();
+      var t3 = document.getElementById(HIST_DICT.id); if (t3 && typeof histFlush === 'function') histFlush();
+    };
+  }
+  function histDictStart() { try { HIST_DICT.rec.start(); } catch (e) {} histDictUi(); }
+  function histDictStop() {
+    HIST_DICT.on = false; var r = HIST_DICT.rec; HIST_DICT.rec = null;
+    if (r) { try { r.onend = null; r.stop(); } catch (e) {} }
+    histDictUi(); if (typeof histFlush === 'function') histFlush();
+  }
+  function histDictToggle(id) {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { showToast('🎙️ La dictée ne marche pas sur ce navigateur : utilise Chrome ou Safari (ou la dictée de ton Mac : appuie deux fois sur la touche micro / fn).'); return; }
+    if (HIST_DICT.on && HIST_DICT.id === id) { histDictStop(); showToast('Dictée arrêtée ✓'); return; }
+    if (HIST_DICT.on) histDictStop();
+    var ta = document.getElementById(id); if (!ta) return;
+    HIST_DICT.id = id; HIST_DICT.on = true; HIST_DICT.retry = 0; HIST_DICT.cur = null;
+    histDictBegin(ta); histDictStart(); showToast('🎙️ Je t\'écoute… parle, ça s\'écrit.');
   }
   function histIdeaAdd() {
     var ta = document.getElementById('histIdeaT'); if (!ta || !ta.value.trim()) { showToast("Écris d'abord ton idée."); return; }
@@ -33540,6 +33629,153 @@ function formPageEdit(fid) {
 @media(max-width:520px){.cf-row label{width:64px}}
 </style>
 
+<script id="indis-dash-script">
+/* ── ⭐ Indispensables : liste de courses de base du foyer (Pôle Livraison). Données : epanouissement_global/indispensables
+   = { updated, cats:[{ id, label, items:[nom, …] }] } (lue par l'appli foyer sans connexion ; écrite ici seulement, par toi).
+   Import PDF : lecteur pdf.js chargé à la demande (comme l'import de recettes). Tout est vérifiable et modifiable avant publication. */
+(function(){
+  var REF='epanouissement_global/indispensables', ST={cats:[],busy:false,loaded:false,pub:null};window.__indST=ST;
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function db(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
+  function say(t,k){var e=document.getElementById('indDMsg');if(e){e.textContent=t;e.style.cssText='display:'+(t?'block':'none')+';margin:12px 0 0;padding:10px 14px;border-radius:10px;font-size:13.5px;background:'+(k==='ok'?'#E3F0DA':k==='warn'?'#FBEAD9':'#F3EFE3')+';color:'+(k==='warn'?'#8a4a2c':'#26312A');}}
+  function norm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+  var EMO=[[/fruit|legum|salade/,'🥦'],[/proteine|viande|poisson|volaille/,'🥩'],[/cremerie|laitier|frais|fromage|yaourt/,'🧀'],[/oeuf/,'🥚'],[/pain|boulang/,'🥖'],[/feculent|cereale|pates|riz/,'🌾'],[/epicer|placard|conserve|sec/,'🥫'],[/boisson|the|tisane|cafe/,'🫖'],[/hygiene|entretien|menage/,'🧴'],[/gras|huile|oleagineux|noix/,'🫒'],[/sucre|plaisir|gourmand|chocolat/,'🍫'],[/surgel/,'🧊']];
+  function emoOf(label){var n=norm(label);for(var i=0;i<EMO.length;i++)if(EMO[i][0].test(n))return EMO[i][1];return '🛒';}
+  var HEAD_RX=/^(fruits?|legumes?|proteines?|viandes?|poissons?|cremerie|produits? laitiers?|frais|feculents?|cereales?|epicerie|placards?|boulangerie|boissons?|condiments?|surgeles?|hygiene|entretien|matieres? grasses|oleagineux|petit[- ]dejeuner|collations?|sucres?|autres?)\b/;
+  var BUL=/^[\s•·▪■□☐☑✓✔\-–—*○●◦▫►▶➤✦]+/;
+  function hasEmoji(t){return /[\u{1F300}-\u{1FAFF}☀-➿]/u.test(t);}
+  function cleanHead(t){return t.replace(/\s*[:：]\s*$/,'').replace(/^[\s•·▪■□☐☑✓✔\-–—*○●◦▫►▶➤✦]+/,'').replace(/\s+/g,' ').trim();}
+  function splitItems(t){
+    return t.split(/\s*[;,•·▪|]\s*|\s+[–—]\s+|\s{3,}/).map(function(x){return x.replace(BUL,'').replace(/\s+/g,' ').trim();}).filter(function(x){return x.length>1&&!/^\d+\s*\/\s*\d+$/.test(x)&&!/^page\s*\d+/i.test(x);});
+  }
+  async function loadLib(){
+    if(window.pdfjsLib)return window.pdfjsLib;
+    if(typeof recImpLoadLib==='function')return recImpLoadLib();
+    return new Promise(function(res,rej){var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload=function(){try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';}catch(e){}res(window.pdfjsLib);};
+      s.onerror=function(){rej(new Error('Impossible de charger le lecteur PDF (connexion internet ?)'));};document.head.appendChild(s);});
+  }
+  // Lignes d'un PDF : morceaux de texte regroupés par hauteur, de haut en bas
+  async function pdfLines(lib,buf){
+    var pdf=await lib.getDocument({data:buf}).promise,out=[];
+    for(var p=1;p<=pdf.numPages;p++){
+      var page=await pdf.getPage(p),tc=await page.getTextContent(),its=[];
+      tc.items.forEach(function(it){if(!it.str||!it.str.trim()&&!it.hasEOL)return;var tr=it.transform;its.push({t:it.str,x:tr[4],y:tr[5],sz:Math.hypot(tr[2],tr[3])||it.height||10,w:it.width||0});});
+      its.sort(function(a,b){return Math.abs(b.y-a.y)>2.5?b.y-a.y:a.x-b.x;});
+      var rows=[];its.forEach(function(it){var r=rows[rows.length-1];if(r&&Math.abs(r.y-it.y)<=2.5){r.parts.push(it);}else rows.push({y:it.y,parts:[it]});});
+      rows.forEach(function(r){
+        r.parts.sort(function(a,b){return a.x-b.x;});var t='',px=null;
+        r.parts.forEach(function(it){var gap=px==null?0:it.x-px;t+=(px!=null&&gap>it.sz*0.9?'   ':(px!=null&&gap>0.5&&!/^\s/.test(it.t)&&!/\s$/.test(t)?' ':''))+it.t;px=it.x+it.w;});
+        t=t.replace(/\s+$/,'');if(!t.trim())return;
+        var sz=0;r.parts.forEach(function(it){sz=Math.max(sz,it.sz);});
+        out.push({t:t,sz:sz,page:p});
+      });
+    }
+    return out;
+  }
+  // Lignes → catégories : titres (taille plus grande, « Titre : », MAJUSCULES, mot-clé connu) puis aliments
+  function toCats(lines){
+    var szs=lines.map(function(l){return l.sz;}).sort(function(a,b){return a-b;}),med=szs.length?szs[Math.floor(szs.length/2)]:10,cats=[],cur=null;
+    function startCat(label){label=cleanHead(label);if(!label)return null;
+      if(label===label.toUpperCase()&&/[A-ZÀ-Ý]/.test(label)){label=label.toLowerCase();}
+      var c=null;cats.forEach(function(x){if(norm(x.label)===norm(label))c=x;});
+      if(!c){c={label:(hasEmoji(label)?'':emoOf(label)+' ')+label.charAt(0).toUpperCase()+label.slice(1),text:''};cats.push(c);}return c;}
+    function addItems(c,arr){var have={};c.text.split('\n').forEach(function(x){have[norm(x)]=1;});
+      arr.forEach(function(n){n=n.charAt(0).toUpperCase()+n.slice(1);if(!have[norm(n)]){have[norm(n)]=1;c.text+=(c.text?'\n':'')+n;}});}
+    lines.forEach(function(l){
+      var raw=l.t.trim();if(!raw||/^page\s*\d+(\s*\/\s*\d+)?$/i.test(raw)||/^\d+$/.test(raw))return;
+      var bulleted=BUL.test(raw)&&raw.replace(BUL,'').length<raw.length&&/^[\s]*[•·▪■□☐☑✓✔\-–—*○●◦▫►▶➤✦]/.test(raw);
+      var body=raw.replace(BUL,'').trim(),colon=body.match(/^([^:：]{2,40})\s*[:：]\s*(.*)$/);
+      if(!bulleted&&colon&&(colon[2]===''||HEAD_RX.test(norm(colon[1]))||colon[2].indexOf(',')>=0)){cur=startCat(colon[1]);if(cur&&colon[2])addItems(cur,splitItems(colon[2]));return;}
+      var caps=body.length>2&&body.length<46&&body===body.toUpperCase()&&/[A-ZÀ-Ý]/.test(body)&&!/\d/.test(body);
+      var big=l.sz>=med*1.15&&body.length<50&&!/[,;]/.test(body);
+      var kw=!bulleted&&body.length<=40&&!/[,;]/.test(body)&&HEAD_RX.test(norm(body));
+      if(!bulleted&&(caps||big||kw)){cur=startCat(body);return;}
+      if(!cur)cur=startCat('Indispensables');
+      addItems(cur,splitItems(body));
+    });
+    return cats.filter(function(c){return c.text.trim();});
+  }
+  function fromPub(o){
+    var raw=o&&(Array.isArray(o.cats)?o.cats:Object.values(o.cats||{}))||[];
+    return raw.map(function(c){return {label:String(c.label||''),text:(Array.isArray(c.items)?c.items:Object.values(c.items||{})).join('\n')};}).filter(function(c){return c.label;});
+  }
+  window.indDInit=function(){
+    var d=db(),el=document.getElementById('indDashEditor');if(!el)return;
+    if(!d){el.innerHTML='<p style="color:#c05621">⚠️ Connexion cloud indisponible pour le moment.</p>';return;}
+    if(ST.loaded){render();return;}
+    el.innerHTML='<p style="color:#66735F">Chargement de la liste publiée…</p>';
+    d.ref(REF).once('value').then(function(sn){var o=sn.val();ST.pub=o||null;ST.cats=fromPub(o);ST.loaded=true;render();},function(){ST.loaded=true;render();say('Lecture de la liste publiée impossible pour le moment.','warn');});
+  };
+  var BTN='padding:9px 16px;border-radius:10px;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer;';
+  function render(){
+    var el=document.getElementById('indDashEditor');if(!el)return;
+    var nIt=0;ST.cats.forEach(function(c){nIt+=c.text.split('\n').filter(function(x){return x.trim();}).length;});
+    var h='<div style="background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px;margin-bottom:14px">'
+      +'<label id="indDrop" class="ri-drop" style="display:block;border:2px dashed #BFD0B8;background:#F4F8F0;border-radius:14px;padding:20px;text-align:center;cursor:pointer;color:#2F4A3A;font-weight:700">📄 Importer un PDF (ou déposer le fichier ici)<input type="file" id="indFile" accept="application/pdf,.pdf" style="display:none" onchange="indDPick(this.files)"></label>'
+      +'<div id="indDMsg" class="ri-msg" style="display:none"></div></div>'
+      +'<div style="background:#fff;border:1px solid #E2DCC8;border-radius:14px;padding:14px 16px">'
+      +'<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px"><b style="font-size:15px">Ta liste (<span id="indDCount">'+nIt+'</span> aliment'+(nIt>1?'s':'')+' · '+ST.cats.length+' catégorie'+(ST.cats.length>1?'s':'')+')</b>'
+      +(ST.pub&&ST.pub.updated?'<span style="font-size:12px;color:#66735F">Dernière publication : '+new Date(ST.pub.updated).toLocaleString('fr-FR')+'</span>':'<span style="font-size:12px;color:#B96A46">Pas encore publiée</span>')+'</div>';
+    if(!ST.cats.length)h+='<p style="color:#66735F;font-size:13.5px">Aucune catégorie pour l\'instant : importe un PDF ci-dessus ou ajoute une catégorie à la main.</p>';
+    ST.cats.forEach(function(c,i){
+      h+='<div style="border:1px solid #EFE9D6;border-radius:12px;padding:10px 12px;margin-bottom:10px;background:#FBF8EE"><div style="display:flex;gap:8px;align-items:center">'
+        +'<input value="'+esc(c.label)+'" oninput="indDSet('+i+',\'label\',this.value)" style="flex:1;min-width:0;box-sizing:border-box;padding:8px 10px;border:1.5px solid #E2DCC8;border-radius:9px;font:inherit;font-size:14px;font-weight:800;background:#fff">'
+        +'<button onclick="indDDelCat('+i+')" title="Supprimer cette catégorie" style="padding:6px 10px;background:#fff5f5;color:#c53030;border:1.5px solid #fed7d7;border-radius:8px;font:inherit;font-size:12px;font-weight:700;cursor:pointer">🗑️</button></div>'
+        +'<textarea rows="'+Math.min(10,Math.max(3,c.text.split('\n').length+1))+'" oninput="indDSet('+i+',\'text\',this.value)" placeholder="Un aliment par ligne" style="width:100%;box-sizing:border-box;margin-top:8px;padding:9px 11px;border:1.5px solid #E2DCC8;border-radius:9px;font:inherit;font-size:14px;background:#fff;resize:vertical">'+esc(c.text)+'</textarea>'
+        +'<div style="font-size:11.5px;color:#8a8577;margin-top:3px">Un aliment par ligne. Tu peux corriger, supprimer ou ajouter des lignes.</div></div>';
+    });
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px"><button onclick="indDAddCat()" style="'+BTN+'background:#fff;color:#3F5D46;border:1.5px solid #b7c9b3">➕ Ajouter une catégorie</button>'
+      +'<button onclick="indDPublish()" style="'+BTN+'background:#3F5D46;color:#fff;border:none">📤 Publier dans l\'appli foyer</button>'
+      +(ST.cats.length?'<button onclick="indDClear()" style="'+BTN+'background:#fff;color:#8a7c5f;border:1.5px solid #e2d9c3">Tout vider</button>':'')+'</div>'
+      +'<p style="font-size:12.5px;color:#66735F;margin:10px 0 0">« Publier » remplace la liste que voient toutes tes clientes (leurs aliments masqués ou ajoutés sont conservés). Un aliment renommé réapparaît chez celles qui l\'avaient masqué.</p></div>';
+    el.innerHTML=h;
+    var dr=document.getElementById('indDrop');
+    if(dr){['dragover','dragenter'].forEach(function(ev){dr.addEventListener(ev,function(e){e.preventDefault();dr.style.background='#E6F0DF';});});
+      ['dragleave','drop'].forEach(function(ev){dr.addEventListener(ev,function(e){e.preventDefault();dr.style.background='#F4F8F0';});});
+      dr.addEventListener('drop',function(e){if(e.dataTransfer&&e.dataTransfer.files)indDPick(e.dataTransfer.files);});}
+  }
+  window.indDSet=function(i,k,v){if(ST.cats[i]){ST.cats[i][k]=v;if(k==='text'){var n=0;ST.cats.forEach(function(c){n+=c.text.split('\n').filter(function(x){return x.trim();}).length;});var e=document.getElementById('indDCount');if(e)e.textContent=n;}}};
+  window.indDDelCat=function(i){if(!ST.cats[i])return;if(!confirm('Supprimer la catégorie « '+ST.cats[i].label+' » ?'))return;ST.cats.splice(i,1);render();};
+  window.indDAddCat=function(){ST.cats.push({label:'🛒 Nouvelle catégorie',text:''});render();};
+  window.indDClear=function(){if(!confirm('Vider tout le brouillon ? (la liste publiée ne change que si tu publies ensuite)'))return;ST.cats=[];render();};
+  window.indDPick=async function(files){
+    if(!files||!files.length||ST.busy)return;ST.busy=true;
+    try{
+      var lib=await loadLib(),added=0,nf=0;
+      for(var i=0;i<files.length;i++){
+        var f=files[i];say('⏳ Lecture de « '+f.name+' »…');
+        var lines=await pdfLines(lib,new Uint8Array(await f.arrayBuffer())),cats=toCats(lines);nf++;
+        cats.forEach(function(c){var ex=null;ST.cats.forEach(function(x){if(norm(x.label)===norm(c.label))ex=x;});
+          if(ex){var have={};ex.text.split('\n').forEach(function(t){have[norm(t)]=1;});c.text.split('\n').forEach(function(t){if(!have[norm(t)]){ex.text+=(ex.text?'\n':'')+t;added++;}});}
+          else{ST.cats.push(c);added+=c.text.split('\n').length;}});
+      }
+      render();
+      if(added)say('✅ '+added+' aliment'+(added>1?'s':'')+' reconnu'+(added>1?'s':'')+'. Vérifie les catégories ci-dessous, corrige si besoin, puis publie.','ok');
+      else say('Je n\'ai reconnu aucun aliment dans ce PDF. S\'il s\'agit d\'une image scannée (pas de texte sélectionnable), il faut recopier la liste à la main.','warn');
+    }catch(e){say('⚠️ '+(e&&e.message?e.message:'Lecture impossible'),'warn');}
+    ST.busy=false;var inp=document.getElementById('indFile');if(inp)inp.value='';
+  };
+  window.indDPublish=async function(){
+    var d=db();if(!d){say('Pas de connexion à la base : réessaie dans un instant.','warn');return;}
+    var cats=[],used={};
+    ST.cats.forEach(function(c){
+      var label=String(c.label||'').replace(/\s+/g,' ').trim(),items=[],seen={};
+      c.text.split('\n').forEach(function(x){x=x.replace(/\s+/g,' ').trim();if(x&&!seen[norm(x)]){seen[norm(x)]=1;items.push(x);}});
+      if(!label||!items.length)return;
+      var id=norm(label).replace(/ /g,'-')||'cat';while(used[id])id+='-2';used[id]=1;
+      cats.push({id:id,label:label,items:items});
+    });
+    if(!cats.length&&!confirm('La liste est vide : les clientes ne verront plus d\'indispensables. Publier quand même ?'))return;
+    say('⏳ Publication…');
+    try{var o={updated:Date.now(),cats:cats};await d.ref(REF).set(cats.length?o:null);ST.pub=cats.length?o:null;
+      say('✅ Publié : '+cats.length+' catégorie'+(cats.length>1?'s':'')+'. Elle apparaît dans « co-NAÎTRE son foyer » → Courses → ⭐ Indispensables (bouton « Actualiser » chez la cliente si elle a déjà l\'écran ouvert).','ok');
+      render();say('✅ Publié : '+cats.length+' catégorie'+(cats.length>1?'s':'')+'. Elle apparaît dans « co-NAÎTRE son foyer » → Courses → ⭐ Indispensables.','ok');
+    }catch(e){say('⚠️ Publication refusée : '+String((e&&(e.code||e.message))||e).slice(0,80)+'. Vérifie que tu es connectée en propriétaire.','warn');}
+  };
+})();
+</script>
+
 <script id="lecture-dash-script">
 /* ── 📚 Lecture : livres de l'appli co-NAÎTRE (Pôle Livraison). Données : epanouissement_global/lecture/livres/<id>
    = { titre, auteur, note, photo, de, deType:'coach'|'cliente', code, at, masque }. Les clientes y ajoutent depuis l'appli (signées de leur prénom). */
@@ -33786,7 +34022,7 @@ function formPageEdit(fid) {
     if(!K[g]){
       h.innerHTML='<div class="'+cls+'">'+intro+'<div class="cf-box cf-lock"><div class="cf-big">🔒</div><h3>Coffre verrouillé</h3><p>'+esc(msg||'Entre ton mot de passe maître pour l\'ouvrir.')+'</p>'+
         '<div class="cf-stack"><input class="cf-in" type="password" id="cfP_'+mode+'" placeholder="Mot de passe maître" autocomplete="current-password"><button class="cf-btn" data-a="unlock">Déverrouiller</button></div><div class="cf-err" id="cfE_'+mode+'"></div>'+
-        '<div class="cf-note cf-fpr" data-g="'+g+'" style="margin-top:8px;opacity:.7">'+fprTxt(g)+'</div><div class="cf-note" style="margin-top:4px"><a href="#" onclick="cfVoirCloud(\''+g+'\');return false" style="color:#8A4A21">🔄 Relire le cloud maintenant</a> <span class="cf-rel" data-g="'+g+'" style="opacity:.8"></span></div>'+(mode==='equipe'&&!own?'':'<div class="cf-note" style="margin-top:8px"><a href="#" data-a="forgot" style="color:#8A4A21">J\'ai oublié mon mot de passe maître</a></div>')+'</div></div>';
+        '<div class="cf-note cf-fpr" data-g="'+g+'" style="margin-top:8px;opacity:.7">'+fprTxt(g)+'</div><div class="cf-note" style="margin-top:4px"><a href="#" onclick="cfVoirCloud(\''+g+'\');return false" style="color:#8A4A21">🔄 Relire le cloud maintenant</a>'+(canPush()?' · <a href="#" onclick="cfForcerEnvoi(\''+g+'\');return false" style="color:#8A4A21">⬆️ Envoyer mon coffre au cloud</a>':'')+' <span class="cf-rel" data-g="'+g+'" style="opacity:.8"></span></div>'+(mode==='equipe'&&!own?'':'<div class="cf-note" style="margin-top:8px"><a href="#" data-a="forgot" style="color:#8A4A21">J\'ai oublié mon mot de passe maître</a></div>')+'</div></div>';
       var inp=document.getElementById('cfP_'+mode);if(inp&&host(mode).offsetParent!==null)setTimeout(function(){try{inp.focus();}catch(e){}},30);
       return;
     }
@@ -33912,8 +34148,30 @@ function formPageEdit(fid) {
   function cloudPushVault(g,del){
     if(!canPush())return;
     clearTimeout(pushT[g]);
-    pushT[g]=setTimeout(function(){var db=dbq();if(!db)return;var o=del?{del:1,t:Date.now()}:localPack(g);if(!o)return;try{db.ref(CL[g]).set(o).catch(function(){});}catch(e){}},700);
+    pushT[g]=setTimeout(function(){var db=dbq();if(!db)return;var o=del?{del:1,t:Date.now()}:localPack(g);if(!o)return;pushDo(g,db,o);},700);
   }
+  // Envoi + VÉRIFICATION : on relit le serveur juste après pour être sûr que l'écriture a vraiment abouti (avant, un refus était ignoré en silence).
+  function pushDo(g,db,o,say){
+    function st(t){PUSHST[g]=t;try{document.querySelectorAll('.cf-fpr[data-g="'+g+'"]').forEach(function(e){e.textContent=fprTxt(g);});}catch(e){} if(say)say(t);}
+    var au=null;try{au=window.firebase&&firebase.auth&&firebase.auth().currentUser;}catch(e){}
+    var who=au?'connectée':'NON connectée à Firebase';
+    try{db.ref(CL[g]).set(o).then(function(){
+      var url=((db.app&&db.app.options&&db.app.options.databaseURL)||'https://cooperation-familiale-default-rtdb.europe-west1.firebasedatabase.app')+'/'+CL[g]+'/t.json';
+      return fetch(url+'?_='+Date.now(),{cache:'no-store'}).then(function(rs){return rs.json();}).then(function(t){
+        var hh=new Date().toLocaleTimeString('fr-FR');
+        st(t===o.t?('✔ envoi vérifié à '+hh+' (serveur = cet appareil)'):('✖ envoi accepté mais le serveur affiche encore '+(t?new Date(t).toLocaleString('fr-FR'):'rien')+' ('+who+')'));
+      });
+    }).catch(function(er){st('✖ envoi REFUSÉ par le serveur : '+String((er&&(er.code||er.message))||er).slice(0,60)+' ('+who+')');});}catch(e){st('✖ envoi impossible : '+String(e&&e.message||e).slice(0,50));}
+  }
+  var PUSHST={};
+  window.cfForcerEnvoi=function(g){
+    function say(t){document.querySelectorAll('.cf-rel[data-g="'+g+'"]').forEach(function(e){e.textContent=t;});}
+    if(!canPush()){say('Réservé à Anaïs (propriétaire).');return;}
+    var db=dbq(),o=localPack(g);if(!db||!o){say('Rien à envoyer sur cet appareil.');return;}
+    if(!confirm('Envoyer le coffre de CET appareil vers le cloud ? Il remplacera celui du cloud (celui de Flavie sera remplacé à sa prochaine ouverture).'))return;
+    o.t=Date.now();try{localStorage.setItem(TK[g],String(o.t));}catch(e){}
+    say('Envoi…');pushDo(g,db,o,say);
+  };
   function applyRemote(g,r,metaToo){
     if(metaToo)localStorage.setItem(METAK[g],r.meta);
     GM[g].forEach(function(m){if(r[m])localStorage.setItem(VKEY[m],r[m]);else localStorage.removeItem(VKEY[m]);});
@@ -33945,7 +34203,7 @@ function formPageEdit(fid) {
   function fprTxt(g){
     var R=RSEEN[g],rl='?';try{rl=typeof window.accRole==='function'?String(window.accRole()||'aucun'):'?';}catch(e){}
     var cl=R?(R.err?('lecture IMPOSSIBLE ('+R.err+')'):(R.has?('n° '+R.f+(R.f===fpr(g)?' ✔ identique':' ✖ différent')+(R.t?' (écrit le '+new Date(R.t).toLocaleString('fr-FR')+')':'')):'vide')):'pas encore lu';
-    return 'Coffre n° '+fpr(g)+' · cloud : '+cl+' · profil : '+(rl==='owner'?'propriétaire':rl)+' · version : '+(window.ACC_BUILD_PUB||'ancienne');
+    return 'Coffre n° '+fpr(g)+' · cloud : '+cl+' · profil : '+(rl==='owner'?'propriétaire':rl)+(PUSHST[g]?' · dernier envoi : '+PUSHST[g]:'')+' · version : '+(window.ACC_BUILD_PUB||'ancienne');
   }
   function handleRemote(g,r){
     RSEEN[g]={has:!!(r&&r.meta),f:fprR(r),t:(r&&r.t)||0};
@@ -34063,7 +34321,7 @@ body.acc-assist.acc-ro .acc-banner{background:#7A5A12}
         return d;}}catch(e){}
     return {enabled:false,code:null,members:[]};}
   // ── Sauvegarde cloud directe des réglages d'équipe (indépendante de la synchro générale) ──
-  var ACC_BUILD='27/11 · 4h · lecture v19', CLOUDSEEN=null;window.ACC_BUILD_PUB=ACC_BUILD;
+  var ACC_BUILD='27/11 · 4h · dictée v22', CLOUDSEEN=null;window.ACC_BUILD_PUB=ACC_BUILD;
   var CLOUD='dash_team/config', TKEY='sfm_acces_cloud_t', ST={ok:null,msg:'Vérification de la connexion au cloud…'}, pulling=false, pollN=0;
   function dbq(){try{return (typeof initSyncFirebase==='function')?initSyncFirebase():null;}catch(e){return null;}}
   function stTxt(){return (ST.ok===false?'⚠️ ':ST.ok?'☁️ ':'')+ST.msg;}
